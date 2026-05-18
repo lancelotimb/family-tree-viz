@@ -1,26 +1,41 @@
 @import "tailwindcss";
+@import "@xyflow/react/dist/style.css";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fdfbf7;
+  --foreground: #3d3428;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-inter);
+  --font-serif: var(--font-playfair);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+.font-serif {
+  font-family: var(--font-playfair), Georgia, serif;
+}
+
+.family-tree-flow .react-flow__edge-path {
+  stroke: #c4b49a;
+  stroke-width: 1.5;
+}
+
+.family-tree-flow .react-flow__pane {
+  cursor: grab;
+}
+
+.family-tree-flow .react-flow__pane:active {
+  cursor: grabbing;
+}
+
+.family-tree-flow .react-flow__node {
+  cursor: pointer;
 }
