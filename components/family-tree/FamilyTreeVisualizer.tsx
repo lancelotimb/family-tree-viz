@@ -13,7 +13,13 @@ import {
 import { FamilyMemberNode } from "./FamilyMemberNode";
 import { SearchBar } from "./SearchBar";
 import { ControlSidebar } from "./ControlSidebar";
+import { ZoomControls } from "./ZoomControls";
 import { ProfilePanel } from "./ProfilePanel";
+import {
+  buildAdjacencyList,
+  findShortestPath,
+  pathEdgeIds,
+} from "./graphPath";
 import {
   buildInitialNodes,
   initialEdges,
@@ -28,6 +34,11 @@ const defaultEdgeOptions = {
   style: { stroke: "#c4b49a", strokeWidth: 1.5 },
 };
 
+const highlightedEdgeStyle = {
+  stroke: "#7a9e6a",
+  strokeWidth: 3,
+};
+
 function FamilyTreeCanvas() {
   const [initialNodes] = useState(() => buildInitialNodes());
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -35,6 +46,32 @@ function FamilyTreeCanvas() {
   const [maxDepth, setMaxDepth] = useState(maxGeneration);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [greyDeceased, setGreyDeceased] = useState(false);
+  const [pathFromId, setPathFromId] = useState("");
+  const [pathToId, setPathToId] = useState("");
+
+  const adjacency = useMemo(() => buildAdjacencyList(initialEdges), []);
+
+  const pathResult = useMemo(() => {
+    if (!pathFromId || !pathToId) return null;
+    return findShortestPath(pathFromId, pathToId, adjacency);
+  }, [pathFromId, pathToId, adjacency]);
+
+  const pathNodeIds = useMemo(
+    () => (pathResult ? new Set(pathResult) : null),
+    [pathResult],
+  );
+
+  const pathEdgeIdSet = useMemo(
+    () => (pathResult ? pathEdgeIds(pathResult, initialEdges) : null),
+    [pathResult],
+  );
+
+  const pathStatus = useMemo((): "idle" | "ready" | "no-path" => {
+    if (!pathFromId || !pathToId) return "idle";
+    if (pathResult) return "ready";
+    return "no-path";
+  }, [pathFromId, pathToId, pathResult]);
 
   const visibleNodeIds = useMemo(() => {
     return new Set(
@@ -49,24 +86,42 @@ function FamilyTreeCanvas() {
       current.map((node) => {
         const data = node.data as FamilyMemberNodeData;
         const hidden = !visibleNodeIds.has(node.id);
+        const isDeceased = data.deathYear !== null;
         return {
           ...node,
           hidden,
           data: {
             ...data,
             selected: node.id === selectedId,
+            greyed: greyDeceased && isDeceased,
+            pathHighlighted: pathNodeIds?.has(node.id) ?? false,
           },
           selected: node.id === selectedId,
         };
       }),
     );
     setEdges((current) =>
-      current.map((edge) => ({
-        ...edge,
-        hidden: !visibleNodeIds.has(edge.source) || !visibleNodeIds.has(edge.target),
-      })),
+      current.map((edge) => {
+        const hidden =
+          !visibleNodeIds.has(edge.source) || !visibleNodeIds.has(edge.target);
+        const highlighted = pathEdgeIdSet?.has(edge.id) ?? false;
+        return {
+          ...edge,
+          hidden,
+          style: highlighted ? highlightedEdgeStyle : defaultEdgeOptions.style,
+          animated: highlighted,
+        };
+      }),
     );
-  }, [visibleNodeIds, selectedId, setNodes, setEdges]);
+  }, [
+    visibleNodeIds,
+    selectedId,
+    greyDeceased,
+    pathNodeIds,
+    pathEdgeIdSet,
+    setNodes,
+    setEdges,
+  ]);
 
   const onSelectionChange = useCallback(({ nodes: selectedNodes }: OnSelectionChangeParams) => {
     const node = selectedNodes[0] as Node<FamilyMemberNodeData> | undefined;
@@ -111,7 +166,20 @@ function FamilyTreeCanvas() {
           <SearchBar maxDepth={maxDepth} />
         </header>
         <div className="flex flex-1 items-start p-6">
-          <ControlSidebar maxDepth={maxDepth} onMaxDepthChange={setMaxDepth} />
+          <ControlSidebar
+            maxDepth={maxDepth}
+            onMaxDepthChange={setMaxDepth}
+            greyDeceased={greyDeceased}
+            onGreyDeceasedChange={setGreyDeceased}
+            pathFromId={pathFromId}
+            pathToId={pathToId}
+            onPathFromChange={setPathFromId}
+            onPathToChange={setPathToId}
+            pathStatus={pathStatus}
+          />
+        </div>
+        <div className="flex justify-end p-6">
+          <ZoomControls />
         </div>
       </div>
 

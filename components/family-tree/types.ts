@@ -18,4 +18,6 @@ export type FamilyMemberNodeData = {
   deathYear: number | null;
   generation: number;
   selected?: boolean;
+  greyed?: boolean;
+  pathHighlighted?: boolean;
 };
