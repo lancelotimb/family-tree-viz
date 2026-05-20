@@ -1,4 +1,5 @@
 import type { Edge, Node } from "@xyflow/react";
+import { computeFamilyTreeLayout } from "./familyTreeLayout";
 import type { FamilyMemberNodeData, FamilyMemberProfile } from "./types";
 
 const NODE_WIDTH = 200;
@@ -301,27 +302,7 @@ export const profiles: Record<string, FamilyMemberProfile> = {
   },
 };
 
-const layoutRows: { id: string; row: number; col: number }[] = [
-  { id: "henri-martin", row: 0, col: 0 },
-  { id: "marie-dubois", row: 0, col: 1 },
-  { id: "louis-bernard", row: 0, col: 3 },
-  { id: "suzanne-moreau", row: 0, col: 4 },
-  { id: "jean-martin", row: 1, col: 0.5 },
-  { id: "hélène-bernard", row: 1, col: 1.5 },
-  { id: "claire-martin", row: 1, col: 2.5 },
-  { id: "pierre-bernard", row: 1, col: 4 },
-  { id: "andré-martin", row: 2, col: 0.5 },
-  { id: "marguerite-laurent", row: 2, col: 1.5 },
-  { id: "simone-martin", row: 2, col: 2.5 },
-  { id: "philippe-martin", row: 3, col: 0 },
-  { id: "isabelle-fontaine", row: 3, col: 1 },
-  { id: "élise-martin", row: 3, col: 2 },
-  { id: "camille-martin", row: 3, col: 3 },
-  { id: "thomas-renard", row: 3, col: 4.5 },
-  { id: "lucas-martin", row: 4, col: 0 },
-  { id: "sophie-martin", row: 4, col: 1 },
-  { id: "léa-dupont", row: 4, col: 2.5 },
-];
+const layoutPositions = computeFamilyTreeLayout(profiles);
 
 function toPosition(col: number, row: number) {
   return {
@@ -331,8 +312,9 @@ function toPosition(col: number, row: number) {
 }
 
 export function buildInitialNodes(): Node<FamilyMemberNodeData>[] {
-  return layoutRows.map(({ id, row, col }) => {
+  return Object.keys(profiles).map((id) => {
     const profile = profiles[id];
+    const { row, col } = layoutPositions.get(id)!;
     return {
       id,
       type: "familyMember",
