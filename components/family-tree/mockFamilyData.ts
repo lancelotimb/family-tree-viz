@@ -1,11 +1,8 @@
-import type { Edge, Node } from "@xyflow/react";
+import type { Node } from "@xyflow/react";
+import { buildFamilyEdges } from "./familyTreeEdges";
 import { computeFamilyTreeLayout } from "./familyTreeLayout";
+import { H_GAP, NODE_HEIGHT, NODE_WIDTH, V_GAP } from "./layoutConstants";
 import type { FamilyMemberNodeData, FamilyMemberProfile } from "./types";
-
-const NODE_WIDTH = 200;
-const NODE_HEIGHT = 120;
-const H_GAP = 80;
-const V_GAP = 140;
 
 export const profiles: Record<string, FamilyMemberProfile> = {
   "henri-martin": {
@@ -329,31 +326,7 @@ export function buildInitialNodes(): Node<FamilyMemberNodeData>[] {
   });
 }
 
-export const initialEdges: Edge[] = [
-  { id: "e-henri-marie", source: "henri-martin", target: "marie-dubois", type: "smoothstep" },
-  { id: "e-louis-suzanne", source: "louis-bernard", target: "suzanne-moreau", type: "smoothstep" },
-  { id: "e-henri-jean", source: "henri-martin", target: "jean-martin", type: "smoothstep" },
-  { id: "e-marie-jean", source: "marie-dubois", target: "jean-martin", type: "smoothstep" },
-  { id: "e-henri-claire", source: "henri-martin", target: "claire-martin", type: "smoothstep" },
-  { id: "e-louis-pierre", source: "louis-bernard", target: "pierre-bernard", type: "smoothstep" },
-  { id: "e-jean-helene", source: "jean-martin", target: "hélène-bernard", type: "smoothstep" },
-  { id: "e-pierre-helene", source: "pierre-bernard", target: "hélène-bernard", type: "smoothstep" },
-  { id: "e-jean-andre", source: "jean-martin", target: "andré-martin", type: "smoothstep" },
-  { id: "e-helene-andre", source: "hélène-bernard", target: "andré-martin", type: "smoothstep" },
-  { id: "e-helene-simone", source: "hélène-bernard", target: "simone-martin", type: "smoothstep" },
-  { id: "e-andre-marguerite", source: "andré-martin", target: "marguerite-laurent", type: "smoothstep" },
-  { id: "e-andre-philippe", source: "andré-martin", target: "philippe-martin", type: "smoothstep" },
-  { id: "e-marguerite-philippe", source: "marguerite-laurent", target: "philippe-martin", type: "smoothstep" },
-  { id: "e-andre-elise", source: "andré-martin", target: "élise-martin", type: "smoothstep" },
-  { id: "e-andre-camille", source: "andré-martin", target: "camille-martin", type: "smoothstep" },
-  { id: "e-philippe-isabelle", source: "philippe-martin", target: "isabelle-fontaine", type: "smoothstep" },
-  { id: "e-philippe-lucas", source: "philippe-martin", target: "lucas-martin", type: "smoothstep" },
-  { id: "e-isabelle-lucas", source: "isabelle-fontaine", target: "lucas-martin", type: "smoothstep" },
-  { id: "e-philippe-sophie", source: "philippe-martin", target: "sophie-martin", type: "smoothstep" },
-  { id: "e-isabelle-sophie", source: "isabelle-fontaine", target: "sophie-martin", type: "smoothstep" },
-  { id: "e-elise-lea", source: "élise-martin", target: "léa-dupont", type: "smoothstep" },
-  { id: "e-simone-thomas", source: "simone-martin", target: "thomas-renard", type: "smoothstep" },
-];
+export const initialEdges = buildFamilyEdges(profiles, layoutPositions);
 
 export const searchIndex = Object.values(profiles).map((p) => ({
   id: p.id,

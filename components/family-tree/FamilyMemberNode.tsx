@@ -23,7 +23,24 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
             : "border-[#e8dfd0] hover:border-[#d4c4a8] hover:shadow-md"
       } ${isGreyed ? "opacity-45 grayscale" : ""}`}
     >
-      <Handle type="target" position={Position.Top} className="!h-2 !w-2 !opacity-0" />
+      <Handle
+        id="child"
+        type="target"
+        position={Position.Top}
+        className="!h-2 !w-2 !opacity-0"
+      />
+      <Handle
+        id="spouse-left"
+        type="target"
+        position={Position.Left}
+        className="!h-3 !w-3 !border-0 !bg-transparent !opacity-0"
+      />
+      <Handle
+        id="spouse-right"
+        type="source"
+        position={Position.Right}
+        className="!h-3 !w-3 !border-0 !bg-transparent !opacity-0"
+      />
       <div
         className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full border bg-gradient-to-b from-[#faf6ef] to-[#f0e8da] ${
           isPathHighlighted ? "border-[#7a9e6a]" : "border-[#e8dfd0]"
@@ -44,7 +61,6 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
       <p className="mt-1 text-center text-xs tracking-wide text-[#8b7d6b]">
         {formatLifespan(member.birthYear, member.deathYear)}
       </p>
-      <Handle type="source" position={Position.Bottom} className="!h-2 !w-2 !opacity-0" />
     </div>
   );
 }

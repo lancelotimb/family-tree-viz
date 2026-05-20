@@ -10,6 +10,7 @@ import {
   type Node,
   type OnSelectionChangeParams,
 } from "@xyflow/react";
+import { FamilyBranchEdge } from "./FamilyBranchEdge";
 import { FamilyMemberNode } from "./FamilyMemberNode";
 import { SearchBar } from "./SearchBar";
 import { ControlSidebar } from "./ControlSidebar";
@@ -24,11 +25,9 @@ import { buildInitialNodes, initialEdges } from "./mockFamilyData";
 import type { FamilyMemberNodeData } from "./types";
 
 const nodeTypes = { familyMember: FamilyMemberNode };
+const edgeTypes = { familyBranch: FamilyBranchEdge };
 
-const defaultEdgeOptions = {
-  type: "smoothstep" as const,
-  style: { stroke: "#c4b49a", strokeWidth: 1.5 },
-};
+const defaultEdgeStyle = { stroke: "#c4b49a", strokeWidth: 1.5 };
 
 const highlightedEdgeStyle = {
   stroke: "#7a9e6a",
@@ -90,7 +89,7 @@ function FamilyTreeCanvas() {
         const highlighted = pathEdgeIdSet?.has(edge.id) ?? false;
         return {
           ...edge,
-          style: highlighted ? highlightedEdgeStyle : defaultEdgeOptions.style,
+          style: highlighted ? highlightedEdgeStyle : defaultEdgeStyle,
           animated: highlighted,
         };
       }),
@@ -120,7 +119,8 @@ function FamilyTreeCanvas() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
-        defaultEdgeOptions={defaultEdgeOptions}
+        edgeTypes={edgeTypes}
+        defaultEdgeOptions={{ style: defaultEdgeStyle }}
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable

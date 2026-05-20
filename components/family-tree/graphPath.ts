@@ -1,4 +1,5 @@
 import type { Edge } from "@xyflow/react";
+import type { FamilyEdgeData } from "./types";
 
 export function buildAdjacencyList(edges: Edge[]): Map<string, Set<string>> {
   const adjacency = new Map<string, Set<string>>();
@@ -11,6 +12,12 @@ export function buildAdjacencyList(edges: Edge[]): Map<string, Set<string>> {
   for (const edge of edges) {
     addNeighbor(edge.source, edge.target);
     addNeighbor(edge.target, edge.source);
+
+    const data = edge.data as FamilyEdgeData | undefined;
+    if (data?.parentB) {
+      addNeighbor(data.parentB, edge.target);
+      addNeighbor(edge.target, data.parentB);
+    }
   }
 
   return adjacency;
@@ -53,16 +60,31 @@ export function findShortestPath(
   return null;
 }
 
+function edgeConnects(edge: Edge, a: string, b: string): boolean {
+  if (
+    (edge.source === a && edge.target === b) ||
+    (edge.source === b && edge.target === a)
+  ) {
+    return true;
+  }
+
+  const data = edge.data as FamilyEdgeData | undefined;
+  if (!data) return false;
+
+  const parents = [data.parentA, data.parentB].filter(Boolean) as string[];
+  const child = edge.target;
+  return (
+    (parents.includes(a) && child === b) || (parents.includes(b) && child === a)
+  );
+}
+
 export function pathEdgeIds(path: string[], edges: Edge[]): Set<string> {
   const ids = new Set<string>();
   for (let i = 0; i < path.length - 1; i++) {
     const a = path[i];
     const b = path[i + 1];
     for (const edge of edges) {
-      if (
-        (edge.source === a && edge.target === b) ||
-        (edge.source === b && edge.target === a)
-      ) {
+      if (edgeConnects(edge, a, b)) {
         ids.add(edge.id);
       }
     }

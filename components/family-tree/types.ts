@@ -21,3 +21,8 @@ export type FamilyMemberNodeData = {
   greyed?: boolean;
   pathHighlighted?: boolean;
 };
+
+export type FamilyEdgeData = {
+  parentA: string;
+  parentB: string | null;
+};
