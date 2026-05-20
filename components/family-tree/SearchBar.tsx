@@ -6,7 +6,6 @@ import { Search, User } from "lucide-react";
 import { searchIndex } from "./mockFamilyData";
 
 type SearchBarProps = {
-  maxDepth: number;
   onOpenChange?: (open: boolean) => void;
 };
 
@@ -14,7 +13,7 @@ function formatLifespan(birthYear: number, deathYear: number | null) {
   return deathYear ? `${birthYear} – ${deathYear}` : `${birthYear} –`;
 }
 
-export function SearchBar({ maxDepth, onOpenChange }: SearchBarProps) {
+export function SearchBar({ onOpenChange }: SearchBarProps) {
   const { fitView, getNode } = useReactFlow();
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -23,11 +22,10 @@ export function SearchBar({ maxDepth, onOpenChange }: SearchBarProps) {
   const [activeIndex, setActiveIndex] = useState(0);
 
   const results = useMemo(() => {
-    const visible = searchIndex.filter((item) => item.generation <= maxDepth);
     const q = query.trim().toLowerCase();
-    if (!q) return visible.slice(0, 6);
-    return visible.filter((item) => item.name.toLowerCase().includes(q)).slice(0, 8);
-  }, [query, maxDepth]);
+    if (!q) return searchIndex.slice(0, 6);
+    return searchIndex.filter((item) => item.name.toLowerCase().includes(q)).slice(0, 8);
+  }, [query]);
 
   const setDropdownOpen = useCallback(
     (next: boolean) => {

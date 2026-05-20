@@ -20,11 +20,7 @@ import {
   findShortestPath,
   pathEdgeIds,
 } from "./graphPath";
-import {
-  buildInitialNodes,
-  initialEdges,
-  maxGeneration,
-} from "./mockFamilyData";
+import { buildInitialNodes, initialEdges } from "./mockFamilyData";
 import type { FamilyMemberNodeData } from "./types";
 
 const nodeTypes = { familyMember: FamilyMemberNode };
@@ -43,7 +39,6 @@ function FamilyTreeCanvas() {
   const [initialNodes] = useState(() => buildInitialNodes());
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [maxDepth, setMaxDepth] = useState(maxGeneration);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [greyDeceased, setGreyDeceased] = useState(false);
@@ -73,23 +68,13 @@ function FamilyTreeCanvas() {
     return "no-path";
   }, [pathFromId, pathToId, pathResult]);
 
-  const visibleNodeIds = useMemo(() => {
-    return new Set(
-      initialNodes
-        .filter((n) => (n.data as FamilyMemberNodeData).generation <= maxDepth)
-        .map((n) => n.id),
-    );
-  }, [initialNodes, maxDepth]);
-
   useEffect(() => {
     setNodes((current) =>
       current.map((node) => {
         const data = node.data as FamilyMemberNodeData;
-        const hidden = !visibleNodeIds.has(node.id);
         const isDeceased = data.deathYear !== null;
         return {
           ...node,
-          hidden,
           data: {
             ...data,
             selected: node.id === selectedId,
@@ -102,26 +87,15 @@ function FamilyTreeCanvas() {
     );
     setEdges((current) =>
       current.map((edge) => {
-        const hidden =
-          !visibleNodeIds.has(edge.source) || !visibleNodeIds.has(edge.target);
         const highlighted = pathEdgeIdSet?.has(edge.id) ?? false;
         return {
           ...edge,
-          hidden,
           style: highlighted ? highlightedEdgeStyle : defaultEdgeOptions.style,
           animated: highlighted,
         };
       }),
     );
-  }, [
-    visibleNodeIds,
-    selectedId,
-    greyDeceased,
-    pathNodeIds,
-    pathEdgeIdSet,
-    setNodes,
-    setEdges,
-  ]);
+  }, [selectedId, greyDeceased, pathNodeIds, pathEdgeIdSet, setNodes, setEdges]);
 
   const onSelectionChange = useCallback(({ nodes: selectedNodes }: OnSelectionChangeParams) => {
     const node = selectedNodes[0] as Node<FamilyMemberNodeData> | undefined;
@@ -163,12 +137,10 @@ function FamilyTreeCanvas() {
 
       <div className="pointer-events-none absolute inset-0 z-10 flex flex-col">
         <header className="flex justify-center px-6 pt-6">
-          <SearchBar maxDepth={maxDepth} />
+          <SearchBar />
         </header>
         <div className="flex flex-1 items-start p-6">
           <ControlSidebar
-            maxDepth={maxDepth}
-            onMaxDepthChange={setMaxDepth}
             greyDeceased={greyDeceased}
             onGreyDeceasedChange={setGreyDeceased}
             pathFromId={pathFromId}

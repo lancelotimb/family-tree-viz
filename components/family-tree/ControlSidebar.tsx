@@ -1,12 +1,9 @@
 "use client";
 
 import { GitBranch, UserX } from "lucide-react";
-import { maxGeneration } from "./mockFamilyData";
 import { PersonSelect } from "./PersonSelect";
 
 type ControlSidebarProps = {
-  maxDepth: number;
-  onMaxDepthChange: (depth: number) => void;
   greyDeceased: boolean;
   onGreyDeceasedChange: (enabled: boolean) => void;
   pathFromId: string;
@@ -17,8 +14,6 @@ type ControlSidebarProps = {
 };
 
 export function ControlSidebar({
-  maxDepth,
-  onMaxDepthChange,
   greyDeceased,
   onGreyDeceasedChange,
   pathFromId,
@@ -29,30 +24,6 @@ export function ControlSidebar({
 }: ControlSidebarProps) {
   return (
     <aside className="pointer-events-auto flex w-56 flex-col gap-5 rounded-2xl border border-[#e8dfd0] bg-white/75 p-4 shadow-lg backdrop-blur-md">
-      <div>
-        <div className="mb-2 flex items-center justify-between">
-          <p className="text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
-            Generation depth
-          </p>
-          <span className="text-xs tabular-nums text-[#3d3428]">
-            {maxDepth + 1} / {maxGeneration + 1}
-          </span>
-        </div>
-        <input
-          type="range"
-          min={0}
-          max={maxGeneration}
-          value={maxDepth}
-          onChange={(e) => onMaxDepthChange(Number(e.target.value))}
-          className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[#e8dfd0] accent-[#b8956a]"
-          aria-label="Filter by generation depth"
-        />
-        <div className="mt-1 flex justify-between text-[10px] text-[#a8957a]">
-          <span>Root</span>
-          <span>Latest</span>
-        </div>
-      </div>
-
       <div>
         <p className="mb-2 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
           Display
@@ -75,14 +46,12 @@ export function ControlSidebar({
             label="From"
             value={pathFromId}
             onChange={onPathFromChange}
-            maxDepth={maxDepth}
             excludeId={pathToId}
           />
           <PersonSelect
             label="To"
             value={pathToId}
             onChange={onPathToChange}
-            maxDepth={maxDepth}
             excludeId={pathFromId}
           />
         </div>

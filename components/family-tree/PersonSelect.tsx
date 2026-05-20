@@ -6,7 +6,6 @@ type PersonSelectProps = {
   label: string;
   value: string;
   onChange: (id: string) => void;
-  maxDepth: number;
   excludeId?: string;
 };
 
@@ -14,11 +13,10 @@ export function PersonSelect({
   label,
   value,
   onChange,
-  maxDepth,
   excludeId,
 }: PersonSelectProps) {
   const options = searchIndex
-    .filter((p) => p.generation <= maxDepth && p.id !== excludeId)
+    .filter((p) => p.id !== excludeId)
     .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
