@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useReactFlow } from "@xyflow/react";
-import { Search, User } from "lucide-react";
+import { Search } from "lucide-react";
+import { ProfileAvatar } from "./ProfileAvatar";
 import { searchIndex } from "./mockFamilyData";
 
 type SearchBarProps = {
@@ -138,7 +139,7 @@ export function SearchBar({ onOpenChange }: SearchBarProps) {
                 }`}
               >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#e8dfd0] bg-[#faf6ef]">
-                  <User className="h-4 w-4 text-[#a8957a]" />
+                  <ProfileAvatar gender={item.gender} className="h-4 w-4 text-[#a8957a]" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-[#3d3428]">{item.name}</p>

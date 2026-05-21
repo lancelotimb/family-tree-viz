@@ -3,20 +3,35 @@
 import { useReactFlow } from "@xyflow/react";
 import { Maximize2, ZoomIn, ZoomOut } from "lucide-react";
 
+/** React Flow defaults to 1.2× per step; use a larger factor for button zoom. */
+const ZOOM_STEP = 1.45;
+const MIN_ZOOM = 0.2;
+const MAX_ZOOM = 1.8;
+
 export function ZoomControls() {
-  const { zoomIn, zoomOut, fitView } = useReactFlow();
+  const { getZoom, zoomTo, fitView } = useReactFlow();
+
+  const zoomIn = () => {
+    const next = Math.min(getZoom() * ZOOM_STEP, MAX_ZOOM);
+    zoomTo(next, { duration: 300 });
+  };
+
+  const zoomOut = () => {
+    const next = Math.max(getZoom() / ZOOM_STEP, MIN_ZOOM);
+    zoomTo(next, { duration: 300 });
+  };
 
   return (
     <div className="pointer-events-auto flex flex-col gap-2">
       <ZoomButton
         label="Zoom in"
         icon={<ZoomIn className="h-4 w-4" />}
-        onClick={() => zoomIn({ duration: 300 })}
+        onClick={zoomIn}
       />
       <ZoomButton
         label="Zoom out"
         icon={<ZoomOut className="h-4 w-4" />}
-        onClick={() => zoomOut({ duration: 300 })}
+        onClick={zoomOut}
       />
       <ZoomButton
         label="Fit view"
