@@ -14,6 +14,7 @@ export const profiles: Record<string, FamilyMemberProfile> = {
     biography:
       "Henri Martin was a master clockmaker whose workshop on the Saône riverbank served three generations of Lyonnais families. He apprenticed under his uncle at fourteen and opened his own atelier at twenty-two. Known for precision and patience, he documented every repair in leather-bound journals that the family still keeps in an oak chest.",
     avatarUrl: "",
+    gender: "male",
     generation: 0,
     spouseId: "marie-dubois",
     childIds: ["jean-martin", "claire-martin"],
@@ -32,6 +33,7 @@ export const profiles: Record<string, FamilyMemberProfile> = {
     biography:
       "Marie Dubois Martin tended a walled herb garden behind the clockmaker's shop and taught village children to read on Sunday afternoons. She kept correspondence with cousins in Provence and preserved recipes that became the backbone of family holiday gatherings for decades.",
     avatarUrl: "",
+    gender: "female",
     generation: 0,
     spouseId: "henri-martin",
     childIds: ["jean-martin", "claire-martin"],
@@ -39,6 +41,39 @@ export const profiles: Record<string, FamilyMemberProfile> = {
       { id: "g1", caption: "Herb garden sketch" },
       { id: "g2", caption: "Sunday school, 1901" },
     ],
+  },
+  "louis-bernard": {
+    id: "louis-bernard",
+    name: "Louis Bernard",
+    birthYear: 1858,
+    deathYear: 1931,
+    birthplace: "Dijon, France",
+    biography:
+      "Louis Bernard was a railway signal engineer who moved east with the expanding line toward Strasbourg. His meticulous diagrams of junction switches were admired by colleagues and later framed by his granddaughter Élise.",
+    avatarUrl: "",
+    gender: "male",
+    generation: 0,
+    spouseId: "suzanne-moreau",
+    childIds: ["pierre-bernard"],
+    gallery: [
+      { id: "g1", caption: "Signal tower, 1894" },
+      { id: "g2", caption: "Engineer's notebook" },
+    ],
+  },
+  "suzanne-moreau": {
+    id: "suzanne-moreau",
+    name: "Suzanne Moreau",
+    birthYear: 1860,
+    deathYear: 1940,
+    birthplace: "Beaune, France",
+    biography:
+      "Suzanne Moreau Bernard sang in the parish choir and embroidered altar cloths that traveled to three churches before returning to the family home. She wrote vivid letters about vineyard seasons that her descendants still quote at reunions.",
+    avatarUrl: "",
+    gender: "female",
+    generation: 0,
+    spouseId: "louis-bernard",
+    childIds: ["pierre-bernard"],
+    gallery: [{ id: "g1", caption: "Choir photograph, 1908" }],
   },
   "jean-martin": {
     id: "jean-martin",
@@ -49,29 +84,13 @@ export const profiles: Record<string, FamilyMemberProfile> = {
     biography:
       "Jean Martin inherited the clockmaker's bench and expanded into municipal tower clocks across the Rhône valley. He served as a reserve officer during the Great War and returned to rebuild the workshop roof with his own hands.",
     avatarUrl: "",
+    gender: "male",
     generation: 1,
     spouseId: "hélène-bernard",
     childIds: ["andré-martin", "simone-martin"],
     gallery: [
       { id: "g1", caption: "Tower clock restoration" },
       { id: "g2", caption: "Reserve uniform, 1916" },
-    ],
-  },
-  "hélène-bernard": {
-    id: "hélène-bernard",
-    name: "Hélène Bernard",
-    birthYear: 1894,
-    deathYear: 1978,
-    birthplace: "Mulhouse, France",
-    biography:
-      "Hélène Bernard Martin kept the household accounts with legendary exactness and volunteered at the town library cataloguing donations. She organized the first Martin family reunion in 1952 and kept the guest lists in a cloth-bound ledger.",
-    avatarUrl: "",
-    generation: 1,
-    spouseId: "jean-martin",
-    childIds: ["andré-martin", "simone-martin"],
-    gallery: [
-      { id: "g1", caption: "Library volunteers, 1948" },
-      { id: "g2", caption: "Family reunion, 1952" },
     ],
   },
   "claire-martin": {
@@ -83,9 +102,42 @@ export const profiles: Record<string, FamilyMemberProfile> = {
     biography:
       "Claire Martin trained as a schoolmistress in Grenoble and taught literature in a girls' academy until retirement. She translated English poetry for her pupils and hosted a literary salon every Thursday in her apartment overlooking the park.",
     avatarUrl: "",
+    gender: "female",
     generation: 1,
     childIds: [],
     gallery: [{ id: "g1", caption: "Academy portrait, 1920" }],
+  },
+  "pierre-bernard": {
+    id: "pierre-bernard",
+    name: "Pierre Bernard",
+    birthYear: 1888,
+    deathYear: 1959,
+    birthplace: "Dijon, France",
+    biography:
+      "Pierre Bernard followed his father onto the railways and rose to stationmaster at Mulhouse. He collected timetables from across Europe and could recite departure schedules from memory well into his seventies.",
+    avatarUrl: "",
+    gender: "male",
+    generation: 1,
+    childIds: ["hélène-bernard"],
+    gallery: [{ id: "g1", caption: "Stationmaster office, 1935" }],
+  },
+  "hélène-bernard": {
+    id: "hélène-bernard",
+    name: "Hélène Bernard",
+    birthYear: 1894,
+    deathYear: 1978,
+    birthplace: "Mulhouse, France",
+    biography:
+      "Hélène Bernard Martin kept the household accounts with legendary exactness and volunteered at the town library cataloguing donations. She bridged the Martin and Bernard branches of the family and organized the first unified reunion in 1952.",
+    avatarUrl: "",
+    gender: "female",
+    generation: 1,
+    spouseId: "jean-martin",
+    childIds: ["andré-martin", "simone-martin"],
+    gallery: [
+      { id: "g1", caption: "Library volunteers, 1948" },
+      { id: "g2", caption: "Family reunion, 1952" },
+    ],
   },
   "andré-martin": {
     id: "andré-martin",
@@ -96,6 +148,7 @@ export const profiles: Record<string, FamilyMemberProfile> = {
     biography:
       "André Martin studied architecture in Paris and designed modest public housing that prioritized light and courtyards. He spent summers sketching Provençal farmhouses and passed watercolors to his children as birthday gifts.",
     avatarUrl: "",
+    gender: "male",
     generation: 2,
     spouseId: "marguerite-laurent",
     childIds: ["philippe-martin", "élise-martin", "camille-martin"],
@@ -103,23 +156,6 @@ export const profiles: Record<string, FamilyMemberProfile> = {
       { id: "g1", caption: "Housing project model, 1962" },
       { id: "g2", caption: "Watercolor collection" },
       { id: "g3", caption: "Paris studio, 1950" },
-    ],
-  },
-  "marguerite-laurent": {
-    id: "marguerite-laurent",
-    name: "Marguerite Laurent",
-    birthYear: 1925,
-    deathYear: 2003,
-    birthplace: "Avignon, France",
-    biography:
-      "Marguerite Laurent Martin was a ceramicist whose studio kiln fired tiles for churches and homes alike. She exhibited in Marseille and taught weekend workshops that drew students from across the south.",
-    avatarUrl: "",
-    generation: 2,
-    spouseId: "andré-martin",
-    childIds: ["philippe-martin", "élise-martin", "camille-martin"],
-    gallery: [
-      { id: "g1", caption: "Kiln opening day, 1960" },
-      { id: "g2", caption: "Exhibition poster, 1971" },
     ],
   },
   "simone-martin": {
@@ -131,24 +167,28 @@ export const profiles: Record<string, FamilyMemberProfile> = {
     biography:
       "Simone Martin became a pediatric nurse and later directed a clinic ward in Villeurbanne. Colleagues remembered her calm voice during night shifts and the knitted blankets she left for newborns.",
     avatarUrl: "",
+    gender: "female",
     generation: 2,
-    spouseId: "paul-renard",
     childIds: ["thomas-renard"],
     gallery: [{ id: "g1", caption: "Clinic dedication, 1975" }],
   },
-  "paul-renard": {
-    id: "paul-renard",
-    name: "Paul Renard",
-    birthYear: 1924,
-    deathYear: 2005,
-    birthplace: "Villeurbanne, France",
+  "marguerite-laurent": {
+    id: "marguerite-laurent",
+    name: "Marguerite Laurent",
+    birthYear: 1925,
+    deathYear: 2003,
+    birthplace: "Avignon, France",
     biography:
-      "Paul Renard was a cabinetmaker who furnished clinics and schools across the Lyon suburbs. He met Simone at a charity bazaar in 1954 and built the oak sideboard that still stands in their daughter-in-law's dining room.",
+      "Marguerite Laurent Martin was a ceramicist whose studio kiln fired tiles for churches and homes alike. She exhibited in Marseille and taught weekend workshops that drew students from across the south.",
     avatarUrl: "",
+    gender: "female",
     generation: 2,
-    spouseId: "simone-martin",
-    childIds: ["thomas-renard"],
-    gallery: [{ id: "g1", caption: "Charity bazaar booth, 1954" }],
+    spouseId: "andré-martin",
+    childIds: ["philippe-martin", "élise-martin", "camille-martin"],
+    gallery: [
+      { id: "g1", caption: "Kiln opening day, 1960" },
+      { id: "g2", caption: "Exhibition poster, 1971" },
+    ],
   },
   "philippe-martin": {
     id: "philippe-martin",
@@ -159,12 +199,44 @@ export const profiles: Record<string, FamilyMemberProfile> = {
     biography:
       "Philippe Martin teaches history at a lycée and leads archival trips for students to municipal record offices. He digitized the family's nineteenth-century journals and maintains the shared genealogy spreadsheet used at reunions.",
     avatarUrl: "",
+    gender: "male",
     generation: 3,
     spouseId: "isabelle-fontaine",
     childIds: ["lucas-martin", "sophie-martin"],
     gallery: [
       { id: "g1", caption: "Archive visit, 2018" },
       { id: "g2", caption: "Lycée faculty photo" },
+    ],
+  },
+  "élise-martin": {
+    id: "élise-martin",
+    name: "Élise Martin",
+    birthYear: 1955,
+    deathYear: null,
+    birthplace: "Lyon, France",
+    biography:
+      "Élise Martin is a violinist with the regional orchestra and coaches chamber ensembles on weekends. She restored her grandfather's signal diagrams and hung them in her practice room as a reminder of precision across disciplines.",
+    avatarUrl: "",
+    gender: "female",
+    generation: 3,
+    childIds: ["léa-dupont"],
+    gallery: [{ id: "g1", caption: "Orchestra season program" }],
+  },
+  "camille-martin": {
+    id: "camille-martin",
+    name: "Camille Martin",
+    birthYear: 1958,
+    deathYear: null,
+    birthplace: "Lyon, France",
+    biography:
+      "Camille Martin runs a small publishing imprint specializing in translated essays and family memoirs. She compiled the first printed anthology of Martin–Bernard letters in 2019.",
+    avatarUrl: "",
+    gender: "female",
+    generation: 3,
+    childIds: [],
+    gallery: [
+      { id: "g1", caption: "Imprint colophon" },
+      { id: "g2", caption: "Letter anthology cover" },
     ],
   },
   "isabelle-fontaine": {
@@ -176,54 +248,11 @@ export const profiles: Record<string, FamilyMemberProfile> = {
     biography:
       "Isabelle Fontaine Martin is a landscape architect who redesigned the lakeside promenade in Annecy and consults on heritage garden restorations. She maps family trips around notable parks and cemeteries with equal enthusiasm.",
     avatarUrl: "",
+    gender: "female",
     generation: 3,
     spouseId: "philippe-martin",
     childIds: ["lucas-martin", "sophie-martin"],
     gallery: [{ id: "g1", caption: "Promenade dedication, 2009" }],
-  },
-  "élise-martin": {
-    id: "élise-martin",
-    name: "Élise Martin",
-    birthYear: 1955,
-    deathYear: null,
-    birthplace: "Lyon, France",
-    biography:
-      "Élise Martin is a violinist with the regional orchestra and coaches chamber ensembles on weekends. She keeps her grandfather Henri's clock journals on a shelf in her practice room as a reminder of precision across disciplines.",
-    avatarUrl: "",
-    generation: 3,
-    spouseId: "antoine-dupont",
-    childIds: ["léa-dupont"],
-    gallery: [{ id: "g1", caption: "Orchestra season program" }],
-  },
-  "antoine-dupont": {
-    id: "antoine-dupont",
-    name: "Antoine Dupont",
-    birthYear: 1953,
-    deathYear: null,
-    birthplace: "Grenoble, France",
-    biography:
-      "Antoine Dupont is a sound engineer who records chamber concerts and public radio documentaries. He and Élise host an annual summer concert in their courtyard for relatives visiting from abroad.",
-    avatarUrl: "",
-    generation: 3,
-    spouseId: "élise-martin",
-    childIds: ["léa-dupont"],
-    gallery: [{ id: "g1", caption: "Courtyard concert, 2019" }],
-  },
-  "camille-martin": {
-    id: "camille-martin",
-    name: "Camille Martin",
-    birthYear: 1958,
-    deathYear: null,
-    birthplace: "Lyon, France",
-    biography:
-      "Camille Martin runs a small publishing imprint specializing in translated essays and family memoirs. She compiled the first printed anthology of Martin family letters in 2019.",
-    avatarUrl: "",
-    generation: 3,
-    childIds: [],
-    gallery: [
-      { id: "g1", caption: "Imprint colophon" },
-      { id: "g2", caption: "Letter anthology cover" },
-    ],
   },
   "thomas-renard": {
     id: "thomas-renard",
@@ -234,6 +263,7 @@ export const profiles: Record<string, FamilyMemberProfile> = {
     biography:
       "Thomas Renard works in renewable energy project finance and visits his mother Simone every Sunday for lunch. He built the online photo archive that feeds this family tree visualizer.",
     avatarUrl: "",
+    gender: "male",
     generation: 3,
     childIds: [],
     gallery: [{ id: "g1", caption: "Solar farm inauguration" }],
@@ -247,6 +277,7 @@ export const profiles: Record<string, FamilyMemberProfile> = {
     biography:
       "Lucas Martin is a software engineer in Berlin who contributed the interactive layout for this genealogy project. He visits Lyon twice a year and documents each reunion with panoramic photographs.",
     avatarUrl: "",
+    gender: "male",
     generation: 4,
     childIds: [],
     gallery: [
@@ -263,6 +294,7 @@ export const profiles: Record<string, FamilyMemberProfile> = {
     biography:
       "Sophie Martin practices environmental law in Brussels and advocates for river basin protections along the Rhône. She inherited her grandmother Marguerite's eye for color and collects ceramic tiles from travels.",
     avatarUrl: "",
+    gender: "female",
     generation: 4,
     childIds: [],
     gallery: [{ id: "g1", caption: "Rhône advocacy forum, 2023" }],
@@ -276,6 +308,7 @@ export const profiles: Record<string, FamilyMemberProfile> = {
     biography:
       "Léa Dupont is a documentary filmmaker whose first feature followed municipal archivists in Lyon. She records oral histories with elder relatives and stores them in a shared family media library.",
     avatarUrl: "",
+    gender: "female",
     generation: 4,
     childIds: [],
     gallery: [
@@ -306,6 +339,7 @@ export function buildInitialNodes(): Node<FamilyMemberNodeData>[] {
         name: profile.name,
         birthYear: profile.birthYear,
         deathYear: profile.deathYear,
+        gender: profile.gender,
         generation: profile.generation,
       },
     };
@@ -319,6 +353,7 @@ export const searchIndex = Object.values(profiles).map((p) => ({
   name: p.name,
   birthYear: p.birthYear,
   deathYear: p.deathYear,
+  gender: p.gender,
   generation: p.generation,
 }));
 

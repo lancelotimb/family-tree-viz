@@ -1,7 +1,8 @@
 "use client";
 
-import { Heart, MapPin, User, X } from "lucide-react";
-import type { FamilyMemberProfile } from "./types";
+import { Heart, MapPin, X } from "lucide-react";
+import { ProfileAvatar } from "./ProfileAvatar";
+import type { FamilyMemberProfile, MemberGender } from "./types";
 import { profiles } from "./mockFamilyData";
 
 type ProfilePanelProps = {
@@ -51,7 +52,11 @@ export function ProfilePanel({ memberId, open, onClose }: ProfilePanelProps) {
                 <X className="h-5 w-5" />
               </button>
               <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full border-2 border-[#e8dfd0] bg-gradient-to-b from-[#faf6ef] to-[#f0e8da]">
-                <User className="h-12 w-12 text-[#a8957a]" strokeWidth={1.25} />
+                <ProfileAvatar
+                  gender={profile.gender}
+                  className="h-12 w-12 text-[#a8957a]"
+                  strokeWidth={1.25}
+                />
               </div>
               <h2 className="mt-4 text-center font-serif text-2xl font-medium text-[#3d3428]">
                 {profile.name}
@@ -79,7 +84,11 @@ export function ProfilePanel({ memberId, open, onClose }: ProfilePanelProps) {
                       <Heart className="h-3.5 w-3.5" />
                       Married with
                     </p>
-                    <RelationshipCard name={spouse.name} years={formatLifespan(spouse.birthYear, spouse.deathYear)} />
+                    <RelationshipCard
+                      name={spouse.name}
+                      gender={spouse.gender}
+                      years={formatLifespan(spouse.birthYear, spouse.deathYear)}
+                    />
                   </div>
                 )}
                 {children.length > 0 && (
@@ -92,6 +101,7 @@ export function ProfilePanel({ memberId, open, onClose }: ProfilePanelProps) {
                         <RelationshipCard
                           key={child.id}
                           name={child.name}
+                          gender={child.gender}
                           years={formatLifespan(child.birthYear, child.deathYear)}
                           compact
                         />
@@ -110,7 +120,11 @@ export function ProfilePanel({ memberId, open, onClose }: ProfilePanelProps) {
                       className="w-36 shrink-0 overflow-hidden rounded-lg border border-[#e8dfd0] bg-[#faf6ef]"
                     >
                       <div className="flex h-28 items-center justify-center bg-gradient-to-br from-[#f0e8da] to-[#e8dfd0]">
-                        <User className="h-8 w-8 text-[#c4b49a]/60" strokeWidth={1} />
+                        <ProfileAvatar
+                          gender={profile.gender}
+                          className="h-8 w-8 text-[#c4b49a]/60"
+                          strokeWidth={1}
+                        />
                       </div>
                       <figcaption className="px-2 py-2 text-[10px] leading-snug text-[#6b5f4f]">
                         {item.caption}
@@ -129,10 +143,12 @@ export function ProfilePanel({ memberId, open, onClose }: ProfilePanelProps) {
 
 function RelationshipCard({
   name,
+  gender,
   years,
   compact = false,
 }: {
   name: string;
+  gender: MemberGender;
   years: string;
   compact?: boolean;
 }) {
@@ -147,8 +163,10 @@ function RelationshipCard({
           compact ? "h-8 w-8" : "h-10 w-10"
         }`}
       >
-        <User
+        <ProfileAvatar
+          gender={gender}
           className={`${compact ? "h-3.5 w-3.5" : "h-4 w-4"} text-[#a8957a]`}
+          strokeWidth={1.25}
         />
       </div>
       <div className="min-w-0">
