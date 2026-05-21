@@ -10,63 +10,91 @@ import {
   type Node,
   type OnSelectionChangeParams,
 } from "@xyflow/react";
+import { FamilyBranchEdge } from "./FamilyBranchEdge";
 import { FamilyMemberNode } from "./FamilyMemberNode";
 import { SearchBar } from "./SearchBar";
 import { ControlSidebar } from "./ControlSidebar";
+import { ZoomControls } from "./ZoomControls";
 import { ProfilePanel } from "./ProfilePanel";
 import {
-  buildInitialNodes,
-  initialEdges,
-  maxGeneration,
-} from "./mockFamilyData";
+  buildAdjacencyList,
+  findShortestPath,
+  pathEdgeIds,
+} from "./graphPath";
+import { buildInitialNodes, initialEdges } from "./mockFamilyData";
 import type { FamilyMemberNodeData } from "./types";
 
 const nodeTypes = { familyMember: FamilyMemberNode };
+const edgeTypes = { familyBranch: FamilyBranchEdge };
 
-const defaultEdgeOptions = {
-  type: "smoothstep" as const,
-  style: { stroke: "#c4b49a", strokeWidth: 1.5 },
+const defaultEdgeStyle = { stroke: "#c4b49a", strokeWidth: 1.5 };
+
+const highlightedEdgeStyle = {
+  stroke: "#7a9e6a",
+  strokeWidth: 3,
 };
 
 function FamilyTreeCanvas() {
   const [initialNodes] = useState(() => buildInitialNodes());
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [maxDepth, setMaxDepth] = useState(maxGeneration);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [greyDeceased, setGreyDeceased] = useState(false);
+  const [pathFromId, setPathFromId] = useState("");
+  const [pathToId, setPathToId] = useState("");
 
-  const visibleNodeIds = useMemo(() => {
-    return new Set(
-      initialNodes
-        .filter((n) => (n.data as FamilyMemberNodeData).generation <= maxDepth)
-        .map((n) => n.id),
-    );
-  }, [initialNodes, maxDepth]);
+  const adjacency = useMemo(() => buildAdjacencyList(initialEdges), []);
+
+  const pathResult = useMemo(() => {
+    if (!pathFromId || !pathToId) return null;
+    return findShortestPath(pathFromId, pathToId, adjacency);
+  }, [pathFromId, pathToId, adjacency]);
+
+  const pathNodeIds = useMemo(
+    () => (pathResult ? new Set(pathResult) : null),
+    [pathResult],
+  );
+
+  const pathEdgeIdSet = useMemo(
+    () => (pathResult ? pathEdgeIds(pathResult, initialEdges) : null),
+    [pathResult],
+  );
+
+  const pathStatus = useMemo((): "idle" | "ready" | "no-path" => {
+    if (!pathFromId || !pathToId) return "idle";
+    if (pathResult) return "ready";
+    return "no-path";
+  }, [pathFromId, pathToId, pathResult]);
 
   useEffect(() => {
     setNodes((current) =>
       current.map((node) => {
         const data = node.data as FamilyMemberNodeData;
-        const hidden = !visibleNodeIds.has(node.id);
+        const isDeceased = data.deathYear !== null;
         return {
           ...node,
-          hidden,
           data: {
             ...data,
             selected: node.id === selectedId,
+            greyed: greyDeceased && isDeceased,
+            pathHighlighted: pathNodeIds?.has(node.id) ?? false,
           },
           selected: node.id === selectedId,
         };
       }),
     );
     setEdges((current) =>
-      current.map((edge) => ({
-        ...edge,
-        hidden: !visibleNodeIds.has(edge.source) || !visibleNodeIds.has(edge.target),
-      })),
+      current.map((edge) => {
+        const highlighted = pathEdgeIdSet?.has(edge.id) ?? false;
+        return {
+          ...edge,
+          style: highlighted ? highlightedEdgeStyle : defaultEdgeStyle,
+          animated: highlighted,
+        };
+      }),
     );
-  }, [visibleNodeIds, selectedId, setNodes, setEdges]);
+  }, [selectedId, greyDeceased, pathNodeIds, pathEdgeIdSet, setNodes, setEdges]);
 
   const onSelectionChange = useCallback(({ nodes: selectedNodes }: OnSelectionChangeParams) => {
     const node = selectedNodes[0] as Node<FamilyMemberNodeData> | undefined;
@@ -91,7 +119,8 @@ function FamilyTreeCanvas() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
-        defaultEdgeOptions={defaultEdgeOptions}
+        edgeTypes={edgeTypes}
+        defaultEdgeOptions={{ style: defaultEdgeStyle }}
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable
@@ -108,10 +137,21 @@ function FamilyTreeCanvas() {
 
       <div className="pointer-events-none absolute inset-0 z-10 flex flex-col">
         <header className="flex justify-center px-6 pt-6">
-          <SearchBar maxDepth={maxDepth} />
+          <SearchBar />
         </header>
         <div className="flex flex-1 items-start p-6">
-          <ControlSidebar maxDepth={maxDepth} onMaxDepthChange={setMaxDepth} />
+          <ControlSidebar
+            greyDeceased={greyDeceased}
+            onGreyDeceasedChange={setGreyDeceased}
+            pathFromId={pathFromId}
+            pathToId={pathToId}
+            onPathFromChange={setPathFromId}
+            onPathToChange={setPathToId}
+            pathStatus={pathStatus}
+          />
+        </div>
+        <div className="flex justify-end p-6">
+          <ZoomControls />
         </div>
       </div>
 
