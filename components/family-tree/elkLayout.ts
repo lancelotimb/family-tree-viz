@@ -12,15 +12,10 @@ const average = (values: number[]) =>
 /**
  * Run ELK's layered algorithm. Generations become layers (DOWN direction) via
  * partitioning; each union sits in its own band between its partners and their
- * children, so partners connect down to a shared anchor. `interactive` mode
- * lets ELK respect existing positions, so editing one node doesn't reshuffle
- * the whole canvas.
+ * children, so partners connect down to a shared anchor.
  */
-export async function computeLayout(
-  previous?: Map<string, LayoutPosition>,
-): Promise<Map<string, LayoutPosition>> {
+export async function computeLayout(): Promise<Map<string, LayoutPosition>> {
   const { nodes, edges } = buildElkGraph();
-  const interactive = Boolean(previous && previous.size > 0);
 
   const elkGraph: ElkNode = {
     id: "root",
@@ -31,27 +26,19 @@ export async function computeLayout(
       "elk.layered.spacing.nodeNodeBetweenLayers": "70",
       "elk.spacing.nodeNode": "55",
       "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
-      "elk.layered.crossingMinimization.strategy": interactive
-        ? "INTERACTIVE"
-        : "LAYER_SWEEP",
-      "elk.layered.cycleBreaking.strategy": interactive
-        ? "INTERACTIVE"
-        : "GREEDY",
+      "elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
+      "elk.layered.cycleBreaking.strategy": "GREEDY",
       "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
       "elk.edgeRouting": "ORTHOGONAL",
     },
-    children: nodes.map((node) => {
-      const prior = previous?.get(node.id);
-      return {
-        id: node.id,
-        width: node.width,
-        height: node.height,
-        ...(prior ? { x: prior.x, y: prior.y } : {}),
-        layoutOptions: {
-          "elk.partitioning.partition": String(node.partition),
-        },
-      };
-    }),
+    children: nodes.map((node) => ({
+      id: node.id,
+      width: node.width,
+      height: node.height,
+      layoutOptions: {
+        "elk.partitioning.partition": String(node.partition),
+      },
+    })),
     edges: edges.map((edge) => ({
       id: edge.id,
       sources: [edge.source],
