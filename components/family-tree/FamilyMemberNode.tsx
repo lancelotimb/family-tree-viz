@@ -1,7 +1,7 @@
 "use client";
 
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { User } from "lucide-react";
+import { ProfileAvatar } from "./ProfileAvatar";
 import type { FamilyMemberNodeData } from "./types";
 
 function formatLifespan(birthYear: number, deathYear: number | null) {
@@ -46,7 +46,8 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
           isPathHighlighted ? "border-[#7a9e6a]" : "border-[#e8dfd0]"
         }`}
       >
-        <User
+        <ProfileAvatar
+          gender={member.gender}
           className={`h-6 w-6 ${isPathHighlighted ? "text-[#5a7d4a]" : "text-[#a8957a]"}`}
           strokeWidth={1.5}
         />

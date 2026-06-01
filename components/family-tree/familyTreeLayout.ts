@@ -44,15 +44,18 @@ export function computeFamilyTreeLayout(
 
   type Span = { startCol: number; endCol: number };
 
+  const coupleColumnStart = (childSpan: Span) => {
+    const spanWidth = childSpan.endCol - childSpan.startCol;
+    return childSpan.startCol + Math.max(0, Math.floor((spanWidth - 2) / 2));
+  };
+
   const placeCoupleAboveChildren = (
     parentA: string,
     parentB: string,
     row: number,
     childSpan: Span,
   ) => {
-    const spanWidth = childSpan.endCol - childSpan.startCol;
-    const coupleStart =
-      childSpan.startCol + Math.max(0, Math.floor((spanWidth - 2) / 2));
+    const coupleStart = coupleColumnStart(childSpan);
     mark(parentA, row, coupleStart);
     mark(parentB, row, coupleStart + 1);
   };

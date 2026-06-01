@@ -1,3 +1,5 @@
+export type MemberGender = "male" | "female";
+
 export type FamilyMemberProfile = {
   id: string;
   name: string;
@@ -6,6 +8,7 @@ export type FamilyMemberProfile = {
   birthplace: string;
   biography: string;
   avatarUrl: string;
+  gender: MemberGender;
   generation: number;
   spouseId?: string;
   childIds: string[];
@@ -16,6 +19,7 @@ export type FamilyMemberNodeData = {
   name: string;
   birthYear: number;
   deathYear: number | null;
+  gender: MemberGender;
   generation: number;
   selected?: boolean;
   greyed?: boolean;
