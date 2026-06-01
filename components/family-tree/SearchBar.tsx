@@ -4,14 +4,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { Search } from "lucide-react";
 import { ProfileAvatar } from "./ProfileAvatar";
-import { searchIndex } from "./mockFamilyData";
+import { searchIndex } from "./familyGraph";
 
 type SearchBarProps = {
   onOpenChange?: (open: boolean) => void;
 };
 
-function formatLifespan(birthYear: number, deathYear: number | null) {
-  return deathYear ? `${birthYear} – ${deathYear}` : `${birthYear} –`;
+function formatLifespan(birthYear: number | null, deathYear: number | null) {
+  const birth = birthYear ?? "?";
+  return deathYear ? `${birth} – ${deathYear}` : `${birth} –`;
 }
 
 export function SearchBar({ onOpenChange }: SearchBarProps) {

@@ -2,8 +2,8 @@
 
 import { Heart, MapPin, X } from "lucide-react";
 import { ProfileAvatar } from "./ProfileAvatar";
-import type { FamilyMemberProfile, MemberGender } from "./types";
-import { profiles } from "./mockFamilyData";
+import type { MemberGender } from "./types";
+import { getChildren, getIndividual, getSpouses } from "./familyGraph";
 
 type ProfilePanelProps = {
   memberId: string | null;
@@ -11,19 +11,15 @@ type ProfilePanelProps = {
   onClose: () => void;
 };
 
-function formatLifespan(birthYear: number, deathYear: number | null) {
-  return deathYear ? `${birthYear} – ${deathYear}` : `b. ${birthYear}`;
-}
-
-function getProfile(id: string | null): FamilyMemberProfile | null {
-  if (!id) return null;
-  return profiles[id] ?? null;
+function formatLifespan(birthYear: number | null, deathYear: number | null) {
+  const birth = birthYear ?? "?";
+  return deathYear ? `${birth} – ${deathYear}` : `b. ${birth}`;
 }
 
 export function ProfilePanel({ memberId, open, onClose }: ProfilePanelProps) {
-  const profile = getProfile(memberId);
-  const spouse = profile?.spouseId ? profiles[profile.spouseId] : null;
-  const children = profile?.childIds.map((id) => profiles[id]).filter(Boolean) ?? [];
+  const profile = getIndividual(memberId);
+  const spouses = profile ? getSpouses(profile.id) : [];
+  const children = profile ? getChildren(profile.id) : [];
 
   return (
     <>
@@ -62,12 +58,14 @@ export function ProfilePanel({ memberId, open, onClose }: ProfilePanelProps) {
                 {profile.name}
               </h2>
               <p className="mt-1 text-center text-sm text-[#8b7d6b]">
-                {formatLifespan(profile.birthYear, profile.deathYear)}
+                {formatLifespan(profile.birth.year, profile.death?.year ?? null)}
               </p>
-              <p className="mt-2 flex items-center justify-center gap-1.5 text-sm text-[#6b5f4f]">
-                <MapPin className="h-3.5 w-3.5 text-[#a8957a]" />
-                {profile.birthplace}
-              </p>
+              {profile.birth.place && (
+                <p className="mt-2 flex items-center justify-center gap-1.5 text-sm text-[#6b5f4f]">
+                  <MapPin className="h-3.5 w-3.5 text-[#a8957a]" />
+                  {profile.birth.place}
+                </p>
+              )}
             </header>
 
             <div className="flex-1 overflow-y-auto px-6 py-5">
@@ -78,17 +76,25 @@ export function ProfilePanel({ memberId, open, onClose }: ProfilePanelProps) {
 
               <section className="mb-8">
                 <h3 className="mb-3 font-serif text-lg text-[#3d3428]">Relationships</h3>
-                {spouse && (
+                {spouses.length > 0 && (
                   <div className="mb-4">
                     <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
                       <Heart className="h-3.5 w-3.5" />
-                      Married with
+                      {spouses.length > 1 ? "Partners" : "Married with"}
                     </p>
-                    <RelationshipCard
-                      name={spouse.name}
-                      gender={spouse.gender}
-                      years={formatLifespan(spouse.birthYear, spouse.deathYear)}
-                    />
+                    <div className="flex flex-col gap-2">
+                      {spouses.map((spouse) => (
+                        <RelationshipCard
+                          key={spouse.id}
+                          name={spouse.name}
+                          gender={spouse.gender}
+                          years={formatLifespan(
+                            spouse.birth.year,
+                            spouse.death?.year ?? null,
+                          )}
+                        />
+                      ))}
+                    </div>
                   </div>
                 )}
                 {children.length > 0 && (
@@ -102,7 +108,10 @@ export function ProfilePanel({ memberId, open, onClose }: ProfilePanelProps) {
                           key={child.id}
                           name={child.name}
                           gender={child.gender}
-                          years={formatLifespan(child.birthYear, child.deathYear)}
+                          years={formatLifespan(
+                            child.birth.year,
+                            child.death?.year ?? null,
+                          )}
                           compact
                         />
                       ))}
