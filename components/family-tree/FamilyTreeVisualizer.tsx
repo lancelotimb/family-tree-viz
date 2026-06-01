@@ -1,17 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
   useNodesState,
   useEdgesState,
   useOnSelectionChange,
+  type Edge,
   type Node,
   type OnSelectionChangeParams,
+  type ReactFlowInstance,
 } from "@xyflow/react";
-import { FamilyBranchEdge } from "./FamilyBranchEdge";
 import { FamilyMemberNode } from "./FamilyMemberNode";
+import { MarriageNode } from "./MarriageNode";
 import { SearchBar } from "./SearchBar";
 import { ControlSidebar } from "./ControlSidebar";
 import { ZoomControls } from "./ZoomControls";
@@ -21,11 +23,11 @@ import {
   findShortestPath,
   pathEdgeIds,
 } from "./graphPath";
-import { buildInitialNodes, initialEdges } from "./mockFamilyData";
-import type { FamilyMemberNodeData } from "./types";
+import { buildFlowEdges, buildFlowNodes } from "./familyGraph";
+import { computeLayout } from "./elkLayout";
+import type { FamilyNodeData } from "./types";
 
-const nodeTypes = { familyMember: FamilyMemberNode };
-const edgeTypes = { familyBranch: FamilyBranchEdge };
+const nodeTypes = { familyMember: FamilyMemberNode, union: MarriageNode };
 
 const defaultEdgeStyle = { stroke: "#c4b49a", strokeWidth: 1.5 };
 
@@ -35,16 +37,42 @@ const highlightedEdgeStyle = {
 };
 
 function FamilyTreeCanvas() {
-  const [initialNodes] = useState(() => buildInitialNodes());
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node<FamilyNodeData>>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const [baseEdges, setBaseEdges] = useState<Edge[]>([]);
+  const [ready, setReady] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [greyDeceased, setGreyDeceased] = useState(false);
   const [pathFromId, setPathFromId] = useState("");
   const [pathToId, setPathToId] = useState("");
+  const instanceRef = useRef<ReactFlowInstance<Node<FamilyNodeData>, Edge> | null>(
+    null,
+  );
 
-  const adjacency = useMemo(() => buildAdjacencyList(initialEdges), []);
+  useEffect(() => {
+    let cancelled = false;
+    computeLayout().then((positions) => {
+      if (cancelled) return;
+      setNodes(buildFlowNodes(positions));
+      const built = buildFlowEdges(positions);
+      setBaseEdges(built);
+      setEdges(built);
+      setReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [setNodes, setEdges]);
+
+  useEffect(() => {
+    if (!ready) return;
+    requestAnimationFrame(() => {
+      instanceRef.current?.fitView({ padding: 0.15, duration: 400 });
+    });
+  }, [ready]);
+
+  const adjacency = useMemo(() => buildAdjacencyList(baseEdges), [baseEdges]);
 
   const pathResult = useMemo(() => {
     if (!pathFromId || !pathToId) return null;
@@ -57,8 +85,8 @@ function FamilyTreeCanvas() {
   );
 
   const pathEdgeIdSet = useMemo(
-    () => (pathResult ? pathEdgeIds(pathResult, initialEdges) : null),
-    [pathResult],
+    () => (pathResult ? pathEdgeIds(pathResult, baseEdges) : null),
+    [pathResult, baseEdges],
   );
 
   const pathStatus = useMemo((): "idle" | "ready" | "no-path" => {
@@ -70,39 +98,57 @@ function FamilyTreeCanvas() {
   useEffect(() => {
     setNodes((current) =>
       current.map((node) => {
-        const data = node.data as FamilyMemberNodeData;
-        const isDeceased = data.deathYear !== null;
-        return {
-          ...node,
-          data: {
-            ...data,
+        const data = node.data;
+        const pathHighlighted = pathNodeIds?.has(node.id) ?? false;
+        if (data.kind === "person") {
+          const isDeceased = data.deathYear !== null;
+          return {
+            ...node,
+            data: {
+              ...data,
+              selected: node.id === selectedId,
+              greyed: greyDeceased && isDeceased,
+              pathHighlighted,
+            },
             selected: node.id === selectedId,
-            greyed: greyDeceased && isDeceased,
-            pathHighlighted: pathNodeIds?.has(node.id) ?? false,
-          },
-          selected: node.id === selectedId,
-        };
+          };
+        }
+        return { ...node, data: { ...data, pathHighlighted } };
       }),
     );
     setEdges((current) =>
       current.map((edge) => {
         const highlighted = pathEdgeIdSet?.has(edge.id) ?? false;
+        const baseStyle = baseEdges.find((e) => e.id === edge.id)?.style ?? defaultEdgeStyle;
         return {
           ...edge,
-          style: highlighted ? highlightedEdgeStyle : defaultEdgeStyle,
+          style: highlighted ? highlightedEdgeStyle : baseStyle,
           animated: highlighted,
         };
       }),
     );
-  }, [selectedId, greyDeceased, pathNodeIds, pathEdgeIdSet, setNodes, setEdges]);
+  }, [
+    selectedId,
+    greyDeceased,
+    pathNodeIds,
+    pathEdgeIdSet,
+    baseEdges,
+    setNodes,
+    setEdges,
+  ]);
 
-  const onSelectionChange = useCallback(({ nodes: selectedNodes }: OnSelectionChangeParams) => {
-    const node = selectedNodes[0] as Node<FamilyMemberNodeData> | undefined;
-    if (node) {
-      setSelectedId(node.id);
-      setPanelOpen(true);
-    }
-  }, []);
+  const onSelectionChange = useCallback(
+    ({ nodes: selectedNodes }: OnSelectionChangeParams) => {
+      const node = selectedNodes.find(
+        (n) => (n.data as FamilyNodeData)?.kind === "person",
+      ) as Node<FamilyNodeData> | undefined;
+      if (node) {
+        setSelectedId(node.id);
+        setPanelOpen(true);
+      }
+    },
+    [],
+  );
 
   useOnSelectionChange({ onChange: onSelectionChange });
 
@@ -116,10 +162,12 @@ function FamilyTreeCanvas() {
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        onInit={(instance) => {
+          instanceRef.current = instance;
+        }}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
         defaultEdgeOptions={{ style: defaultEdgeStyle }}
         nodesDraggable={false}
         nodesConnectable={false}
@@ -134,6 +182,14 @@ function FamilyTreeCanvas() {
         fitViewOptions={{ padding: 0.15 }}
         className="family-tree-flow"
       />
+
+      {!ready && (
+        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+          <p className="rounded-full bg-white/80 px-4 py-2 text-sm text-[#8b7d6b] shadow backdrop-blur-md">
+            Arranging the family tree…
+          </p>
+        </div>
+      )}
 
       <div className="pointer-events-none absolute inset-0 z-10 flex flex-col">
         <header className="flex justify-center px-6 pt-6">

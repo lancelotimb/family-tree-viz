@@ -1,6 +1,6 @@
 "use client";
 
-import { searchIndex } from "./mockFamilyData";
+import { searchIndex } from "./familyGraph";
 
 type PersonSelectProps = {
   label: string;
