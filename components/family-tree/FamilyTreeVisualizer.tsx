@@ -169,7 +169,7 @@ function FamilyTreeCanvas() {
         onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
         defaultEdgeOptions={{ style: defaultEdgeStyle }}
-        nodesDraggable
+        nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable
         panOnDrag
