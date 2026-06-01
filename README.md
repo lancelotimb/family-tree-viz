@@ -22,20 +22,20 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 ## Family data (GEDCOM)
 
-The tree is defined as a GEDCOM document in
-`components/family-tree/gedcom.ts`. `INDI` records are people and `FAM` records
-are marriage/union nodes — `HUSB`/`WIFE` are the partners and `CHIL` the
-children. Modelling unions as records (rather than a single `spouseId`) is what
-lets the tree represent remarriages, divorces, and half-siblings.
+The tree is defined as a GEDCOM document in `data/family-tree.ged`. `INDI`
+records are people and `FAM` records are marriage/union nodes — `HUSB`/`WIFE` are
+the partners and `CHIL` the children. Modelling unions as records (rather than a
+single `spouseId`) is what lets the tree represent remarriages, divorces, and
+half-siblings.
 
-To edit the family, change the GEDCOM string:
+To edit the family, change `data/family-tree.ged`:
 
 - Add a person with an `INDI` record (`NAME`, `SEX`, `BIRT`/`DEAT`, `NOTE` for
   the biography, `_PHOTO` for gallery captions).
 - Link relationships with a `FAM` record and the `FAMS` (spouse) / `FAMC`
   (child) pointers on the individuals.
 
-`gedcom.ts` parses the document into a graph; generations are derived
+`components/family-tree/gedcom.ts` parses the document into a graph; generations are derived
 automatically and the layout is computed with
 [ELK](https://github.com/kieler/elkjs)'s layered algorithm
 (`components/family-tree/elkLayout.ts`).
