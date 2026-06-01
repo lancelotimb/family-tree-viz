@@ -2,14 +2,15 @@
 
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { ProfileAvatar } from "./ProfileAvatar";
-import type { FamilyMemberNodeData } from "./types";
+import type { PersonNodeData } from "./types";
 
-function formatLifespan(birthYear: number, deathYear: number | null) {
-  return deathYear ? `${birthYear} – ${deathYear}` : `${birthYear} –`;
+function formatLifespan(birthYear: number | null, deathYear: number | null) {
+  const birth = birthYear ?? "?";
+  return deathYear ? `${birth} – ${deathYear}` : `${birth} –`;
 }
 
 export function FamilyMemberNode({ data, selected }: NodeProps) {
-  const member = data as FamilyMemberNodeData;
+  const member = data as PersonNodeData;
   const isGreyed = member.greyed;
   const isPathHighlighted = member.pathHighlighted;
 
@@ -27,19 +28,13 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
         id="child"
         type="target"
         position={Position.Top}
-        className="!h-2 !w-2 !opacity-0"
+        className="!h-2 !w-2 !border-0 !bg-transparent !opacity-0"
       />
       <Handle
-        id="spouse-left"
-        type="target"
-        position={Position.Left}
-        className="!h-3 !w-3 !border-0 !bg-transparent !opacity-0"
-      />
-      <Handle
-        id="spouse-right"
+        id="parent-out"
         type="source"
-        position={Position.Right}
-        className="!h-3 !w-3 !border-0 !bg-transparent !opacity-0"
+        position={Position.Bottom}
+        className="!h-2 !w-2 !border-0 !bg-transparent !opacity-0"
       />
       <div
         className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full border bg-gradient-to-b from-[#faf6ef] to-[#f0e8da] ${
