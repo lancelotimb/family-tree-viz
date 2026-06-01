@@ -20,6 +20,26 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Family data (GEDCOM)
+
+The tree is defined as a GEDCOM document in
+`components/family-tree/gedcom.ts`. `INDI` records are people and `FAM` records
+are marriage/union nodes — `HUSB`/`WIFE` are the partners and `CHIL` the
+children. Modelling unions as records (rather than a single `spouseId`) is what
+lets the tree represent remarriages, divorces, and half-siblings.
+
+To edit the family, change the GEDCOM string:
+
+- Add a person with an `INDI` record (`NAME`, `SEX`, `BIRT`/`DEAT`, `NOTE` for
+  the biography, `_PHOTO` for gallery captions).
+- Link relationships with a `FAM` record and the `FAMS` (spouse) / `FAMC`
+  (child) pointers on the individuals.
+
+`gedcom.ts` parses the document into a graph; generations are derived
+automatically and the layout is computed with
+[ELK](https://github.com/kieler/elkjs)'s layered algorithm
+(`components/family-tree/elkLayout.ts`).
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
