@@ -17,6 +17,7 @@ import { MarriageNode } from "./MarriageNode";
 import { SearchBar } from "./SearchBar";
 import { ControlDrawer } from "./ControlDrawer";
 import { ControlSidebar } from "./ControlSidebar";
+import { MAX_ZOOM, MIN_ZOOM } from "./layoutConstants";
 import { ZoomControls } from "./ZoomControls";
 import { ProfilePanel } from "./ProfilePanel";
 import {
@@ -70,7 +71,7 @@ function FamilyTreeCanvas() {
   useEffect(() => {
     if (!ready) return;
     requestAnimationFrame(() => {
-      instanceRef.current?.fitView({ padding: 0.15, duration: 400 });
+      instanceRef.current?.fitView({ padding: 0.15, minZoom: MIN_ZOOM, duration: 400 });
     });
   }, [ready]);
 
@@ -176,12 +177,12 @@ function FamilyTreeCanvas() {
         elementsSelectable
         panOnDrag
         zoomOnScroll
-        minZoom={0.2}
-        maxZoom={1.8}
+        minZoom={MIN_ZOOM}
+        maxZoom={MAX_ZOOM}
         proOptions={{ hideAttribution: true }}
         onPaneClick={handlePaneClick}
         fitView
-        fitViewOptions={{ padding: 0.15 }}
+        fitViewOptions={{ padding: 0.15, minZoom: MIN_ZOOM }}
         className="family-tree-flow"
       />
 
