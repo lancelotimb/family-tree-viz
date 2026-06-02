@@ -1,12 +1,7 @@
 import type { Edge, Node } from "@xyflow/react";
 import { colorForFamilyName, type FamilyBranch } from "./branchPalette";
 import { FAMILY_GEDCOM, parseGedcom } from "./gedcom";
-import {
-  COUPLE_WIDTH,
-  NODE_HEIGHT,
-  NODE_WIDTH,
-  UNION_SIZE,
-} from "./layoutConstants";
+import { COUPLE_WIDTH, NODE_HEIGHT, NODE_WIDTH } from "./layoutConstants";
 import type {
   FamilyGraph,
   FamilyNodeData,
@@ -313,32 +308,32 @@ export function buildElkGraph(): {
       continue;
     }
 
-    // Loose layout: partners around an explicit marriage anchor, emitted in
-    // order (partner, anchor, partner) so ELK's model order keeps a single
-    // parent next to their anchor.
-    const [first, second] = union.partnerIds;
-    if (first) addPersonNode(first);
-    nodes.push({
-      id: unionNodeId(union.id),
-      width: UNION_SIZE,
-      height: UNION_SIZE,
-      partition: union.generation,
-    });
-    if (second) addPersonNode(second);
+    // Loose layout (remarriages, single parents): we deliberately do NOT hand
+    // ELK a marriage-anchor node. Such a node would share its partners'
+    // generation, so the partner→anchor edge would be an intra-layer edge — and
+    // ELK reacts by splitting that generation into sub-layers, which knocks
+    // same-generation relatives (siblings, in-laws) onto different rows. Instead
+    // we route the child edges straight from each partner and synthesize the
+    // marriage dot's position afterwards (see `computeLayout`), exactly as we
+    // already do for grouped couples. This keeps every generation a single layer.
+    for (const partnerId of union.partnerIds) addPersonNode(partnerId);
 
-    for (const partnerId of union.partnerIds) {
-      edges.push({
-        id: `marriage-${union.id}-${partnerId}`,
-        source: nodeOf(partnerId),
-        target: unionNodeId(union.id),
-      });
-    }
+    // A partner may be grouped into a couple node, so two partners can map to
+    // the same ELK node; dedupe the resulting child edges.
+    const emittedChildEdges = new Set<string>();
     for (const childId of union.childIds) {
-      edges.push({
-        id: `child-${union.id}-${childId}`,
-        source: unionNodeId(union.id),
-        target: nodeOf(childId),
-      });
+      for (const partnerId of union.partnerIds) {
+        const source = nodeOf(partnerId);
+        const target = nodeOf(childId);
+        const key = `${source}->${target}`;
+        if (emittedChildEdges.has(key)) continue;
+        emittedChildEdges.add(key);
+        edges.push({
+          id: `child-${union.id}-${partnerId}-${childId}`,
+          source,
+          target,
+        });
+      }
     }
   }
 
