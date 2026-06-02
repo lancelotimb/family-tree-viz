@@ -15,6 +15,7 @@ import {
 import { FamilyMemberNode } from "./FamilyMemberNode";
 import { MarriageNode } from "./MarriageNode";
 import { SearchBar } from "./SearchBar";
+import { ControlDrawer } from "./ControlDrawer";
 import { ControlSidebar } from "./ControlSidebar";
 import { ZoomControls } from "./ZoomControls";
 import { ProfilePanel } from "./ProfilePanel";
@@ -46,6 +47,7 @@ function FamilyTreeCanvas() {
   const [greyDeceased, setGreyDeceased] = useState(false);
   const [pathFromId, setPathFromId] = useState("");
   const [pathToId, setPathToId] = useState("");
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const instanceRef = useRef<ReactFlowInstance<Node<FamilyNodeData>, Edge> | null>(
     null,
   );
@@ -206,10 +208,22 @@ function FamilyTreeCanvas() {
             pathStatus={pathStatus}
           />
         </div>
-        <div className="flex justify-end p-6">
-          <ZoomControls />
+        <div className="flex justify-end pb-3 pr-3">
+          <ZoomControls onSettingsClick={() => setSettingsOpen(true)} />
         </div>
       </div>
+
+      <ControlDrawer
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        greyDeceased={greyDeceased}
+        onGreyDeceasedChange={setGreyDeceased}
+        pathFromId={pathFromId}
+        pathToId={pathToId}
+        onPathFromChange={setPathFromId}
+        onPathToChange={setPathToId}
+        pathStatus={pathStatus}
+      />
 
       <ProfilePanel
         memberId={selectedId}
