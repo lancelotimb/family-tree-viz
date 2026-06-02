@@ -115,32 +115,9 @@ function FamilyTreeCanvas() {
     return "no-path";
   }, [pathFromId, pathToId, pathResult]);
 
-  const handleFamilyVisibilityChange = useCallback(
-    (familyName: string, visible: boolean) => {
-      setVisibleFamilyNames((current) => {
-        const next = new Set(current);
-        if (visible) {
-          next.add(familyName);
-        } else {
-          next.delete(familyName);
-        }
-        return next;
-      });
-    },
-    [],
-  );
-
-  const showAllBranches = useCallback(() => {
-    setVisibleFamilyNames(new Set(allFamilyNames));
-  }, []);
-
-  const hideAllBranches = useCallback(() => {
-    setVisibleFamilyNames(new Set());
-  }, []);
-
-  useEffect(() => {
+  const clearHiddenPeople = useCallback((nextVisibleFamilyNames: Set<string>) => {
     const isVisiblePerson = (id: string) =>
-      visibleFamilyNames.has(individuals[id]?.familyName ?? "");
+      nextVisibleFamilyNames.has(individuals[id]?.familyName ?? "");
 
     if (selectedId && !isVisiblePerson(selectedId)) {
       setSelectedId(null);
@@ -152,7 +129,31 @@ function FamilyTreeCanvas() {
     if (pathToId && !isVisiblePerson(pathToId)) {
       setPathToId("");
     }
-  }, [visibleFamilyNames, selectedId, pathFromId, pathToId]);
+  }, [selectedId, pathFromId, pathToId]);
+
+  const handleFamilyVisibilityChange = useCallback(
+    (familyName: string, visible: boolean) => {
+      const next = new Set(visibleFamilyNames);
+      if (visible) {
+        next.add(familyName);
+      } else {
+        next.delete(familyName);
+      }
+      setVisibleFamilyNames(next);
+      clearHiddenPeople(next);
+    },
+    [clearHiddenPeople, visibleFamilyNames],
+  );
+
+  const showAllBranches = useCallback(() => {
+    setVisibleFamilyNames(new Set(allFamilyNames));
+  }, []);
+
+  const hideAllBranches = useCallback(() => {
+    const next = new Set<string>();
+    setVisibleFamilyNames(next);
+    clearHiddenPeople(next);
+  }, [clearHiddenPeople]);
 
   useEffect(() => {
     const visibleUnionNodeIds = new Set<string>();

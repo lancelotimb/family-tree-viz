@@ -1,3 +1,5 @@
+import type { BranchColor } from "./branchPalette";
+
 export type MemberGender = "male" | "female";
 
 /** A dated, optionally-placed life event (GEDCOM BIRT / DEAT / MARR …). */
