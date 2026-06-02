@@ -44,9 +44,7 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
         width: NODE_WIDTH,
         height: NODE_HEIGHT,
         borderColor: cardBorderColor,
-        background: colorByFamily
-          ? `linear-gradient(180deg, #fffef9 35%, ${branchColor.background} 100%)`
-          : "#fffef9",
+        backgroundColor: colorByFamily ? branchColor.background : "#fffef9",
       }}
       title={`${member.name} (${member.familyName})`}
       className={`flex flex-col items-center rounded-xl border-2 px-4 py-3 shadow-sm transition-all duration-300 ${
