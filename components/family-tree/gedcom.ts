@@ -97,9 +97,19 @@ function parseEvent(node: GedcomNode | undefined): LifeEvent | null {
   return { year: parseYear(node), place: child(node, "PLAC")?.value };
 }
 
-function parseName(node: GedcomNode): string {
+function fallbackFamilyName(name: string): string {
+  const parts = name.split(" ").filter(Boolean);
+  return parts[parts.length - 1]?.toUpperCase() ?? "UNKNOWN";
+}
+
+function parseName(node: GedcomNode): { name: string; familyName: string } {
   const raw = child(node, "NAME")?.value ?? "Unknown";
-  return raw.replace(/\//g, "").replace(/\s+/g, " ").trim();
+  const name = raw.replace(/\//g, "").replace(/\s+/g, " ").trim();
+  const familyName = raw.match(/\/([^/]+)\//)?.[1]?.trim().toUpperCase();
+  return {
+    name,
+    familyName: familyName || fallbackFamilyName(name),
+  };
 }
 
 function parseGender(node: GedcomNode): MemberGender {
@@ -109,10 +119,12 @@ function parseGender(node: GedcomNode): MemberGender {
 function parseIndividual(node: GedcomNode): Individual {
   const birthNode = child(node, "BIRT");
   const deathNode = child(node, "DEAT");
+  const { name, familyName } = parseName(node);
 
   return {
     id: node.xref!,
-    name: parseName(node),
+    name,
+    familyName,
     gender: parseGender(node),
     birth: parseEvent(birthNode) ?? { year: null },
     death: deathNode ? (parseEvent(deathNode) ?? { year: null }) : null,

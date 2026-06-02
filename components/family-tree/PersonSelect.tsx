@@ -7,6 +7,7 @@ type PersonSelectProps = {
   value: string;
   onChange: (id: string) => void;
   excludeId?: string;
+  visibleFamilyNames?: Set<string>;
 };
 
 export function PersonSelect({
@@ -14,9 +15,14 @@ export function PersonSelect({
   value,
   onChange,
   excludeId,
+  visibleFamilyNames,
 }: PersonSelectProps) {
   const options = searchIndex
-    .filter((p) => p.id !== excludeId)
+    .filter(
+      (p) =>
+        p.id !== excludeId &&
+        (!visibleFamilyNames || visibleFamilyNames.has(p.familyName)),
+    )
     .sort((a, b) => a.name.localeCompare(b.name));
 
   return (

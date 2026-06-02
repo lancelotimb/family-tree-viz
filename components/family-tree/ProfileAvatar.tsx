@@ -1,14 +1,20 @@
 import { User } from "lucide-react";
+import type { CSSProperties } from "react";
 import type { MemberGender } from "./types";
 
 type ProfileAvatarProps = {
   gender: MemberGender;
   className?: string;
+  style?: CSSProperties;
   strokeWidth?: number;
 };
 
 /** Lucide-style silhouette with shoulder-length hair on both sides. */
-function UserFemaleIcon({ className, strokeWidth = 1.5 }: Omit<ProfileAvatarProps, "gender">) {
+function UserFemaleIcon({
+  className,
+  style,
+  strokeWidth = 1.5,
+}: Omit<ProfileAvatarProps, "gender">) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -19,6 +25,7 @@ function UserFemaleIcon({ className, strokeWidth = 1.5 }: Omit<ProfileAvatarProp
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
+      style={style}
       aria-hidden
     >
       <path d="M8 13.5c0-4 1.6-6.5 4-7 2.4-.5 4 2.5 4 7 0 3-.8 6.5-2 9.5" />
@@ -29,9 +36,16 @@ function UserFemaleIcon({ className, strokeWidth = 1.5 }: Omit<ProfileAvatarProp
   );
 }
 
-export function ProfileAvatar({ gender, className, strokeWidth }: ProfileAvatarProps) {
+export function ProfileAvatar({
+  gender,
+  className,
+  style,
+  strokeWidth,
+}: ProfileAvatarProps) {
   if (gender === "female") {
-    return <UserFemaleIcon className={className} strokeWidth={strokeWidth} />;
+    return (
+      <UserFemaleIcon className={className} style={style} strokeWidth={strokeWidth} />
+    );
   }
-  return <User className={className} strokeWidth={strokeWidth} />;
+  return <User className={className} style={style} strokeWidth={strokeWidth} />;
 }

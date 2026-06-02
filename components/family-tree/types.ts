@@ -15,6 +15,7 @@ export type LifeEvent = {
 export type Individual = {
   id: string;
   name: string;
+  familyName: string;
   gender: MemberGender;
   birth: LifeEvent;
   death: LifeEvent | null;
@@ -53,6 +54,8 @@ export type FamilyGraph = {
 export type PersonNodeData = {
   kind: "person";
   name: string;
+  familyName: string;
+  branchColor: BranchColor;
   birthYear: number | null;
   deathYear: number | null;
   gender: MemberGender;
@@ -64,6 +67,8 @@ export type PersonNodeData = {
 
 export type UnionNodeData = {
   kind: "union";
+  familyName: string;
+  branchColor: BranchColor;
   marriageYear: number | null;
   divorced: boolean;
   singleParent: boolean;

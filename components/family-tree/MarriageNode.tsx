@@ -10,6 +10,7 @@ import type { UnionNodeData } from "./types";
 export function MarriageNode({ data }: NodeProps) {
   const union = data as UnionNodeData;
   const highlighted = union.pathHighlighted;
+  const branchColor = union.branchColor;
 
   return (
     <div className="relative flex h-7 w-7 items-center justify-center">
@@ -26,12 +27,12 @@ export function MarriageNode({ data }: NodeProps) {
         className="!h-2 !w-2 !border-0 !bg-transparent !opacity-0"
       />
       <span
+        style={{
+          borderColor: highlighted ? "#7a9e6a" : branchColor.border,
+          backgroundColor: highlighted ? "#9bc48a" : branchColor.background,
+        }}
         className={`block rounded-full border transition-colors ${
           union.singleParent ? "h-2.5 w-2.5" : "h-3.5 w-3.5"
-        } ${
-          highlighted
-            ? "border-[#7a9e6a] bg-[#9bc48a]"
-            : "border-[#c4b49a] bg-[#efe6d4]"
         }`}
         title={
           union.marriageYear

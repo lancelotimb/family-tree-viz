@@ -25,11 +25,17 @@ import {
   findShortestPath,
   pathEdgeIds,
 } from "./graphPath";
-import { buildFlowEdges, buildFlowNodes } from "./familyGraph";
+import {
+  buildFlowEdges,
+  buildFlowNodes,
+  familyBranches,
+  individuals,
+} from "./familyGraph";
 import { computeLayout } from "./elkLayout";
 import type { FamilyNodeData } from "./types";
 
 const nodeTypes = { familyMember: FamilyMemberNode, union: MarriageNode };
+const allFamilyNames = familyBranches.map((branch) => branch.familyName);
 
 const defaultEdgeStyle = { stroke: "#c4b49a", strokeWidth: 1.5 };
 
@@ -37,6 +43,14 @@ const highlightedEdgeStyle = {
   stroke: "#7a9e6a",
   strokeWidth: 3,
 };
+
+type BranchEdgeData = {
+  familyName?: string;
+};
+
+function edgeFamilyName(edge: Edge): string | null {
+  return (edge.data as BranchEdgeData | undefined)?.familyName ?? null;
+}
 
 function FamilyTreeCanvas() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<FamilyNodeData>>([]);
@@ -46,6 +60,9 @@ function FamilyTreeCanvas() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [greyDeceased, setGreyDeceased] = useState(false);
+  const [visibleFamilyNames, setVisibleFamilyNames] = useState<Set<string>>(
+    () => new Set(allFamilyNames),
+  );
   const [pathFromId, setPathFromId] = useState("");
   const [pathToId, setPathToId] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -98,35 +115,93 @@ function FamilyTreeCanvas() {
     return "no-path";
   }, [pathFromId, pathToId, pathResult]);
 
+  const handleFamilyVisibilityChange = useCallback(
+    (familyName: string, visible: boolean) => {
+      setVisibleFamilyNames((current) => {
+        const next = new Set(current);
+        if (visible) {
+          next.add(familyName);
+        } else {
+          next.delete(familyName);
+        }
+        return next;
+      });
+    },
+    [],
+  );
+
+  const showAllBranches = useCallback(() => {
+    setVisibleFamilyNames(new Set(allFamilyNames));
+  }, []);
+
+  const hideAllBranches = useCallback(() => {
+    setVisibleFamilyNames(new Set());
+  }, []);
+
   useEffect(() => {
+    const isVisiblePerson = (id: string) =>
+      visibleFamilyNames.has(individuals[id]?.familyName ?? "");
+
+    if (selectedId && !isVisiblePerson(selectedId)) {
+      setSelectedId(null);
+      setPanelOpen(false);
+    }
+    if (pathFromId && !isVisiblePerson(pathFromId)) {
+      setPathFromId("");
+    }
+    if (pathToId && !isVisiblePerson(pathToId)) {
+      setPathToId("");
+    }
+  }, [visibleFamilyNames, selectedId, pathFromId, pathToId]);
+
+  useEffect(() => {
+    const visibleUnionNodeIds = new Set<string>();
+    for (const edge of baseEdges) {
+      const familyName = edgeFamilyName(edge);
+      if (!familyName || !visibleFamilyNames.has(familyName)) continue;
+      visibleUnionNodeIds.add(edge.source);
+      visibleUnionNodeIds.add(edge.target);
+    }
+
     setNodes((current) =>
       current.map((node) => {
         const data = node.data;
         const pathHighlighted = pathNodeIds?.has(node.id) ?? false;
         if (data.kind === "person") {
           const isDeceased = data.deathYear !== null;
+          const hidden = !visibleFamilyNames.has(data.familyName);
           return {
             ...node,
+            hidden,
             data: {
               ...data,
-              selected: node.id === selectedId,
+              selected: !hidden && node.id === selectedId,
               greyed: greyDeceased && isDeceased,
-              pathHighlighted,
+              pathHighlighted: !hidden && pathHighlighted,
             },
-            selected: node.id === selectedId,
+            selected: !hidden && node.id === selectedId,
           };
         }
-        return { ...node, data: { ...data, pathHighlighted } };
+        const hidden =
+          !visibleUnionNodeIds.has(node.id) && !visibleFamilyNames.has(data.familyName);
+        return {
+          ...node,
+          hidden,
+          data: { ...data, pathHighlighted: !hidden && pathHighlighted },
+        };
       }),
     );
     setEdges((current) =>
       current.map((edge) => {
         const highlighted = pathEdgeIdSet?.has(edge.id) ?? false;
+        const familyName = edgeFamilyName(edge);
+        const hidden = !familyName || !visibleFamilyNames.has(familyName);
         const baseStyle = baseEdges.find((e) => e.id === edge.id)?.style ?? defaultEdgeStyle;
         return {
           ...edge,
-          style: highlighted ? highlightedEdgeStyle : baseStyle,
-          animated: highlighted,
+          hidden,
+          style: !hidden && highlighted ? highlightedEdgeStyle : baseStyle,
+          animated: !hidden && highlighted,
         };
       }),
     );
@@ -135,6 +210,7 @@ function FamilyTreeCanvas() {
     greyDeceased,
     pathNodeIds,
     pathEdgeIdSet,
+    visibleFamilyNames,
     baseEdges,
     setNodes,
     setEdges,
@@ -196,12 +272,17 @@ function FamilyTreeCanvas() {
 
       <div className="pointer-events-none absolute inset-0 z-10 flex flex-col">
         <header className="flex justify-center px-6 pt-6">
-          <SearchBar />
+          <SearchBar visibleFamilyNames={visibleFamilyNames} />
         </header>
         <div className="flex flex-1 items-start p-6">
           <ControlSidebar
             greyDeceased={greyDeceased}
             onGreyDeceasedChange={setGreyDeceased}
+            familyBranches={familyBranches}
+            visibleFamilyNames={visibleFamilyNames}
+            onFamilyVisibilityChange={handleFamilyVisibilityChange}
+            onShowAllBranches={showAllBranches}
+            onHideAllBranches={hideAllBranches}
             pathFromId={pathFromId}
             pathToId={pathToId}
             onPathFromChange={setPathFromId}
@@ -219,6 +300,11 @@ function FamilyTreeCanvas() {
         onClose={() => setSettingsOpen(false)}
         greyDeceased={greyDeceased}
         onGreyDeceasedChange={setGreyDeceased}
+        familyBranches={familyBranches}
+        visibleFamilyNames={visibleFamilyNames}
+        onFamilyVisibilityChange={handleFamilyVisibilityChange}
+        onShowAllBranches={showAllBranches}
+        onHideAllBranches={hideAllBranches}
         pathFromId={pathFromId}
         pathToId={pathToId}
         onPathFromChange={setPathFromId}
