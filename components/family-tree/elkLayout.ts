@@ -1,8 +1,9 @@
 import ELK, { type ElkNode } from "elkjs/lib/elk.bundled.js";
-import { buildElkGraph, unions } from "./familyGraph";
+import { buildElkGraph, individuals, unions } from "./familyGraph";
 import {
   COUPLE_INNER_GAP,
   COUPLE_UNION_DROP,
+  COUPLE_WIDTH,
   LAYER_GAP,
   NODE_WIDTH,
   UNION_SIZE,
@@ -66,17 +67,60 @@ export async function computeLayout(): Promise<Map<string, LayoutPosition>> {
     });
   }
 
+  // Snapshot the combined couple centers before mutating, so they stay usable
+  // as parent anchors while we expand the rest of the couples.
+  const coupleCenterX = new Map<string, number>();
+  for (const couple of couples) {
+    const pos = positions.get(couple.nodeId);
+    if (pos) coupleCenterX.set(couple.unionId, pos.x + COUPLE_WIDTH / 2);
+  }
+
+  /**
+   * Horizontal center of a person's parent union (their `famc`), if it is laid
+   * out. Used to orient a couple so each partner sits on the side their own
+   * parents are on, which keeps the two upward marriage edges from crossing.
+   */
+  const parentAnchorX = (personId: string): number | null => {
+    const famc = individuals[personId]?.famc;
+    if (!famc) return null;
+    if (coupleCenterX.has(famc)) return coupleCenterX.get(famc)!;
+    const loose = positions.get(famc);
+    return loose ? loose.x + UNION_SIZE / 2 : null;
+  };
+
   // Expand each combined couple node into its two partner cards and a marriage
-  // anchor dot centered just below them, so spouses always sit side by side.
+  // anchor dot centered just below them. We no longer force husband-left:
+  // whichever partner's parents lie further left is placed on the left, which
+  // removes avoidable crossings between the partners' edges to their parents.
   for (const couple of couples) {
     const combined = positions.get(couple.nodeId);
     if (!combined) continue;
-    const leftX = combined.x;
+
+    const center =
+      coupleCenterX.get(couple.unionId) ?? combined.x + COUPLE_WIDTH / 2;
+    const leftAnchor = parentAnchorX(couple.leftId);
+    const rightAnchor = parentAnchorX(couple.rightId);
+
+    let swap = false;
+    if (leftAnchor !== null && rightAnchor !== null) {
+      swap = leftAnchor > rightAnchor;
+    } else if (leftAnchor !== null) {
+      swap = leftAnchor > center;
+    } else if (rightAnchor !== null) {
+      swap = rightAnchor < center;
+    }
+
+    const leftPartner = swap ? couple.rightId : couple.leftId;
+    const rightPartner = swap ? couple.leftId : couple.rightId;
     const rightX = combined.x + NODE_WIDTH + COUPLE_INNER_GAP;
 
-    positions.set(couple.leftId, { id: couple.leftId, x: leftX, y: combined.y });
-    positions.set(couple.rightId, {
-      id: couple.rightId,
+    positions.set(leftPartner, {
+      id: leftPartner,
+      x: combined.x,
+      y: combined.y,
+    });
+    positions.set(rightPartner, {
+      id: rightPartner,
       x: rightX,
       y: combined.y,
     });
