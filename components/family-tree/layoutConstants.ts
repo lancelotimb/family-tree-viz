@@ -1,5 +1,10 @@
 export const NODE_WIDTH = 200;
-export const NODE_HEIGHT = 120;
+/**
+ * Fixed height of every person card. Sized to hold the avatar, a two-line
+ * (clamped) name, and the lifespan, so all nodes are uniform regardless of name
+ * length. Kept in sync with the card markup in `FamilyMemberNode`.
+ */
+export const NODE_HEIGHT = 150;
 export const UNION_SIZE = 28;
 export const H_GAP = 80;
 export const V_GAP = 140;
