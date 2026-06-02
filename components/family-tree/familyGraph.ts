@@ -1,4 +1,5 @@
 import type { Edge, Node } from "@xyflow/react";
+import { colorForFamilyName, type FamilyBranch } from "./branchPalette";
 import { FAMILY_GEDCOM, parseGedcom } from "./gedcom";
 import {
   COUPLE_WIDTH,
@@ -128,12 +129,26 @@ export const searchIndex = Object.values(individuals)
   .map((p) => ({
     id: p.id,
     name: p.name,
+    familyName: p.familyName,
     birthYear: p.birth.year,
     deathYear: p.death?.year ?? null,
     gender: p.gender,
     generation: p.generation,
   }))
   .sort((a, b) => a.name.localeCompare(b.name));
+
+export const familyBranches: FamilyBranch[] = Array.from(
+  Object.values(individuals).reduce((counts, individual) => {
+    counts.set(individual.familyName, (counts.get(individual.familyName) ?? 0) + 1);
+    return counts;
+  }, new Map<string, number>()),
+)
+  .map(([familyName, count]) => ({
+    familyName,
+    count,
+    color: colorForFamilyName(familyName),
+  }))
+  .sort((a, b) => b.count - a.count || a.familyName.localeCompare(b.familyName));
 
 export const maxGeneration = Math.max(
   ...Object.values(individuals).map((p) => p.generation),
@@ -320,9 +335,12 @@ export function buildElkGraph(): {
 type Positioned = { id: string; x: number; y: number };
 
 function personData(individual: Individual): PersonNodeData {
+  const branchColor = colorForFamilyName(individual.familyName);
   return {
     kind: "person",
     name: individual.name,
+    familyName: individual.familyName,
+    branchColor,
     birthYear: individual.birth.year,
     deathYear: individual.death?.year ?? null,
     gender: individual.gender,
@@ -330,9 +348,23 @@ function personData(individual: Individual): PersonNodeData {
   };
 }
 
+function unionFamilyName(union: Union): string {
+  const childFamilyName = union.childIds
+    .map((id) => individuals[id]?.familyName)
+    .find(Boolean);
+  if (childFamilyName) return childFamilyName;
+  const partnerFamilyName = union.partnerIds
+    .map((id) => individuals[id]?.familyName)
+    .find(Boolean);
+  return partnerFamilyName ?? "UNKNOWN";
+}
+
 function unionData(union: Union): UnionNodeData {
+  const familyName = unionFamilyName(union);
   return {
     kind: "union",
+    familyName,
+    branchColor: colorForFamilyName(familyName),
     marriageYear: union.marriage?.year ?? null,
     divorced: union.divorce !== null,
     singleParent: union.partnerIds.length < 2,
@@ -371,7 +403,12 @@ export function buildFlowNodes(
   return nodes;
 }
 
-const edgeStyle = { stroke: "#c4b49a", strokeWidth: 1.5 };
+function edgeStyleForFamily(familyName: string) {
+  return {
+    stroke: colorForFamilyName(familyName).stroke,
+    strokeWidth: 1.7,
+  };
+}
 
 /**
  * Build render edges: each partner connects down to their union anchor, and the
@@ -386,6 +423,7 @@ export function buildFlowEdges(_positions: Map<string, Positioned>): Edge[] {
     const unionId = unionNodeId(union.id);
 
     for (const partnerId of union.partnerIds) {
+      const familyName = individuals[partnerId]?.familyName ?? unionFamilyName(union);
       edges.push({
         id: `marriage-${union.id}-${partnerId}`,
         source: personNodeId(partnerId),
@@ -395,13 +433,14 @@ export function buildFlowEdges(_positions: Map<string, Positioned>): Edge[] {
         type: "smoothstep",
         pathOptions: { borderRadius: 12 },
         style: union.divorce
-          ? { ...edgeStyle, strokeDasharray: "5 4" }
-          : edgeStyle,
-        data: { kind: "marriage" },
+          ? { ...edgeStyleForFamily(familyName), strokeDasharray: "5 4" }
+          : edgeStyleForFamily(familyName),
+        data: { kind: "marriage", familyName },
       } as Edge);
     }
 
     for (const childId of union.childIds) {
+      const familyName = individuals[childId]?.familyName ?? unionFamilyName(union);
       edges.push({
         id: `child-${union.id}-${childId}`,
         source: unionId,
@@ -410,8 +449,8 @@ export function buildFlowEdges(_positions: Map<string, Positioned>): Edge[] {
         targetHandle: "child",
         type: "smoothstep",
         pathOptions: { borderRadius: 12 },
-        style: edgeStyle,
-        data: { kind: "child" },
+        style: edgeStyleForFamily(familyName),
+        data: { kind: "child", familyName },
       } as Edge);
     }
   }

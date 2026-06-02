@@ -25,11 +25,17 @@ import {
   findShortestPath,
   pathEdgeIds,
 } from "./graphPath";
-import { buildFlowEdges, buildFlowNodes } from "./familyGraph";
+import {
+  buildFlowEdges,
+  buildFlowNodes,
+  familyBranches,
+  individuals,
+} from "./familyGraph";
 import { computeLayout } from "./elkLayout";
 import type { FamilyNodeData } from "./types";
 
 const nodeTypes = { familyMember: FamilyMemberNode, union: MarriageNode };
+const allFamilyNames = familyBranches.map((branch) => branch.familyName);
 
 const defaultEdgeStyle = { stroke: "#c4b49a", strokeWidth: 1.5 };
 
@@ -37,6 +43,19 @@ const highlightedEdgeStyle = {
   stroke: "#7a9e6a",
   strokeWidth: 3,
 };
+
+type BranchEdgeData = {
+  familyName?: string;
+};
+
+function edgeFamilyName(edge: Edge): string | null {
+  return (edge.data as BranchEdgeData | undefined)?.familyName ?? null;
+}
+
+function neutralEdgeStyle(edge: Edge) {
+  const dash = (edge.style as { strokeDasharray?: string } | undefined)?.strokeDasharray;
+  return dash ? { ...defaultEdgeStyle, strokeDasharray: dash } : defaultEdgeStyle;
+}
 
 function FamilyTreeCanvas() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<FamilyNodeData>>([]);
@@ -46,6 +65,10 @@ function FamilyTreeCanvas() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [greyDeceased, setGreyDeceased] = useState(false);
+  const [colorByFamily, setColorByFamily] = useState(true);
+  const [visibleFamilyNames, setVisibleFamilyNames] = useState<Set<string>>(
+    () => new Set(allFamilyNames),
+  );
   const [pathFromId, setPathFromId] = useState("");
   const [pathToId, setPathToId] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -98,43 +121,113 @@ function FamilyTreeCanvas() {
     return "no-path";
   }, [pathFromId, pathToId, pathResult]);
 
+  const clearHiddenPeople = useCallback((nextVisibleFamilyNames: Set<string>) => {
+    const isVisiblePerson = (id: string) =>
+      nextVisibleFamilyNames.has(individuals[id]?.familyName ?? "");
+
+    if (selectedId && !isVisiblePerson(selectedId)) {
+      setSelectedId(null);
+      setPanelOpen(false);
+    }
+    if (pathFromId && !isVisiblePerson(pathFromId)) {
+      setPathFromId("");
+    }
+    if (pathToId && !isVisiblePerson(pathToId)) {
+      setPathToId("");
+    }
+  }, [selectedId, pathFromId, pathToId]);
+
+  const handleFamilyVisibilityChange = useCallback(
+    (familyName: string, visible: boolean) => {
+      const next = new Set(visibleFamilyNames);
+      if (visible) {
+        next.add(familyName);
+      } else {
+        next.delete(familyName);
+      }
+      setVisibleFamilyNames(next);
+      clearHiddenPeople(next);
+    },
+    [clearHiddenPeople, visibleFamilyNames],
+  );
+
+  const showAllBranches = useCallback(() => {
+    setVisibleFamilyNames(new Set(allFamilyNames));
+  }, []);
+
+  const hideAllBranches = useCallback(() => {
+    const next = new Set<string>();
+    setVisibleFamilyNames(next);
+    clearHiddenPeople(next);
+  }, [clearHiddenPeople]);
+
   useEffect(() => {
+    const visibleUnionNodeIds = new Set<string>();
+    for (const edge of baseEdges) {
+      const familyName = edgeFamilyName(edge);
+      if (!familyName || !visibleFamilyNames.has(familyName)) continue;
+      visibleUnionNodeIds.add(edge.source);
+      visibleUnionNodeIds.add(edge.target);
+    }
+
     setNodes((current) =>
       current.map((node) => {
         const data = node.data;
         const pathHighlighted = pathNodeIds?.has(node.id) ?? false;
         if (data.kind === "person") {
           const isDeceased = data.deathYear !== null;
+          const hidden = !visibleFamilyNames.has(data.familyName);
           return {
             ...node,
+            hidden,
             data: {
               ...data,
-              selected: node.id === selectedId,
+              selected: !hidden && node.id === selectedId,
               greyed: greyDeceased && isDeceased,
-              pathHighlighted,
+              pathHighlighted: !hidden && pathHighlighted,
+              colorByFamily,
             },
-            selected: node.id === selectedId,
+            selected: !hidden && node.id === selectedId,
           };
         }
-        return { ...node, data: { ...data, pathHighlighted } };
+        const hidden =
+          !visibleUnionNodeIds.has(node.id) && !visibleFamilyNames.has(data.familyName);
+        return {
+          ...node,
+          hidden,
+          data: {
+            ...data,
+            pathHighlighted: !hidden && pathHighlighted,
+            colorByFamily,
+          },
+        };
       }),
     );
     setEdges((current) =>
       current.map((edge) => {
         const highlighted = pathEdgeIdSet?.has(edge.id) ?? false;
-        const baseStyle = baseEdges.find((e) => e.id === edge.id)?.style ?? defaultEdgeStyle;
+        const familyName = edgeFamilyName(edge);
+        const hidden = !familyName || !visibleFamilyNames.has(familyName);
+        const baseEdge = baseEdges.find((e) => e.id === edge.id);
+        const baseStyle = baseEdge?.style ?? defaultEdgeStyle;
+        const visibleStyle = colorByFamily
+          ? baseStyle
+          : neutralEdgeStyle(baseEdge ?? edge);
         return {
           ...edge,
-          style: highlighted ? highlightedEdgeStyle : baseStyle,
-          animated: highlighted,
+          hidden,
+          style: !hidden && highlighted ? highlightedEdgeStyle : visibleStyle,
+          animated: !hidden && highlighted,
         };
       }),
     );
   }, [
     selectedId,
     greyDeceased,
+    colorByFamily,
     pathNodeIds,
     pathEdgeIdSet,
+    visibleFamilyNames,
     baseEdges,
     setNodes,
     setEdges,
@@ -196,12 +289,19 @@ function FamilyTreeCanvas() {
 
       <div className="pointer-events-none absolute inset-0 z-10 flex flex-col">
         <header className="flex justify-center px-6 pt-6">
-          <SearchBar />
+          <SearchBar visibleFamilyNames={visibleFamilyNames} />
         </header>
         <div className="flex flex-1 items-start p-6">
           <ControlSidebar
             greyDeceased={greyDeceased}
             onGreyDeceasedChange={setGreyDeceased}
+            colorByFamily={colorByFamily}
+            onColorByFamilyChange={setColorByFamily}
+            familyBranches={familyBranches}
+            visibleFamilyNames={visibleFamilyNames}
+            onFamilyVisibilityChange={handleFamilyVisibilityChange}
+            onShowAllBranches={showAllBranches}
+            onHideAllBranches={hideAllBranches}
             pathFromId={pathFromId}
             pathToId={pathToId}
             onPathFromChange={setPathFromId}
@@ -219,6 +319,13 @@ function FamilyTreeCanvas() {
         onClose={() => setSettingsOpen(false)}
         greyDeceased={greyDeceased}
         onGreyDeceasedChange={setGreyDeceased}
+        colorByFamily={colorByFamily}
+        onColorByFamilyChange={setColorByFamily}
+        familyBranches={familyBranches}
+        visibleFamilyNames={visibleFamilyNames}
+        onFamilyVisibilityChange={handleFamilyVisibilityChange}
+        onShowAllBranches={showAllBranches}
+        onHideAllBranches={hideAllBranches}
         pathFromId={pathFromId}
         pathToId={pathToId}
         onPathFromChange={setPathFromId}

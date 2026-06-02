@@ -14,6 +14,25 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
   const member = data as PersonNodeData;
   const isGreyed = member.greyed;
   const isPathHighlighted = member.pathHighlighted;
+  const branchColor = member.branchColor;
+  const colorByFamily = member.colorByFamily ?? true;
+  const cardBorderColor = isPathHighlighted
+    ? "#7a9e6a"
+    : colorByFamily
+      ? branchColor.border
+      : selected
+        ? "#b8956a"
+        : "#e8dfd0";
+  const avatarBorderColor = isPathHighlighted
+    ? "#7a9e6a"
+    : colorByFamily
+      ? branchColor.border
+      : "#e8dfd0";
+  const avatarColor = isPathHighlighted
+    ? "#5a7d4a"
+    : colorByFamily
+      ? branchColor.stroke
+      : "#a8957a";
 
   return (
     // Pin the card to the exact size the layout reserves (NODE_WIDTH ×
@@ -21,13 +40,21 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
     // layout left for it. The fixed height is what keeps long and short names
     // from producing different-sized cards.
     <div
-      style={{ width: NODE_WIDTH, height: NODE_HEIGHT }}
-      className={`flex flex-col items-center rounded-xl border bg-[#fffef9] px-4 py-3 shadow-sm transition-all duration-300 ${
+      style={{
+        width: NODE_WIDTH,
+        height: NODE_HEIGHT,
+        borderColor: cardBorderColor,
+        backgroundColor: colorByFamily
+          ? `color-mix(in srgb, ${branchColor.background} 45%, #fffef9)`
+          : "#fffef9",
+      }}
+      title={`${member.name} (${member.familyName})`}
+      className={`flex flex-col items-center rounded-xl border-2 px-4 py-3 shadow-sm transition-all duration-300 ${
         isPathHighlighted
-          ? "border-[#7a9e6a] shadow-md ring-2 ring-[#9bc48a]/50"
+          ? "shadow-md ring-2 ring-[#9bc48a]/60"
           : selected
-            ? "border-[#b8956a] shadow-md ring-2 ring-[#d4b896]/40"
-            : "border-[#e8dfd0] hover:border-[#d4c4a8] hover:shadow-md"
+            ? "shadow-md ring-2 ring-[#d4b896]/50"
+            : "hover:shadow-md"
       } ${isGreyed ? "opacity-45 grayscale" : ""}`}
     >
       <Handle
@@ -43,13 +70,18 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
         className="!h-2 !w-2 !border-0 !bg-transparent !opacity-0"
       />
       <div
-        className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full border bg-gradient-to-b from-[#faf6ef] to-[#f0e8da] ${
-          isPathHighlighted ? "border-[#7a9e6a]" : "border-[#e8dfd0]"
-        }`}
+        style={{
+          borderColor: avatarBorderColor,
+          background: colorByFamily
+            ? `linear-gradient(180deg, ${branchColor.background}, #f0e8da)`
+            : "linear-gradient(180deg, #faf6ef, #f0e8da)",
+        }}
+        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border"
       >
         <ProfileAvatar
           gender={member.gender}
-          className={`h-6 w-6 ${isPathHighlighted ? "text-[#5a7d4a]" : "text-[#a8957a]"}`}
+          className="h-6 w-6"
+          style={{ color: avatarColor }}
           strokeWidth={1.5}
         />
       </div>
