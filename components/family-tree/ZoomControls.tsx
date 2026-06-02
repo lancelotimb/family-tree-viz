@@ -44,7 +44,7 @@ export function ZoomControls({ onSettingsClick }: ZoomControlsProps) {
       <ZoomButton
         label="Fit view"
         icon={<Maximize2 className="h-4 w-4" />}
-        onClick={() => fitView({ duration: 500, padding: 0.15 })}
+        onClick={() => fitView({ duration: 500, padding: 0.15, minZoom: MIN_ZOOM })}
       />
     </div>
   );
