@@ -21,16 +21,33 @@ import type {
  * their union, and married-in partners are pulled down to match their partner's
  * generation so couples share a row. Computed as a fixpoint relaxation, which
  * naturally handles multi-marriages and half-siblings.
+ *
+ * Generations model *contemporaneity*, not raw ancestral depth: a married
+ * couple share a row, so when someone marries into a deeper branch they are
+ * pulled down to their spouse's generation. To keep their birth family
+ * consistent we also pull a union down to sit one row above its *deepest* child
+ * (the `gen[childId] - 1` term below). That deepest child then drags the union,
+ * which in turn lifts every sibling onto the same row and propagates up the
+ * branch — so a short branch that marries into a deep one slides down as a unit
+ * instead of leaving the married-in member stranded generations below their
+ * parents and siblings.
  */
 function deriveGenerations(graph: FamilyGraph): void {
   const { individuals, unions } = graph;
   const gen: Record<string, number> = {};
   for (const id of Object.keys(individuals)) gen[id] = 0;
 
-  const partnerGenerationOf = (union: Union) =>
-    union.partnerIds.length
+  // A union sits as deep as the lower of: its own partners, or one row above its
+  // deepest child (so a child pulled down by their marriage drags the family).
+  const unionGenerationOf = (union: Union) => {
+    let result = union.partnerIds.length
       ? Math.max(...union.partnerIds.map((p) => gen[p] ?? 0))
       : 0;
+    for (const childId of union.childIds) {
+      result = Math.max(result, (gen[childId] ?? 0) - 1);
+    }
+    return result;
+  };
 
   const maxIterations =
     Object.keys(individuals).length + Object.keys(unions).length + 1;
@@ -39,7 +56,7 @@ function deriveGenerations(graph: FamilyGraph): void {
     let changed = false;
 
     for (const union of Object.values(unions)) {
-      const partnerGen = partnerGenerationOf(union);
+      const partnerGen = unionGenerationOf(union);
 
       for (const partnerId of union.partnerIds) {
         if ((gen[partnerId] ?? 0) < partnerGen) {
@@ -63,7 +80,7 @@ function deriveGenerations(graph: FamilyGraph): void {
     individual.generation = gen[individual.id] ?? 0;
   }
   for (const union of Object.values(unions)) {
-    union.generation = partnerGenerationOf(union);
+    union.generation = unionGenerationOf(union);
   }
 }
 
