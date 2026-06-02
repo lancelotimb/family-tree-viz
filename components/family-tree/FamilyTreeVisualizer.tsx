@@ -6,10 +6,9 @@ import {
   ReactFlowProvider,
   useNodesState,
   useEdgesState,
-  useOnSelectionChange,
   type Edge,
   type Node,
-  type OnSelectionChangeParams,
+  type NodeMouseHandler,
   type ReactFlowInstance,
 } from "@xyflow/react";
 import { FamilyMemberNode } from "./FamilyMemberNode";
@@ -187,7 +186,6 @@ function FamilyTreeCanvas() {
               pathHighlighted: !hidden && pathHighlighted,
               colorByFamily,
             },
-            selected: !hidden && node.id === selectedId,
           };
         }
         const hidden =
@@ -233,20 +231,12 @@ function FamilyTreeCanvas() {
     setEdges,
   ]);
 
-  const onSelectionChange = useCallback(
-    ({ nodes: selectedNodes }: OnSelectionChangeParams) => {
-      const node = selectedNodes.find(
-        (n) => (n.data as FamilyNodeData)?.kind === "person",
-      ) as Node<FamilyNodeData> | undefined;
-      if (node) {
-        setSelectedId(node.id);
-        setPanelOpen(true);
-      }
-    },
-    [],
-  );
-
-  useOnSelectionChange({ onChange: onSelectionChange });
+  const handleNodeClick: NodeMouseHandler = useCallback((_event, node) => {
+    const data = node.data as FamilyNodeData;
+    if (data.kind !== "person" || node.hidden) return;
+    setSelectedId(node.id);
+    setPanelOpen(true);
+  }, []);
 
   const handlePaneClick = useCallback(() => {
     setSelectedId(null);
@@ -267,7 +257,9 @@ function FamilyTreeCanvas() {
         defaultEdgeOptions={{ style: defaultEdgeStyle }}
         nodesDraggable={false}
         nodesConnectable={false}
-        elementsSelectable
+        elementsSelectable={false}
+        selectNodesOnDrag={false}
+        onNodeClick={handleNodeClick}
         panOnDrag
         zoomOnScroll
         minZoom={MIN_ZOOM}

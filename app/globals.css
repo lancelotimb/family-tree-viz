@@ -38,4 +38,10 @@ body {
 
 .family-tree-flow .react-flow__node {
   cursor: pointer;
+  /* Let drags on person cards pan the viewport; clicks still hit the card. */
+  pointer-events: none;
+}
+
+.family-tree-flow .react-flow__node > * {
+  pointer-events: auto;
 }
