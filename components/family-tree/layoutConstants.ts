@@ -22,7 +22,7 @@ export const COUPLE_WIDTH = NODE_WIDTH * 2 + COUPLE_INNER_GAP;
  * Vertical spacing reserved between generation layers. Large enough to fit the
  * marriage anchor dot (which sits just below the couple) and its child edges.
  */
-export const LAYER_GAP = 120;
+export const LAYER_GAP = 152;
 
 /**
  * How far the marriage anchor dot drops below the top of a grouped couple. Puts
