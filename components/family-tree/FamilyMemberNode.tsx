@@ -2,6 +2,7 @@
 
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { ProfileAvatar } from "./ProfileAvatar";
+import { NODE_HEIGHT, NODE_WIDTH } from "./layoutConstants";
 import type { PersonNodeData } from "./types";
 
 function formatLifespan(birthYear: number | null, deathYear: number | null) {
@@ -16,7 +17,8 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
 
   return (
     <div
-      className={`w-[200px] rounded-xl border bg-[#fffef9] px-4 py-3 shadow-sm transition-all duration-300 ${
+      style={{ width: NODE_WIDTH, height: NODE_HEIGHT }}
+      className={`flex flex-col items-center rounded-xl border bg-[#fffef9] px-4 py-3 shadow-sm transition-all duration-300 ${
         isPathHighlighted
           ? "border-[#7a9e6a] shadow-md ring-2 ring-[#9bc48a]/50"
           : selected
@@ -37,7 +39,7 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
         className="!h-2 !w-2 !border-0 !bg-transparent !opacity-0"
       />
       <div
-        className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full border bg-gradient-to-b from-[#faf6ef] to-[#f0e8da] ${
+        className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full border bg-gradient-to-b from-[#faf6ef] to-[#f0e8da] ${
           isPathHighlighted ? "border-[#7a9e6a]" : "border-[#e8dfd0]"
         }`}
       >
@@ -47,14 +49,17 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
           strokeWidth={1.5}
         />
       </div>
-      <p
-        className={`mt-2 text-center font-serif text-base font-medium leading-tight ${
-          isPathHighlighted ? "text-[#3d5230]" : "text-[#3d3428]"
-        }`}
-      >
-        {member.name}
-      </p>
-      <p className="mt-1 text-center text-xs tracking-wide text-[#8b7d6b]">
+      <div className="mt-2 flex h-10 w-full items-center justify-center">
+        <p
+          title={member.name}
+          className={`line-clamp-2 w-full break-words text-center font-serif text-base font-medium leading-tight ${
+            isPathHighlighted ? "text-[#3d5230]" : "text-[#3d3428]"
+          }`}
+        >
+          {member.name}
+        </p>
+      </div>
+      <p className="mt-1 shrink-0 text-center text-xs tracking-wide text-[#8b7d6b]">
         {formatLifespan(member.birthYear, member.deathYear)}
       </p>
     </div>
