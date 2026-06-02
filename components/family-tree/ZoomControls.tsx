@@ -2,11 +2,7 @@
 
 import { useReactFlow } from "@xyflow/react";
 import { Maximize2, Settings, ZoomIn, ZoomOut } from "lucide-react";
-
-/** React Flow defaults to 1.2× per step; use a larger factor for button zoom. */
-const ZOOM_STEP = 1.45;
-const MIN_ZOOM = 0.2;
-const MAX_ZOOM = 1.8;
+import { MAX_ZOOM, MIN_ZOOM, ZOOM_STEP } from "./layoutConstants";
 
 type ZoomControlsProps = {
   onSettingsClick?: () => void;

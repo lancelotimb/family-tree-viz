@@ -17,6 +17,7 @@ import { MarriageNode } from "./MarriageNode";
 import { SearchBar } from "./SearchBar";
 import { ControlDrawer } from "./ControlDrawer";
 import { ControlSidebar } from "./ControlSidebar";
+import { MAX_ZOOM, MIN_ZOOM } from "./layoutConstants";
 import { ZoomControls } from "./ZoomControls";
 import { ProfilePanel } from "./ProfilePanel";
 import {
