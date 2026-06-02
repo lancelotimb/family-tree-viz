@@ -1,6 +1,11 @@
 import type { Edge, Node } from "@xyflow/react";
 import { FAMILY_GEDCOM, parseGedcom } from "./gedcom";
-import { NODE_HEIGHT, NODE_WIDTH, UNION_SIZE } from "./layoutConstants";
+import {
+  COUPLE_WIDTH,
+  NODE_HEIGHT,
+  NODE_WIDTH,
+  UNION_SIZE,
+} from "./layoutConstants";
 import type {
   FamilyGraph,
   FamilyNodeData,
@@ -146,29 +151,98 @@ export type ElkNodeInput = {
 
 export type ElkEdgeInput = { id: string; source: string; target: string };
 
+/** A couple that ELK lays out as one combined node, expanded after layout. */
+export type CoupleGroup = {
+  unionId: string;
+  /** ELK node id standing in for the whole couple. */
+  nodeId: string;
+  /** Partner placed on the left / right half of the combined node. */
+  leftId: string;
+  rightId: string;
+};
+
+export const coupleNodeId = (unionId: string) => `couple:${unionId}`;
+
 /**
- * Describe the graph for ELK: people and unions are both nodes, partitioned by
- * generation. Edges connect each partner to their union and each union down to
- * its children. Nodes are emitted grouped by couple so ELK's model-order keeps
- * spouses adjacent.
+ * Decide which unions become a single combined "couple" node. Each person can
+ * only belong to one combined couple, so for the rare remarriage we keep the
+ * earliest union grouped and let the others fall back to the loose edge layout.
+ */
+function planCouples(): {
+  couples: CoupleGroup[];
+  groupedUnions: Set<string>;
+  personToUnion: Record<string, string>;
+} {
+  const couples: CoupleGroup[] = [];
+  const groupedUnions = new Set<string>();
+  const personToUnion: Record<string, string> = {};
+
+  const ordered = Object.values(unions).sort((a, b) => {
+    if (a.generation !== b.generation) return a.generation - b.generation;
+    return (a.marriage?.year ?? Infinity) - (b.marriage?.year ?? Infinity);
+  });
+
+  for (const union of ordered) {
+    if (union.partnerIds.length !== 2) continue;
+    const [left, right] = union.partnerIds;
+    if (personToUnion[left] || personToUnion[right]) continue;
+    groupedUnions.add(union.id);
+    personToUnion[left] = union.id;
+    personToUnion[right] = union.id;
+    couples.push({
+      unionId: union.id,
+      nodeId: coupleNodeId(union.id),
+      leftId: left,
+      rightId: right,
+    });
+  }
+
+  return { couples, groupedUnions, personToUnion };
+}
+
+/**
+ * Describe the graph for ELK, partitioned by generation. Each two-partner
+ * couple collapses into a single node so ELK can never split spouses apart;
+ * everyone else (single parents, remarried partners) stays a plain person node
+ * connected through a marriage anchor. Edges connect partners to their union
+ * and unions down to their children. The combined couple nodes are expanded
+ * back into two partner positions after layout (see `computeLayout`).
  */
 export function buildElkGraph(): {
   nodes: ElkNodeInput[];
   edges: ElkEdgeInput[];
+  couples: CoupleGroup[];
 } {
   const nodes: ElkNodeInput[] = [];
   const edges: ElkEdgeInput[] = [];
   const emitted = new Set<string>();
 
-  const addPerson = (id: string) => {
-    if (emitted.has(id)) return;
-    emitted.add(id);
-    nodes.push({
-      id: personNodeId(id),
-      width: NODE_WIDTH,
-      height: NODE_HEIGHT,
-      partition: individuals[id].generation,
-    });
+  const { couples, groupedUnions, personToUnion } = planCouples();
+
+  /** ELK node id representing a person (their couple node when grouped). */
+  const nodeOf = (id: string) =>
+    personToUnion[id] ? coupleNodeId(personToUnion[id]) : personNodeId(id);
+
+  const addPersonNode = (id: string) => {
+    const groupUnion = personToUnion[id];
+    const nodeId = nodeOf(id);
+    if (emitted.has(nodeId)) return;
+    emitted.add(nodeId);
+    if (groupUnion) {
+      nodes.push({
+        id: nodeId,
+        width: COUPLE_WIDTH,
+        height: NODE_HEIGHT,
+        partition: unions[groupUnion].generation,
+      });
+    } else {
+      nodes.push({
+        id: nodeId,
+        width: NODE_WIDTH,
+        height: NODE_HEIGHT,
+        partition: individuals[id].generation,
+      });
+    }
   };
 
   const orderedUnions = Object.values(unions).sort(
@@ -176,20 +250,35 @@ export function buildElkGraph(): {
   );
 
   for (const union of orderedUnions) {
+    if (groupedUnions.has(union.id)) {
+      // Partners live inside one combined node; marriage edges are implicit.
+      addPersonNode(union.partnerIds[0]);
+      for (const childId of union.childIds) {
+        edges.push({
+          id: `child-${union.id}-${childId}`,
+          source: coupleNodeId(union.id),
+          target: nodeOf(childId),
+        });
+      }
+      continue;
+    }
+
+    // Loose layout: partners around an explicit marriage anchor, emitted in
+    // order so ELK's model order keeps a single parent next to their anchor.
     const [first, second] = union.partnerIds;
-    if (first) addPerson(first);
+    if (first) addPersonNode(first);
     nodes.push({
       id: unionNodeId(union.id),
       width: UNION_SIZE,
       height: UNION_SIZE,
       partition: union.generation,
     });
-    if (second) addPerson(second);
+    if (second) addPersonNode(second);
 
     for (const partnerId of union.partnerIds) {
       edges.push({
         id: `marriage-${union.id}-${partnerId}`,
-        source: personNodeId(partnerId),
+        source: nodeOf(partnerId),
         target: unionNodeId(union.id),
       });
     }
@@ -197,14 +286,14 @@ export function buildElkGraph(): {
       edges.push({
         id: `child-${union.id}-${childId}`,
         source: unionNodeId(union.id),
-        target: personNodeId(childId),
+        target: nodeOf(childId),
       });
     }
   }
 
-  for (const id of Object.keys(individuals)) addPerson(id);
+  for (const id of Object.keys(individuals)) addPersonNode(id);
 
-  return { nodes, edges };
+  return { nodes, edges, couples };
 }
 
 type Positioned = { id: string; x: number; y: number };
