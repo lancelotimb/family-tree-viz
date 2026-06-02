@@ -15,6 +15,7 @@ import {
 import { FamilyMemberNode } from "./FamilyMemberNode";
 import { MarriageNode } from "./MarriageNode";
 import { SearchBar } from "./SearchBar";
+import { ControlDrawer } from "./ControlDrawer";
 import { ControlSidebar } from "./ControlSidebar";
 import { ZoomControls } from "./ZoomControls";
 import { ProfilePanel } from "./ProfilePanel";
@@ -208,9 +209,21 @@ function FamilyTreeCanvas() {
           />
         </div>
         <div className="flex justify-end p-6">
-          <ZoomControls />
+          <ZoomControls onSettingsClick={() => setSettingsOpen(true)} />
         </div>
       </div>
+
+      <ControlDrawer
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        greyDeceased={greyDeceased}
+        onGreyDeceasedChange={setGreyDeceased}
+        pathFromId={pathFromId}
+        pathToId={pathToId}
+        onPathFromChange={setPathFromId}
+        onPathToChange={setPathToId}
+        pathStatus={pathStatus}
+      />
 
       <ProfilePanel
         memberId={selectedId}

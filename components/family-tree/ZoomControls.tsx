@@ -32,7 +32,7 @@ export function ZoomControls({ onSettingsClick }: ZoomControlsProps) {
           label="Settings"
           icon={<Settings className="h-4 w-4" />}
           onClick={onSettingsClick}
-          className="md:hidden"
+          className="hidden max-md:flex"
         />
       )}
       <ZoomButton
@@ -58,7 +58,7 @@ function ZoomButton({
   label,
   icon,
   onClick,
-  className = "",
+  className = "flex",
 }: {
   label: string;
   icon: React.ReactNode;
@@ -71,7 +71,7 @@ function ZoomButton({
       onClick={onClick}
       aria-label={label}
       title={label}
-      className={`flex h-10 w-10 items-center justify-center rounded-xl border border-[#e8dfd0] bg-white/80 text-[#3d3428] shadow-lg backdrop-blur-md transition-colors hover:border-[#d4c4a8] hover:bg-[#faf6ef] ${className}`}
+      className={`h-10 w-10 items-center justify-center rounded-xl border border-[#e8dfd0] bg-white/80 text-[#3d3428] shadow-lg backdrop-blur-md transition-colors hover:border-[#d4c4a8] hover:bg-[#faf6ef] ${className}`}
     >
       {icon}
     </button>
