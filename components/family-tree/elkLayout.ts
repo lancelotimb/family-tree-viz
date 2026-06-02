@@ -25,16 +25,23 @@ const average = (values: number[]) =>
  */
 export async function computeLayout(): Promise<Map<string, LayoutPosition>> {
   const { nodes, edges, couples } = buildElkGraph();
+  // Unions rendered as a single combined node; used below to skip them in the
+  // loose-anchor pass (their dot is positioned during couple expansion).
   const groupedUnions = new Set(couples.map((c) => c.unionId));
 
   const elkGraph: ElkNode = {
     id: "root",
     layoutOptions: {
       "elk.algorithm": "layered",
+      // Lay generations out top-to-bottom (ancestors above descendants).
       "elk.direction": "DOWN",
+      // Force each generation into its own layer band: `partition` (set per node
+      // below) maps 1:1 to a generation, so people never drift across rows.
       "elk.partitioning.activate": "true",
       "elk.layered.spacing.nodeNodeBetweenLayers": String(LAYER_GAP),
       "elk.spacing.nodeNode": "55",
+      // Honour the order in which we emit nodes/edges (couples are emitted as a
+      // unit), so crossing minimization keeps spouses and siblings together.
       "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
       "elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
       "elk.layered.cycleBreaking.strategy": "GREEDY",
@@ -79,6 +86,8 @@ export async function computeLayout(): Promise<Map<string, LayoutPosition>> {
    * Horizontal center of a person's parent union (their `famc`), if it is laid
    * out. Used to orient a couple so each partner sits on the side their own
    * parents are on, which keeps the two upward marriage edges from crossing.
+   * A grouped parent is found by its combined-node center; a loose parent by
+   * its marriage-dot node.
    */
   const parentAnchorX = (personId: string): number | null => {
     const famc = individuals[personId]?.famc;
@@ -101,17 +110,25 @@ export async function computeLayout(): Promise<Map<string, LayoutPosition>> {
     const leftAnchor = parentAnchorX(couple.leftId);
     const rightAnchor = parentAnchorX(couple.rightId);
 
+    // Decide whether to flip the default (left = first partner) orientation.
     let swap = false;
     if (leftAnchor !== null && rightAnchor !== null) {
+      // Both partners have parents: put the one whose parents are further left
+      // on the left, so the two upward edges run "straight" instead of crossing.
       swap = leftAnchor > rightAnchor;
     } else if (leftAnchor !== null) {
+      // Only the first partner has parents: keep their edge short by seating
+      // them on the side of the couple nearest those parents.
       swap = leftAnchor > center;
     } else if (rightAnchor !== null) {
+      // Symmetric case: only the second partner has parents.
       swap = rightAnchor < center;
     }
 
     const leftPartner = swap ? couple.rightId : couple.leftId;
     const rightPartner = swap ? couple.leftId : couple.rightId;
+    // The combined node spans both cards; the right card starts one card width
+    // plus the inner gap to the right of the node's left edge.
     const rightX = combined.x + NODE_WIDTH + COUPLE_INNER_GAP;
 
     positions.set(leftPartner, {
@@ -124,11 +141,14 @@ export async function computeLayout(): Promise<Map<string, LayoutPosition>> {
       x: rightX,
       y: combined.y,
     });
+    // Place the marriage dot in the middle of the inner gap (so it reads as the
+    // midpoint of the pair) and drop it into the band just below the cards.
     positions.set(couple.unionId, {
       id: couple.unionId,
       x: combined.x + NODE_WIDTH + COUPLE_INNER_GAP / 2 - UNION_SIZE / 2,
       y: combined.y + COUPLE_UNION_DROP,
     });
+    // Drop the placeholder combined node now that the real cards exist.
     positions.delete(couple.nodeId);
   }
 
