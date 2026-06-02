@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, GitBranch, GitFork, UserX } from "lucide-react";
+import { ChevronLeft, ChevronRight, GitBranch, GitFork, Palette, UserX } from "lucide-react";
 import type { FamilyBranch } from "./branchPalette";
 import { PersonSelect } from "./PersonSelect";
 
 export type ControlPanelProps = {
   greyDeceased: boolean;
   onGreyDeceasedChange: (enabled: boolean) => void;
+  colorByFamily: boolean;
+  onColorByFamilyChange: (enabled: boolean) => void;
   familyBranches: FamilyBranch[];
   visibleFamilyNames: Set<string>;
   onFamilyVisibilityChange: (familyName: string, visible: boolean) => void;
@@ -23,6 +25,8 @@ export type ControlPanelProps = {
 export function ControlSidebarContent({
   greyDeceased,
   onGreyDeceasedChange,
+  colorByFamily,
+  onColorByFamilyChange,
   familyBranches,
   visibleFamilyNames,
   onFamilyVisibilityChange,
@@ -46,6 +50,14 @@ export function ControlSidebarContent({
           checked={greyDeceased}
           onChange={onGreyDeceasedChange}
         />
+        <div className="mt-2">
+          <ToggleRow
+            label="Color by family name"
+            icon={<Palette className="h-4 w-4" />}
+            checked={colorByFamily}
+            onChange={onColorByFamilyChange}
+          />
+        </div>
       </div>
 
       <div>

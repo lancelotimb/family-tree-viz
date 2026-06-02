@@ -148,7 +148,7 @@ export const familyBranches: FamilyBranch[] = Array.from(
     count,
     color: colorForFamilyName(familyName),
   }))
-  .sort((a, b) => a.familyName.localeCompare(b.familyName));
+  .sort((a, b) => b.count - a.count || a.familyName.localeCompare(b.familyName));
 
 export const maxGeneration = Math.max(
   ...Object.values(individuals).map((p) => p.generation),

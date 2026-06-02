@@ -11,6 +11,7 @@ export function MarriageNode({ data }: NodeProps) {
   const union = data as UnionNodeData;
   const highlighted = union.pathHighlighted;
   const branchColor = union.branchColor;
+  const colorByFamily = union.colorByFamily ?? true;
 
   return (
     <div className="relative flex h-7 w-7 items-center justify-center">
@@ -28,8 +29,16 @@ export function MarriageNode({ data }: NodeProps) {
       />
       <span
         style={{
-          borderColor: highlighted ? "#7a9e6a" : branchColor.border,
-          backgroundColor: highlighted ? "#9bc48a" : branchColor.background,
+          borderColor: highlighted
+            ? "#7a9e6a"
+            : colorByFamily
+              ? branchColor.border
+              : "#c4b49a",
+          backgroundColor: highlighted
+            ? "#9bc48a"
+            : colorByFamily
+              ? branchColor.background
+              : "#efe6d4",
         }}
         className={`block rounded-full border transition-colors ${
           union.singleParent ? "h-2.5 w-2.5" : "h-3.5 w-3.5"

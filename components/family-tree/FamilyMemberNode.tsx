@@ -15,6 +15,24 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
   const isGreyed = member.greyed;
   const isPathHighlighted = member.pathHighlighted;
   const branchColor = member.branchColor;
+  const colorByFamily = member.colorByFamily ?? true;
+  const cardBorderColor = isPathHighlighted
+    ? "#7a9e6a"
+    : colorByFamily
+      ? branchColor.border
+      : selected
+        ? "#b8956a"
+        : "#e8dfd0";
+  const avatarBorderColor = isPathHighlighted
+    ? "#7a9e6a"
+    : colorByFamily
+      ? branchColor.border
+      : "#e8dfd0";
+  const avatarColor = isPathHighlighted
+    ? "#5a7d4a"
+    : colorByFamily
+      ? branchColor.stroke
+      : "#a8957a";
 
   return (
     // Pin the card to the exact size the layout reserves (NODE_WIDTH ×
@@ -25,10 +43,13 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
       style={{
         width: NODE_WIDTH,
         height: NODE_HEIGHT,
-        borderColor: branchColor.border,
+        borderColor: cardBorderColor,
+        background: colorByFamily
+          ? `linear-gradient(180deg, #fffef9 35%, ${branchColor.background} 100%)`
+          : "#fffef9",
       }}
       title={`${member.name} (${member.familyName})`}
-      className={`flex flex-col items-center rounded-xl border-2 bg-[#fffef9] px-4 py-3 shadow-sm transition-all duration-300 ${
+      className={`flex flex-col items-center rounded-xl border-2 px-4 py-3 shadow-sm transition-all duration-300 ${
         isPathHighlighted
           ? "shadow-md ring-2 ring-[#9bc48a]/60"
           : selected
@@ -50,15 +71,17 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
       />
       <div
         style={{
-          borderColor: branchColor.border,
-          background: `linear-gradient(180deg, ${branchColor.background}, #f0e8da)`,
+          borderColor: avatarBorderColor,
+          background: colorByFamily
+            ? `linear-gradient(180deg, ${branchColor.background}, #f0e8da)`
+            : "linear-gradient(180deg, #faf6ef, #f0e8da)",
         }}
         className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border"
       >
         <ProfileAvatar
           gender={member.gender}
           className="h-6 w-6"
-          style={{ color: isPathHighlighted ? "#5a7d4a" : branchColor.stroke }}
+          style={{ color: avatarColor }}
           strokeWidth={1.5}
         />
       </div>
