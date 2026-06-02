@@ -16,6 +16,10 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
   const isPathHighlighted = member.pathHighlighted;
 
   return (
+    // Pin the card to the exact size the layout reserves (NODE_WIDTH ×
+    // NODE_HEIGHT) so every node is identical and never overflows the gap the
+    // layout left for it. The fixed height is what keeps long and short names
+    // from producing different-sized cards.
     <div
       style={{ width: NODE_WIDTH, height: NODE_HEIGHT }}
       className={`flex flex-col items-center rounded-xl border bg-[#fffef9] px-4 py-3 shadow-sm transition-all duration-300 ${
@@ -49,6 +53,9 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
           strokeWidth={1.5}
         />
       </div>
+      {/* Fixed two-line box for the name: `line-clamp-2` truncates longer names
+          with an ellipsis (full name shown via the `title` tooltip), keeping the
+          card height constant no matter how long the name is. */}
       <div className="mt-2 flex h-10 w-full items-center justify-center">
         <p
           title={member.name}
