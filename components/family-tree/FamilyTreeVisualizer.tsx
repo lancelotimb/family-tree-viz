@@ -46,6 +46,7 @@ function FamilyTreeCanvas() {
   const [greyDeceased, setGreyDeceased] = useState(false);
   const [pathFromId, setPathFromId] = useState("");
   const [pathToId, setPathToId] = useState("");
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const instanceRef = useRef<ReactFlowInstance<Node<FamilyNodeData>, Edge> | null>(
     null,
   );
