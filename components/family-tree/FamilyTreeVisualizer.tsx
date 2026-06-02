@@ -208,7 +208,7 @@ function FamilyTreeCanvas() {
             pathStatus={pathStatus}
           />
         </div>
-        <div className="flex justify-end p-6">
+        <div className="flex justify-end pb-3 pr-3">
           <ZoomControls onSettingsClick={() => setSettingsOpen(true)} />
         </div>
       </div>
