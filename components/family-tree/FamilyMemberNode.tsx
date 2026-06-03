@@ -19,6 +19,8 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
   const isPathHighlighted = member.pathHighlighted && !isHovered && !isHoverRelated;
   const isFocusHighlighted =
     member.focusHighlighted && !isHovered && !isHoverRelated && !isPathHighlighted;
+  const shouldGreyOut =
+    isGreyed && !isHovered && !isHoverRelated && !isFocusHighlighted;
   const branchColor = member.branchColor;
   const colorByFamily = member.colorByFamily ?? true;
 
@@ -74,7 +76,7 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
                 : selected
                   ? "shadow-md ring-2 ring-[#d4b896]/50"
                   : "hover:shadow-md"
-      } ${isGreyed ? "opacity-45 grayscale" : ""}`}
+      } ${shouldGreyOut ? "opacity-45 grayscale" : ""}`}
     >
       <Handle
         id="child"
