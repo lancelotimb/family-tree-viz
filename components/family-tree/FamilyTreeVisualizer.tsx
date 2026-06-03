@@ -33,7 +33,6 @@ import {
   individuals,
 } from "./familyGraph";
 import { computeLayout } from "./elkLayout";
-import { familyHighlight } from "./familyHighlightColors";
 import { isDeceased } from "./personUtils";
 import type { FamilyNodeData } from "./types";
 
@@ -42,14 +41,14 @@ const allFamilyNames = familyBranches.map((branch) => branch.familyName);
 
 const defaultEdgeStyle = { stroke: "#c4b49a", strokeWidth: 1.5 };
 
-const pathEdgeStyle = {
-  stroke: familyHighlight.path.edge,
-  strokeWidth: familyHighlight.path.edgeWidth,
+const highlightedEdgeStyle = {
+  stroke: "#7a9e6a",
+  strokeWidth: 3,
 };
 
 const hoverEdgeStyle = {
-  stroke: familyHighlight.hover.edge,
-  strokeWidth: familyHighlight.hover.edgeWidth,
+  stroke: "#2563eb",
+  strokeWidth: 4.5,
 };
 
 function dimmedEdgeStyle(style: Edge["style"]) {
@@ -182,14 +181,6 @@ function FamilyTreeCanvas() {
     clearHiddenPeople(next);
   }, [clearHiddenPeople]);
 
-  const pathFocusNodeIds = useMemo(() => {
-    if (!pathNodeIds) return null;
-    const focus = new Set<string>();
-    if (hoveredId && pathNodeIds.has(hoveredId)) focus.add(hoveredId);
-    if (selectedId && pathNodeIds.has(selectedId)) focus.add(selectedId);
-    return focus.size > 0 ? focus : null;
-  }, [pathNodeIds, hoveredId, selectedId]);
-
   useEffect(() => {
     const visibleUnionNodeIds = new Set<string>();
     for (const edge of baseEdges) {
@@ -248,21 +239,15 @@ function FamilyTreeCanvas() {
         const visibleStyle = colorByFamily
           ? baseStyle
           : neutralEdgeStyle(baseEdge ?? edge);
-        const hoverDimOthers = familyHighlight !== null && !hidden && !hoverActive && !pathActive;
+        const hoverDimOthers = familyHighlight !== null && !hidden && !pathActive;
         return {
           ...edge,
           hidden,
-          className: !hidden
-            ? hoverActive
-              ? "family-hover-edge"
-              : pathActive
-                ? "family-path-edge"
-                : undefined
-            : undefined,
-          style: !hidden && hoverActive
-            ? hoverEdgeStyle
-            : !hidden && pathActive
-              ? pathEdgeStyle
+          className: !hidden && hoverActive ? "family-hover-edge" : undefined,
+          style: !hidden && pathActive
+            ? highlightedEdgeStyle
+            : !hidden && hoverActive
+              ? hoverEdgeStyle
               : hoverDimOthers
                 ? dimmedEdgeStyle(visibleStyle)
                 : visibleStyle,
@@ -411,18 +396,18 @@ function FamilyTreeCanvas() {
       )}
 
       <div className="pointer-events-none absolute inset-0 z-10 flex flex-col">
-        <header className="relative flex justify-center px-6 pt-6">
-          <div className="w-full max-w-md">
-            <SearchBar
-              visibleFamilyNames={visibleFamilyNames}
-              onOpenChange={setSearchOpen}
-            />
-          </div>
-          <div className="pointer-events-auto absolute left-6 top-6 hidden md:block">
+        <header className="flex items-start gap-2 p-3">
+          <div className="pointer-events-auto hidden shrink-0 md:block">
             <ControlSidebar
               expanded={settingsSidebarExpanded}
               onExpandedChange={setSettingsSidebarExpanded}
               {...controlPanelProps}
+            />
+          </div>
+          <div className="pointer-events-auto min-w-0 flex-1">
+            <SearchBar
+              visibleFamilyNames={visibleFamilyNames}
+              onOpenChange={setSearchOpen}
             />
           </div>
         </header>
