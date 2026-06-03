@@ -10,6 +10,7 @@ import type { UnionNodeData } from "./types";
 export function MarriageNode({ data }: NodeProps) {
   const union = data as UnionNodeData;
   const highlighted = union.pathHighlighted;
+  const hoverRelated = union.hoverRelated;
   const branchColor = union.branchColor;
   const colorByFamily = union.colorByFamily ?? true;
 
@@ -31,18 +32,22 @@ export function MarriageNode({ data }: NodeProps) {
         style={{
           borderColor: highlighted
             ? "#7a9e6a"
-            : colorByFamily
-              ? branchColor.border
-              : "#c4b49a",
+            : hoverRelated
+              ? "#b8956a"
+              : colorByFamily
+                ? branchColor.border
+                : "#c4b49a",
           backgroundColor: highlighted
             ? "#9bc48a"
-            : colorByFamily
-              ? branchColor.background
-              : "#efe6d4",
+            : hoverRelated
+              ? "#e8d4b8"
+              : colorByFamily
+                ? branchColor.background
+                : "#efe6d4",
         }}
-        className={`block rounded-full border transition-colors ${
-          union.singleParent ? "h-2.5 w-2.5" : "h-3.5 w-3.5"
-        }`}
+        className={`block rounded-full border transition-all duration-300 ${
+          hoverRelated ? "scale-125 shadow-sm ring-2 ring-[#d4b896]/50" : ""
+        } ${union.singleParent ? "h-2.5 w-2.5" : "h-3.5 w-3.5"}`}
         title={
           union.marriageYear
             ? `Married ${union.marriageYear}${union.divorced ? " (divorced)" : ""}`

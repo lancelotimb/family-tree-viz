@@ -14,25 +14,35 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
   const member = data as PersonNodeData;
   const isGreyed = member.greyed;
   const isPathHighlighted = member.pathHighlighted;
+  const isHovered = member.hovered;
+  const isHoverRelated = member.hoverRelated;
   const branchColor = member.branchColor;
   const colorByFamily = member.colorByFamily ?? true;
   const cardBorderColor = isPathHighlighted
     ? "#7a9e6a"
-    : colorByFamily
-      ? branchColor.border
-      : selected
-        ? "#b8956a"
-        : "#e8dfd0";
+    : isHovered
+      ? "#b8956a"
+      : isHoverRelated
+        ? "#d4b896"
+        : colorByFamily
+          ? branchColor.border
+          : selected
+            ? "#b8956a"
+            : "#e8dfd0";
   const avatarBorderColor = isPathHighlighted
     ? "#7a9e6a"
-    : colorByFamily
-      ? branchColor.border
-      : "#e8dfd0";
+    : isHovered || isHoverRelated
+      ? "#b8956a"
+      : colorByFamily
+        ? branchColor.border
+        : "#e8dfd0";
   const avatarColor = isPathHighlighted
     ? "#5a7d4a"
-    : colorByFamily
-      ? branchColor.stroke
-      : "#a8957a";
+    : isHovered || isHoverRelated
+      ? "#8b6b45"
+      : colorByFamily
+        ? branchColor.stroke
+        : "#a8957a";
 
   return (
     // Pin the card to the exact size the layout reserves (NODE_WIDTH ×
@@ -52,9 +62,13 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
       className={`flex flex-col items-center rounded-xl border-2 px-4 py-3 shadow-sm transition-all duration-300 ${
         isPathHighlighted
           ? "shadow-md ring-2 ring-[#9bc48a]/60"
-          : selected
-            ? "shadow-md ring-2 ring-[#d4b896]/50"
-            : "hover:shadow-md"
+          : isHovered
+            ? "z-10 scale-[1.03] shadow-lg ring-2 ring-[#d4b896]/70"
+            : isHoverRelated
+              ? "shadow-md ring-2 ring-[#d4b896]/35"
+              : selected
+                ? "shadow-md ring-2 ring-[#d4b896]/50"
+                : "hover:shadow-md"
       } ${isGreyed ? "opacity-45 grayscale" : ""}`}
     >
       <Handle
@@ -92,7 +106,11 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
         <p
           title={member.name}
           className={`line-clamp-2 w-full break-words text-center font-serif text-base font-medium leading-tight ${
-            isPathHighlighted ? "text-[#3d5230]" : "text-[#3d3428]"
+            isPathHighlighted
+              ? "text-[#3d5230]"
+              : isHovered || isHoverRelated
+                ? "text-[#4a3d2a]"
+                : "text-[#3d3428]"
           }`}
         >
           {member.name}
