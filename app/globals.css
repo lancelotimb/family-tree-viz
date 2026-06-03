@@ -48,17 +48,17 @@ body {
 
 .family-tree-flow .family-hover-node {
   box-shadow:
-    0 0 0 3px rgba(106, 159, 212, 0.4),
-    0 10px 24px rgba(53, 104, 168, 0.28);
+    0 0 0 3px rgba(90, 148, 208, 0.45),
+    0 10px 24px rgba(45, 95, 160, 0.32);
 }
 
 .family-tree-flow .family-hover-edge .react-flow__edge-path {
-  stroke: #5a94cc !important;
+  stroke: #4a8ac8 !important;
   stroke-width: 3px !important;
 }
 
 .family-tree-flow .family-path-edge .react-flow__edge-path {
-  stroke: #5a9e72 !important;
+  stroke: #48a066 !important;
   stroke-width: 3px !important;
 }
 
