@@ -57,7 +57,7 @@ export function ProfilePanel({
               <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full border-2 border-[#e8dfd0] bg-gradient-to-b from-[#faf6ef] to-[#f0e8da]">
                 <ProfileAvatar
                   gender={profile.gender}
-                  className="h-12 w-12 text-[#a8957a]"
+                  className="h-16 w-16 text-[#a8957a]"
                   strokeWidth={1.25}
                 />
               </div>
