@@ -47,12 +47,12 @@ const defaultEdgeStyle = { stroke: "#c4b49a", strokeWidth: 1.5 };
 
 const highlightedEdgeStyle = {
   stroke: "#7a9e6a",
-  strokeWidth: 3,
+  strokeWidth: 4,
 };
 
 const hoverEdgeStyle = {
   stroke: "#2563eb",
-  strokeWidth: 4.5,
+  strokeWidth: 4,
 };
 
 function dimmedEdgeStyle(style: Edge["style"]) {
@@ -389,7 +389,12 @@ function FamilyTreeCanvas() {
         return {
           ...edge,
           hidden,
-          className: !hidden && hoverActive ? "family-hover-edge" : undefined,
+          className:
+            !hidden && pathActive
+              ? "family-path-edge"
+              : !hidden && hoverActive
+                ? "family-hover-edge"
+                : undefined,
           style: !hidden && pathActive
             ? highlightedEdgeStyle
             : !hidden && hoverActive

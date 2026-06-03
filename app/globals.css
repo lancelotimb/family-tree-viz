@@ -54,12 +54,12 @@ body {
 
 .family-tree-flow .family-hover-edge .react-flow__edge-path {
   stroke: #4a8ac8 !important;
-  stroke-width: 3px !important;
+  stroke-width: 4px !important;
 }
 
 .family-tree-flow .family-path-edge .react-flow__edge-path {
   stroke: #48a066 !important;
-  stroke-width: 3px !important;
+  stroke-width: 4px !important;
 }
 
 .family-tree-flow .family-hover-union {
