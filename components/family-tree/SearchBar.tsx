@@ -99,9 +99,9 @@ export function SearchBar({ onOpenChange, visibleFamilyNames }: SearchBarProps) 
   };
 
   return (
-    <div ref={containerRef} className="pointer-events-auto relative w-full max-w-md">
+    <div ref={containerRef} className="pointer-events-auto relative w-full">
       <div
-        className={`flex items-center gap-2 rounded-full border bg-white/80 px-4 py-2.5 shadow-lg backdrop-blur-md transition-all duration-300 ${
+        className={`flex items-center gap-2 rounded-xl border bg-white/80 px-4 py-2.5 shadow-lg backdrop-blur-md transition-all duration-300 ${
           open ? "border-[#c9b896] ring-2 ring-[#d4b896]/30" : "border-[#e8dfd0]"
         }`}
       >
