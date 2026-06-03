@@ -36,7 +36,7 @@ import {
   unionInLineage,
   unions,
 } from "./familyGraph";
-import { computeLayout } from "./elkLayout";
+import { computeLayout, type LayoutPosition } from "./elkLayout";
 import { isDeceased } from "./personUtils";
 import type { FamilyNodeData } from "./types";
 
@@ -77,6 +77,8 @@ function FamilyTreeCanvas() {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [baseEdges, setBaseEdges] = useState<Edge[]>([]);
   const [ready, setReady] = useState(false);
+  const [layouting, setLayouting] = useState(true);
+  const fullLayoutRef = useRef<Map<string, LayoutPosition> | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [greyDeceased, setGreyDeceased] = useState(false);
@@ -97,27 +99,103 @@ function FamilyTreeCanvas() {
   );
   const { fitView, getNode } = useReactFlow();
 
-  useEffect(() => {
-    let cancelled = false;
-    computeLayout().then((positions) => {
-      if (cancelled) return;
+  const applyLayout = useCallback(
+    (positions: Map<string, LayoutPosition>, personIds?: Set<string>) => {
+      const layoutOptions = personIds ? { personIds } : undefined;
       setNodes(buildFlowNodes(positions));
-      const built = buildFlowEdges(positions);
+      const built = buildFlowEdges(positions, layoutOptions);
       setBaseEdges(built);
       setEdges(built);
-      setReady(true);
-    });
+    },
+    [setNodes, setEdges],
+  );
+
+  const lineagePersonIds = useMemo(() => {
+    if (focusPersonId) return getLineagePersonIds(focusPersonId);
+    if (focusUnionId) return getLineagePersonIdsForUnion(focusUnionId);
+    return null;
+  }, [focusPersonId, focusUnionId]);
+
+  const layoutPersonIds = useMemo(() => {
+    if (!lineagePersonIds) return null;
+    const ids = new Set<string>();
+    for (const id of lineagePersonIds) {
+      const person = individuals[id];
+      if (person && visibleFamilyNames.has(person.familyName)) {
+        ids.add(id);
+      }
+    }
+    return ids.size > 0 ? ids : lineagePersonIds;
+  }, [lineagePersonIds, visibleFamilyNames]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function runLayout() {
+      setLayouting(true);
+      try {
+        if (!layoutPersonIds) {
+          const positions =
+            fullLayoutRef.current ?? (await computeLayout());
+          if (cancelled) return;
+          if (!fullLayoutRef.current) {
+            fullLayoutRef.current = positions;
+          }
+          applyLayout(positions);
+        } else {
+          const positions = await computeLayout({ personIds: layoutPersonIds });
+          if (cancelled) return;
+          applyLayout(positions, layoutPersonIds);
+        }
+        setReady(true);
+      } finally {
+        if (!cancelled) setLayouting(false);
+      }
+    }
+
+    void runLayout();
     return () => {
       cancelled = true;
     };
-  }, [setNodes, setEdges]);
+  }, [layoutPersonIds, applyLayout]);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || layouting) return;
     requestAnimationFrame(() => {
-      instanceRef.current?.fitView({ padding: 0.15, minZoom: MIN_ZOOM, duration: 400 });
+      if (lineagePersonIds) {
+        const visibleNodeIds = [...lineagePersonIds].filter((id) => {
+          const person = individuals[id];
+          return (
+            person && visibleFamilyNames.has(person.familyName)
+          );
+        });
+        const fitNodes = visibleNodeIds.map((id) => ({ id }));
+        if (focusUnionId && unions[focusUnionId]) {
+          fitNodes.push({ id: focusUnionId });
+        }
+        if (fitNodes.length === 0) return;
+        fitView({
+          nodes: fitNodes,
+          padding: 0.2,
+          minZoom: MIN_ZOOM,
+          duration: 500,
+        });
+      } else {
+        instanceRef.current?.fitView({
+          padding: 0.15,
+          minZoom: MIN_ZOOM,
+          duration: 400,
+        });
+      }
     });
-  }, [ready]);
+  }, [
+    ready,
+    layouting,
+    lineagePersonIds,
+    focusUnionId,
+    visibleFamilyNames,
+    fitView,
+  ]);
 
   const adjacency = useMemo(() => buildAdjacencyList(baseEdges), [baseEdges]);
 
@@ -146,12 +224,6 @@ function FamilyTreeCanvas() {
     () => (hoveredId ? getFamilyHighlight(hoveredId) : null),
     [hoveredId],
   );
-
-  const lineagePersonIds = useMemo(() => {
-    if (focusPersonId) return getLineagePersonIds(focusPersonId);
-    if (focusUnionId) return getLineagePersonIdsForUnion(focusUnionId);
-    return null;
-  }, [focusPersonId, focusUnionId]);
 
   const focusHighlightNodeIds = useMemo(() => {
     if (focusPersonId) return new Set([focusPersonId]);
@@ -346,38 +418,6 @@ function FamilyTreeCanvas() {
     setEdges,
   ]);
 
-  useEffect(() => {
-    if (!ready || !lineagePersonIds || lineagePersonIds.size === 0) return;
-
-    const visibleNodeIds = [...lineagePersonIds].filter((id) => {
-      const person = individuals[id];
-      return person && isPersonVisible(id, person.familyName, visibleFamilyNames);
-    });
-    if (visibleNodeIds.length === 0 && !focusUnionId) return;
-
-    const fitNodes = visibleNodeIds.map((id) => ({ id }));
-    if (focusUnionId && unions[focusUnionId]) {
-      fitNodes.push({ id: focusUnionId });
-    }
-
-    requestAnimationFrame(() => {
-      fitView({
-        nodes: fitNodes,
-        padding: 0.2,
-        minZoom: MIN_ZOOM,
-        duration: 500,
-      });
-    });
-  }, [
-    ready,
-    focusPersonId,
-    focusUnionId,
-    lineagePersonIds,
-    visibleFamilyNames,
-    isPersonVisible,
-    fitView,
-  ]);
-
   const handleNodeClick: NodeMouseHandler = useCallback((_event, node) => {
     const data = node.data as FamilyNodeData;
     if (data.kind !== "person" || node.hidden) return;
@@ -501,13 +541,13 @@ function FamilyTreeCanvas() {
         className="family-tree-flow"
       />
 
-      {!ready && (
+      {!ready || layouting ? (
         <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
           <p className="rounded-full bg-white/80 px-4 py-2 text-sm text-[#8b7d6b] shadow backdrop-blur-md">
             Arranging the family tree…
           </p>
         </div>
-      )}
+      ) : null}
 
       <div className="pointer-events-none absolute inset-0 z-10 flex flex-col">
         <header className="flex items-start gap-2 p-3">

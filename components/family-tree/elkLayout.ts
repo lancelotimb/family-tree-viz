@@ -1,5 +1,5 @@
 import ELK, { type ElkNode } from "elkjs/lib/elk.bundled.js";
-import { buildElkGraph, individuals, unions } from "./familyGraph";
+import { buildElkGraph, individuals, unions, type ElkGraphOptions } from "./familyGraph";
 import {
   COUPLE_INNER_GAP,
   COUPLE_UNION_DROP,
@@ -23,8 +23,10 @@ const average = (values: number[]) =>
  * expand every combined node back into its two partner cards plus a centered
  * marriage anchor dot.
  */
-export async function computeLayout(): Promise<Map<string, LayoutPosition>> {
-  const { nodes, edges, couples } = buildElkGraph();
+export async function computeLayout(
+  options: ElkGraphOptions = {},
+): Promise<Map<string, LayoutPosition>> {
+  const { nodes, edges, couples } = buildElkGraph(options);
   // Unions rendered as a single combined node; used below to skip them in the
   // loose-anchor pass (their dot is positioned during couple expansion).
   const groupedUnions = new Set(couples.map((c) => c.unionId));
