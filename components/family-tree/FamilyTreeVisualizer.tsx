@@ -251,6 +251,11 @@ function FamilyTreeCanvas() {
     setSelectedId(null);
   }, []);
 
+  const handleSelectPerson = useCallback((id: string) => {
+    setSelectedId(id);
+    setPanelOpen(true);
+  }, []);
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
@@ -331,13 +336,13 @@ function FamilyTreeCanvas() {
 
       <div className="pointer-events-none absolute inset-0 z-10 flex flex-col">
         <header className="relative flex justify-center px-6 pt-6">
-          <div className="w-full max-w-md max-md:pr-14">
+          <div className="w-full max-w-md max-md:pl-14">
             <SearchBar
               visibleFamilyNames={visibleFamilyNames}
               onOpenChange={setSearchOpen}
             />
           </div>
-          <div className="pointer-events-auto absolute right-6 top-6 flex items-start">
+          <div className="pointer-events-auto absolute left-6 top-6 flex items-start">
             <div className="hidden md:block">
               <ControlSidebar
                 expanded={settingsSidebarExpanded}
@@ -366,6 +371,7 @@ function FamilyTreeCanvas() {
         memberId={selectedId}
         open={panelOpen}
         onClose={closeProfilePanel}
+        onSelectPerson={handleSelectPerson}
       />
     </div>
   );

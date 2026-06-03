@@ -119,12 +119,12 @@ export function ControlSidebar({ expanded, onExpandedChange, ...props }: Control
   }
 
   return (
-    <aside className="pointer-events-auto flex w-64 shrink-0 flex-col gap-5 overflow-hidden rounded-2xl border border-[#e8dfd0] bg-white/75 p-4 shadow-lg backdrop-blur-md">
+    <aside className="pointer-events-auto flex w-64 shrink-0 flex-col gap-3 overflow-hidden rounded-2xl border border-[#e8dfd0] bg-white/75 px-4 pb-4 pt-2 shadow-lg backdrop-blur-md">
       <div className="flex shrink-0 justify-end">
         <button
           type="button"
           onClick={() => onExpandedChange(false)}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e8dfd0] bg-[#fffef9] text-[#8b7d6b] transition-colors hover:border-[#d4c4a8] hover:bg-[#faf6ef] hover:text-[#3d3428]"
+          className="rounded-full p-1.5 text-[#8b7d6b] transition-colors hover:bg-[#f5efe4] hover:text-[#3d3428]"
           aria-label="Collapse settings"
           title="Collapse settings"
         >

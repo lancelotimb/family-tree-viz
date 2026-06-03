@@ -1,14 +1,15 @@
 "use client";
 
-import { Heart, MapPin, X } from "lucide-react";
+import { Heart, MapPin, Users, X } from "lucide-react";
 import { ProfileAvatar } from "./ProfileAvatar";
 import type { MemberGender } from "./types";
-import { getChildren, getIndividual, getSpouses } from "./familyGraph";
+import { getChildren, getIndividual, getParents, getSpouses } from "./familyGraph";
 
 type ProfilePanelProps = {
   memberId: string | null;
   open: boolean;
   onClose: () => void;
+  onSelectPerson: (id: string) => void;
 };
 
 function formatLifespan(birthYear: number | null, deathYear: number | null) {
@@ -16,8 +17,14 @@ function formatLifespan(birthYear: number | null, deathYear: number | null) {
   return deathYear ? `${birth} – ${deathYear}` : `b. ${birth}`;
 }
 
-export function ProfilePanel({ memberId, open, onClose }: ProfilePanelProps) {
+export function ProfilePanel({
+  memberId,
+  open,
+  onClose,
+  onSelectPerson,
+}: ProfilePanelProps) {
   const profile = getIndividual(memberId);
+  const parents = profile ? getParents(profile.id) : [];
   const spouses = profile ? getSpouses(profile.id) : [];
   const children = profile ? getChildren(profile.id) : [];
 
@@ -76,6 +83,29 @@ export function ProfilePanel({ memberId, open, onClose }: ProfilePanelProps) {
 
               <section className="mb-8">
                 <h3 className="mb-3 font-serif text-lg text-[#3d3428]">Relationships</h3>
+                {parents.length > 0 && (
+                  <div className="mb-4">
+                    <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
+                      <Users className="h-3.5 w-3.5" />
+                      Parents
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      {parents.map((parent) => (
+                        <RelationshipCard
+                          key={parent.id}
+                          id={parent.id}
+                          name={parent.name}
+                          gender={parent.gender}
+                          years={formatLifespan(
+                            parent.birth.year,
+                            parent.death?.year ?? null,
+                          )}
+                          onSelect={onSelectPerson}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {spouses.length > 0 && (
                   <div className="mb-4">
                     <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
@@ -86,12 +116,14 @@ export function ProfilePanel({ memberId, open, onClose }: ProfilePanelProps) {
                       {spouses.map((spouse) => (
                         <RelationshipCard
                           key={spouse.id}
+                          id={spouse.id}
                           name={spouse.name}
                           gender={spouse.gender}
                           years={formatLifespan(
                             spouse.birth.year,
                             spouse.death?.year ?? null,
                           )}
+                          onSelect={onSelectPerson}
                         />
                       ))}
                     </div>
@@ -106,6 +138,7 @@ export function ProfilePanel({ memberId, open, onClose }: ProfilePanelProps) {
                       {children.map((child) => (
                         <RelationshipCard
                           key={child.id}
+                          id={child.id}
                           name={child.name}
                           gender={child.gender}
                           years={formatLifespan(
@@ -113,6 +146,7 @@ export function ProfilePanel({ memberId, open, onClose }: ProfilePanelProps) {
                             child.death?.year ?? null,
                           )}
                           compact
+                          onSelect={onSelectPerson}
                         />
                       ))}
                     </div>
@@ -151,20 +185,26 @@ export function ProfilePanel({ memberId, open, onClose }: ProfilePanelProps) {
 }
 
 function RelationshipCard({
+  id,
   name,
   gender,
   years,
   compact = false,
+  onSelect,
 }: {
+  id: string;
   name: string;
   gender: MemberGender;
   years: string;
   compact?: boolean;
+  onSelect: (id: string) => void;
 }) {
   return (
-    <div
-      className={`flex items-center gap-2 rounded-lg border border-[#e8dfd0] bg-white ${
-        compact ? "px-2 py-1.5" : "px-3 py-2"
+    <button
+      type="button"
+      onClick={() => onSelect(id)}
+      className={`flex items-center gap-2 rounded-lg border border-[#e8dfd0] bg-white text-left transition-colors hover:border-[#d4c4a8] hover:bg-[#faf6ef] ${
+        compact ? "px-2 py-1.5" : "w-full px-3 py-2"
       }`}
     >
       <div
@@ -184,6 +224,6 @@ function RelationshipCard({
         </p>
         <p className="text-[10px] text-[#8b7d6b]">{years}</p>
       </div>
-    </div>
+    </button>
   );
 }

@@ -34,5 +34,5 @@ export const COUPLE_UNION_DROP = NODE_HEIGHT + (LAYER_GAP - UNION_SIZE) / 2;
 /** Multiplier per zoom-in/out button press (React Flow scroll default is ~1.2). */
 export const ZOOM_STEP = 1.7;
 /** Minimum scale — prevents zooming out so far that the tree becomes tiny. */
-export const MIN_ZOOM = 0.35;
+export const MIN_ZOOM = 0.1;
 export const MAX_ZOOM = 1.8;
