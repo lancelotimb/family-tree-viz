@@ -578,3 +578,48 @@ export function getFamilyHighlight(personId: string): {
 
   return { nodeIds, edgeIds };
 }
+
+/** Every blood ancestor and descendant of a person (the person is included). */
+export function getLineagePersonIds(personId: string): Set<string> {
+  const result = new Set<string>();
+
+  const visitAscendants = (id: string) => {
+    if (result.has(id)) return;
+    result.add(id);
+    const person = individuals[id];
+    if (!person?.famc) return;
+    const union = unions[person.famc];
+    if (!union) return;
+    for (const parentId of union.partnerIds) {
+      visitAscendants(parentId);
+    }
+  };
+
+  const visitDescendants = (id: string) => {
+    const person = individuals[id];
+    if (!person) return;
+    for (const unionId of person.fams) {
+      const union = unions[unionId];
+      if (!union) continue;
+      for (const childId of union.childIds) {
+        if (result.has(childId)) continue;
+        result.add(childId);
+        visitDescendants(childId);
+      }
+    }
+  };
+
+  visitAscendants(personId);
+  visitDescendants(personId);
+
+  return result;
+}
+
+export function unionInLineage(unionId: string, lineagePersonIds: Set<string>): boolean {
+  const union = unions[unionId];
+  if (!union) return false;
+  return (
+    union.partnerIds.some((id) => lineagePersonIds.has(id)) ||
+    union.childIds.some((id) => lineagePersonIds.has(id))
+  );
+}

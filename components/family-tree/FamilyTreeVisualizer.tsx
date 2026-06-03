@@ -30,7 +30,9 @@ import {
   buildFlowNodes,
   familyBranches,
   getFamilyHighlight,
+  getLineagePersonIds,
   individuals,
+  unionInLineage,
 } from "./familyGraph";
 import { computeLayout } from "./elkLayout";
 import { isDeceased } from "./personUtils";
@@ -82,6 +84,7 @@ function FamilyTreeCanvas() {
   );
   const [pathFromId, setPathFromId] = useState("");
   const [pathToId, setPathToId] = useState("");
+  const [focusPersonId, setFocusPersonId] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsSidebarExpanded, setSettingsSidebarExpanded] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -141,21 +144,44 @@ function FamilyTreeCanvas() {
     [hoveredId],
   );
 
-  const clearHiddenPeople = useCallback((nextVisibleFamilyNames: Set<string>) => {
-    const isVisiblePerson = (id: string) =>
-      nextVisibleFamilyNames.has(individuals[id]?.familyName ?? "");
+  const lineagePersonIds = useMemo(
+    () => (focusPersonId ? getLineagePersonIds(focusPersonId) : null),
+    [focusPersonId],
+  );
 
-    if (selectedId && !isVisiblePerson(selectedId)) {
-      setSelectedId(null);
-      setPanelOpen(false);
-    }
-    if (pathFromId && !isVisiblePerson(pathFromId)) {
-      setPathFromId("");
-    }
-    if (pathToId && !isVisiblePerson(pathToId)) {
-      setPathToId("");
-    }
-  }, [selectedId, pathFromId, pathToId]);
+  const isPersonVisible = useCallback(
+    (id: string, familyName: string, visibleFamilies: Set<string>) => {
+      if (!visibleFamilies.has(familyName)) return false;
+      if (lineagePersonIds && !lineagePersonIds.has(id)) return false;
+      return true;
+    },
+    [lineagePersonIds],
+  );
+
+  const clearHiddenPeople = useCallback(
+    (nextVisibleFamilyNames: Set<string>) => {
+      const isVisible = (id: string) => {
+        const person = individuals[id];
+        if (!person) return false;
+        return isPersonVisible(id, person.familyName, nextVisibleFamilyNames);
+      };
+
+      if (selectedId && !isVisible(selectedId)) {
+        setSelectedId(null);
+        setPanelOpen(false);
+      }
+      if (pathFromId && !isVisible(pathFromId)) {
+        setPathFromId("");
+      }
+      if (pathToId && !isVisible(pathToId)) {
+        setPathToId("");
+      }
+      if (focusPersonId && !isVisible(focusPersonId)) {
+        setFocusPersonId("");
+      }
+    },
+    [selectedId, pathFromId, pathToId, focusPersonId, isPersonVisible],
+  );
 
   const handleFamilyVisibilityChange = useCallback(
     (familyName: string, visible: boolean) => {
@@ -182,10 +208,18 @@ function FamilyTreeCanvas() {
   }, [clearHiddenPeople]);
 
   useEffect(() => {
+    const isEdgeVisibleByLineage = (edge: Edge) => {
+      if (!lineagePersonIds) return true;
+      if (individuals[edge.source] && !lineagePersonIds.has(edge.source)) return false;
+      if (individuals[edge.target] && !lineagePersonIds.has(edge.target)) return false;
+      return true;
+    };
+
     const visibleUnionNodeIds = new Set<string>();
     for (const edge of baseEdges) {
       const familyName = edgeFamilyName(edge);
       if (!familyName || !visibleFamilyNames.has(familyName)) continue;
+      if (!isEdgeVisibleByLineage(edge)) continue;
       visibleUnionNodeIds.add(edge.source);
       visibleUnionNodeIds.add(edge.target);
     }
@@ -196,7 +230,7 @@ function FamilyTreeCanvas() {
         const pathHighlighted = pathNodeIds?.has(node.id) ?? false;
         if (data.kind === "person") {
           const deceased = isDeceased(data.birthYear, data.deathYear);
-          const hidden = !visibleFamilyNames.has(data.familyName);
+          const hidden = !isPersonVisible(node.id, data.familyName, visibleFamilyNames);
           const inHoverFamily = familyHighlight?.nodeIds.has(node.id) ?? false;
           const isHovered = hoveredId === node.id;
           return {
@@ -213,8 +247,11 @@ function FamilyTreeCanvas() {
             },
           };
         }
-        const hidden =
+        const hiddenByFamily =
           !visibleUnionNodeIds.has(node.id) && !visibleFamilyNames.has(data.familyName);
+        const hiddenByLineage =
+          lineagePersonIds !== null && !unionInLineage(node.id, lineagePersonIds);
+        const hidden = hiddenByFamily || hiddenByLineage;
         const inHoverFamily = familyHighlight?.nodeIds.has(node.id) ?? false;
         return {
           ...node,
@@ -233,7 +270,9 @@ function FamilyTreeCanvas() {
         const pathActive = pathEdgeIdSet?.has(edge.id) ?? false;
         const hoverActive = familyHighlight?.edgeIds.has(edge.id) ?? false;
         const familyName = edgeFamilyName(edge);
-        const hidden = !familyName || !visibleFamilyNames.has(familyName);
+        const hiddenByFamily = !familyName || !visibleFamilyNames.has(familyName);
+        const hiddenByLineage = !isEdgeVisibleByLineage(edge);
+        const hidden = hiddenByFamily || hiddenByLineage;
         const baseEdge = baseEdges.find((e) => e.id === edge.id);
         const baseStyle = baseEdge?.style ?? defaultEdgeStyle;
         const visibleStyle = colorByFamily
@@ -264,10 +303,31 @@ function FamilyTreeCanvas() {
     familyHighlight,
     hoveredId,
     visibleFamilyNames,
+    lineagePersonIds,
+    isPersonVisible,
     baseEdges,
     setNodes,
     setEdges,
   ]);
+
+  useEffect(() => {
+    if (!ready || !focusPersonId || !lineagePersonIds) return;
+
+    const visibleNodeIds = [...lineagePersonIds].filter((id) => {
+      const person = individuals[id];
+      return person && isPersonVisible(id, person.familyName, visibleFamilyNames);
+    });
+    if (visibleNodeIds.length === 0) return;
+
+    requestAnimationFrame(() => {
+      fitView({
+        nodes: visibleNodeIds.map((id) => ({ id })),
+        padding: 0.2,
+        minZoom: MIN_ZOOM,
+        duration: 500,
+      });
+    });
+  }, [ready, focusPersonId, lineagePersonIds, visibleFamilyNames, isPersonVisible, fitView]);
 
   const handleNodeClick: NodeMouseHandler = useCallback((_event, node) => {
     const data = node.data as FamilyNodeData;
@@ -355,6 +415,9 @@ function FamilyTreeCanvas() {
     onPathFromChange: setPathFromId,
     onPathToChange: setPathToId,
     pathStatus,
+    focusPersonId,
+    onFocusPersonChange: setFocusPersonId,
+    lineagePersonIds,
   };
 
   return (
@@ -407,6 +470,7 @@ function FamilyTreeCanvas() {
           <div className="pointer-events-auto min-w-0 flex-1">
             <SearchBar
               visibleFamilyNames={visibleFamilyNames}
+              lineagePersonIds={lineagePersonIds}
               onOpenChange={setSearchOpen}
             />
           </div>

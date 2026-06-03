@@ -11,6 +11,7 @@ type PersonSearchInputProps = {
   onChange: (id: string) => void;
   excludeId?: string;
   visibleFamilyNames?: Set<string>;
+  lineagePersonIds?: Set<string> | null;
   placeholder?: string;
 };
 
@@ -25,6 +26,7 @@ export function PersonSearchInput({
   onChange,
   excludeId,
   visibleFamilyNames,
+  lineagePersonIds,
   placeholder = "Search ancestors…",
 }: PersonSearchInputProps) {
   const listId = useId();
@@ -44,13 +46,14 @@ export function PersonSearchInput({
     const visiblePeople = searchIndex.filter(
       (person) =>
         person.id !== excludeId &&
-        (!visibleFamilyNames || visibleFamilyNames.has(person.familyName)),
+        (!visibleFamilyNames || visibleFamilyNames.has(person.familyName)) &&
+        (!lineagePersonIds || lineagePersonIds.has(person.id)),
     );
     if (!q) return visiblePeople.slice(0, 6);
     return visiblePeople
       .filter((person) => person.name.toLowerCase().includes(q))
       .slice(0, 8);
-  }, [query, excludeId, visibleFamilyNames]);
+  }, [query, excludeId, visibleFamilyNames, lineagePersonIds]);
 
   const selectPerson = useCallback(
     (id: string) => {

@@ -9,6 +9,7 @@ import { searchIndex } from "./familyGraph";
 type SearchBarProps = {
   onOpenChange?: (open: boolean) => void;
   visibleFamilyNames?: Set<string>;
+  lineagePersonIds?: Set<string> | null;
 };
 
 function formatLifespan(birthYear: number | null, deathYear: number | null) {
@@ -16,7 +17,11 @@ function formatLifespan(birthYear: number | null, deathYear: number | null) {
   return deathYear ? `${birth} – ${deathYear}` : `${birth} –`;
 }
 
-export function SearchBar({ onOpenChange, visibleFamilyNames }: SearchBarProps) {
+export function SearchBar({
+  onOpenChange,
+  visibleFamilyNames,
+  lineagePersonIds,
+}: SearchBarProps) {
   const { fitView, getNode } = useReactFlow();
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -27,13 +32,15 @@ export function SearchBar({ onOpenChange, visibleFamilyNames }: SearchBarProps) 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     const visiblePeople = searchIndex.filter(
-      (item) => !visibleFamilyNames || visibleFamilyNames.has(item.familyName),
+      (item) =>
+        (!visibleFamilyNames || visibleFamilyNames.has(item.familyName)) &&
+        (!lineagePersonIds || lineagePersonIds.has(item.id)),
     );
     if (!q) return visiblePeople.slice(0, 6);
     return visiblePeople
       .filter((item) => item.name.toLowerCase().includes(q))
       .slice(0, 8);
-  }, [query, visibleFamilyNames]);
+  }, [query, visibleFamilyNames, lineagePersonIds]);
 
   const setDropdownOpen = useCallback(
     (next: boolean) => {
