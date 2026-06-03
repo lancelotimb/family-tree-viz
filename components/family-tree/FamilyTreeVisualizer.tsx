@@ -17,7 +17,6 @@ import { MarriageNode } from "./MarriageNode";
 import { SearchBar } from "./SearchBar";
 import { ControlDrawer } from "./ControlDrawer";
 import { ControlSidebar } from "./ControlSidebar";
-import { SettingsButton } from "./SettingsButton";
 import { MAX_ZOOM, MIN_ZOOM } from "./layoutConstants";
 import { ZoomControls } from "./ZoomControls";
 import { ProfilePanel } from "./ProfilePanel";
@@ -351,28 +350,22 @@ function FamilyTreeCanvas() {
 
       <div className="pointer-events-none absolute inset-0 z-10 flex flex-col">
         <header className="relative flex justify-center px-6 pt-6">
-          <div className="w-full max-w-md max-md:pl-14">
+          <div className="w-full max-w-md">
             <SearchBar
               visibleFamilyNames={visibleFamilyNames}
               onOpenChange={setSearchOpen}
             />
           </div>
-          <div className="pointer-events-auto absolute left-6 top-6 flex items-start">
-            <div className="hidden md:block">
-              <ControlSidebar
-                expanded={settingsSidebarExpanded}
-                onExpandedChange={setSettingsSidebarExpanded}
-                {...controlPanelProps}
-              />
-            </div>
-            <SettingsButton
-              className="md:hidden"
-              onClick={() => setSettingsOpen(true)}
+          <div className="pointer-events-auto absolute left-6 top-6 hidden md:block">
+            <ControlSidebar
+              expanded={settingsSidebarExpanded}
+              onExpandedChange={setSettingsSidebarExpanded}
+              {...controlPanelProps}
             />
           </div>
         </header>
         <div className="mt-auto flex justify-end pb-3 pr-3">
-          <ZoomControls />
+          <ZoomControls onSettingsClick={() => setSettingsOpen(true)} />
         </div>
       </div>
 
