@@ -125,7 +125,7 @@ export function ControlSidebar({ expanded, onExpandedChange, ...props }: Control
         <button
           type="button"
           onClick={() => onExpandedChange(false)}
-          className="shrink-0 rounded-full p-1.5 text-[#8b7d6b] transition-colors hover:bg-[#f5efe4] hover:text-[#3d3428]"
+          className="shrink-0 cursor-pointer rounded-full p-1.5 text-[#8b7d6b] transition-colors hover:bg-[#f5efe4] hover:text-[#3d3428]"
           aria-label="Collapse settings"
           title="Collapse settings"
         >
