@@ -2,7 +2,7 @@
 
 import { GitBranch, GitFork, Palette, UserX, X } from "lucide-react";
 import type { FamilyBranch } from "./branchPalette";
-import { PersonSelect } from "./PersonSelect";
+import { PersonSearchInput } from "./PersonSearchInput";
 import { SettingsButton } from "./SettingsButton";
 
 export type ControlPanelProps = {
@@ -80,14 +80,14 @@ export function ControlSidebarContent({
           Highlight link
         </p>
         <div className="flex flex-col gap-2">
-          <PersonSelect
+          <PersonSearchInput
             label="From"
             value={pathFromId}
             onChange={onPathFromChange}
             excludeId={pathToId}
             visibleFamilyNames={visibleFamilyNames}
           />
-          <PersonSelect
+          <PersonSearchInput
             label="To"
             value={pathToId}
             onChange={onPathToChange}
@@ -101,7 +101,7 @@ export function ControlSidebarContent({
           </p>
         )}
         {pathStatus === "ready" && (
-          <p className="mt-2 text-xs text-[#3d8750]">Path highlighted on the tree.</p>
+          <p className="mt-2 text-xs text-[#6b7d5a]">Path highlighted on the tree.</p>
         )}
       </div>
     </>
