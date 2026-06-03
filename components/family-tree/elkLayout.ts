@@ -44,6 +44,10 @@ export async function computeLayout(): Promise<Map<string, LayoutPosition>> {
       // unit), so crossing minimization keeps spouses and siblings together.
       "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
       "elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
+      // Honour our DFS node order within each layer so each branch stays a
+      // contiguous block and siblings of different families don't interleave
+      // around couples that bridge two branches.
+      "elk.layered.crossingMinimization.forceNodeModelOrder": "true",
       "elk.layered.cycleBreaking.strategy": "GREEDY",
       "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
       "elk.edgeRouting": "ORTHOGONAL",
