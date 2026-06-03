@@ -72,8 +72,8 @@ body {
 
 .family-tree-flow .family-focus-node {
   box-shadow:
-    0 0 0 3px rgba(184, 112, 112, 0.32),
-    0 8px 20px rgba(115, 64, 64, 0.2);
+    0 0 0 3px rgba(200, 100, 100, 0.38),
+    0 8px 20px rgba(128, 40, 40, 0.24);
 }
 
 .family-tree-flow .family-focus-union {

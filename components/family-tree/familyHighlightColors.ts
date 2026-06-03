@@ -34,12 +34,12 @@ export const familyHighlight = {
   },
   focus: {
     primary: {
-      border: "#b87070",
-      stroke: "#9a5858",
-      text: "#734040",
-      background: "#f3e8e8",
-      marriageBorder: "#b87070",
-      marriageFill: "#e4c8c8",
+      border: "#c86464",
+      stroke: "#b04a4a",
+      text: "#802828",
+      background: "#fae0e0",
+      marriageBorder: "#c86464",
+      marriageFill: "#eeb8b8",
     },
   },
 } as const;
