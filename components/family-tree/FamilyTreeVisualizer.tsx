@@ -32,6 +32,7 @@ import {
   individuals,
 } from "./familyGraph";
 import { computeLayout } from "./elkLayout";
+import { isDeceased } from "./personUtils";
 import type { FamilyNodeData } from "./types";
 
 const nodeTypes = { familyMember: FamilyMemberNode, union: MarriageNode };
@@ -178,7 +179,7 @@ function FamilyTreeCanvas() {
         const data = node.data;
         const pathHighlighted = pathNodeIds?.has(node.id) ?? false;
         if (data.kind === "person") {
-          const isDeceased = data.deathYear !== null;
+          const deceased = isDeceased(data.birthYear, data.deathYear);
           const hidden = !visibleFamilyNames.has(data.familyName);
           return {
             ...node,
@@ -186,7 +187,7 @@ function FamilyTreeCanvas() {
             data: {
               ...data,
               selected: !hidden && node.id === selectedId,
-              greyed: greyDeceased && isDeceased,
+              greyed: greyDeceased && deceased,
               pathHighlighted: !hidden && pathHighlighted,
               colorByFamily,
             },
