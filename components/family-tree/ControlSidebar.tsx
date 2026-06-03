@@ -101,7 +101,7 @@ export function ControlSidebarContent({
           </p>
         )}
         {pathStatus === "ready" && (
-          <p className="mt-2 text-xs text-[#6b7d5a]">Path highlighted on the tree.</p>
+          <p className="mt-2 text-xs text-[#8a9a82]">Path highlighted on the tree.</p>
         )}
       </div>
     </>

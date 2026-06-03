@@ -1,6 +1,7 @@
 "use client";
 
 import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { pathHighlight } from "./pathHighlightColors";
 import type { UnionNodeData } from "./types";
 
 /**
@@ -13,6 +14,7 @@ export function MarriageNode({ data }: NodeProps) {
   const hoverRelated = union.hoverRelated;
   const branchColor = union.branchColor;
   const colorByFamily = union.colorByFamily ?? true;
+  const pathColors = pathHighlight.muted;
 
   return (
     <div className="relative flex h-7 w-7 items-center justify-center">
@@ -31,14 +33,14 @@ export function MarriageNode({ data }: NodeProps) {
       <span
         style={{
           borderColor: highlighted
-            ? "#94b38a"
+            ? pathColors.marriageBorder
             : hoverRelated
               ? "#2563eb"
               : colorByFamily
                 ? branchColor.border
                 : "#c4b49a",
           backgroundColor: highlighted
-            ? "#b5d4ab"
+            ? pathColors.marriageFill
             : hoverRelated
               ? "#60a5fa"
               : colorByFamily

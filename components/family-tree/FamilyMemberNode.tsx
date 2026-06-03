@@ -1,6 +1,7 @@
 "use client";
 
 import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { pathHighlight } from "./pathHighlightColors";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { NODE_HEIGHT, NODE_WIDTH } from "./layoutConstants";
 import type { PersonNodeData } from "./types";
@@ -14,12 +15,16 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
   const member = data as PersonNodeData;
   const isGreyed = member.greyed;
   const isPathHighlighted = member.pathHighlighted;
+  const isPathFocus = isPathHighlighted && (member.hovered || selected);
   const isHovered = member.hovered;
   const isHoverRelated = member.hoverRelated;
   const branchColor = member.branchColor;
   const colorByFamily = member.colorByFamily ?? true;
+
+  const pathColors = isPathFocus ? pathHighlight.focus : pathHighlight.muted;
+
   const cardBorderColor = isPathHighlighted
-    ? "#94b38a"
+    ? pathColors.border
     : isHovered
       ? "#2563eb"
       : isHoverRelated
@@ -30,7 +35,7 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
             ? "#b8956a"
             : "#e8dfd0";
   const avatarBorderColor = isPathHighlighted
-    ? "#94b38a"
+    ? pathColors.border
     : isHovered
       ? "#2563eb"
       : isHoverRelated
@@ -39,7 +44,7 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
           ? branchColor.border
           : "#e8dfd0";
   const avatarColor = isPathHighlighted
-    ? "#78a06c"
+    ? pathColors.stroke
     : isHovered
       ? "#1d4ed8"
       : isHoverRelated
@@ -49,7 +54,7 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
           : "#a8957a";
   const cardBackground = isPathHighlighted
     ? colorByFamily
-      ? `color-mix(in srgb, ${branchColor.background} 45%, #fffef9)`
+      ? `color-mix(in srgb, ${branchColor.background} ${isPathFocus ? 38 : 32}%, #fffef9)`
       : "#fffef9"
     : isHovered
       ? "#eff6ff"
@@ -73,15 +78,17 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
       }}
       title={`${member.name} (${member.familyName})`}
       className={`flex flex-col items-center rounded-xl border-2 px-4 py-3 shadow-sm transition-all duration-200 ${
-        isPathHighlighted
-          ? "shadow-md ring-2 ring-[#b5d4ab]/50"
-          : isHovered
-            ? "family-hover-node z-10 scale-[1.05] border-[3px] shadow-xl ring-4 ring-[#60a5fa]/80"
-            : isHoverRelated
-              ? "z-[1] scale-[1.02] border-[2.5px] shadow-lg ring-2 ring-[#93c5fd]/75"
-              : selected
-                ? "shadow-md ring-2 ring-[#d4b896]/50"
-                : "hover:shadow-md"
+        isPathFocus
+          ? "z-[1] scale-[1.02] border-[2.5px] shadow-md ring-2 ring-[#d4c4a8]/45"
+          : isPathHighlighted
+            ? "shadow-sm ring-1 ring-[#c8dcc2]/30"
+            : isHovered
+              ? "family-hover-node z-10 scale-[1.05] border-[3px] shadow-xl ring-4 ring-[#60a5fa]/80"
+              : isHoverRelated
+                ? "z-[1] scale-[1.02] border-[2.5px] shadow-lg ring-2 ring-[#93c5fd]/75"
+                : selected
+                  ? "shadow-md ring-2 ring-[#d4b896]/50"
+                  : "hover:shadow-md"
       } ${isGreyed ? "opacity-45 grayscale" : ""}`}
     >
       <Handle
@@ -120,7 +127,9 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
           title={member.name}
           className={`line-clamp-2 w-full break-words text-center font-serif text-base font-medium leading-tight ${
             isPathHighlighted
-              ? "text-[#526848]"
+              ? isPathFocus
+                ? "text-[#5e5038]"
+                : "text-[#6a7d66]"
               : isHovered
                 ? "text-[#1e3a8a]"
                 : isHoverRelated
