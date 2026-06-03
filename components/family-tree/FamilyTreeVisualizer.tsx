@@ -6,6 +6,7 @@ import {
   ReactFlowProvider,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   type Edge,
   type Node,
   type NodeMouseHandler,
@@ -77,6 +78,7 @@ function FamilyTreeCanvas() {
   const instanceRef = useRef<ReactFlowInstance<Node<FamilyNodeData>, Edge> | null>(
     null,
   );
+  const { fitView, getNode } = useReactFlow();
 
   useEffect(() => {
     let cancelled = false;
@@ -251,10 +253,23 @@ function FamilyTreeCanvas() {
     setSelectedId(null);
   }, []);
 
-  const handleSelectPerson = useCallback((id: string) => {
-    setSelectedId(id);
-    setPanelOpen(true);
-  }, []);
+  const handleSelectPerson = useCallback(
+    (id: string) => {
+      setSelectedId(id);
+      setPanelOpen(true);
+      const node = getNode(id);
+      if (node && !node.hidden) {
+        fitView({
+          nodes: [{ id }],
+          duration: 500,
+          padding: 0.4,
+          maxZoom: 1.2,
+          minZoom: MIN_ZOOM,
+        });
+      }
+    },
+    [fitView, getNode],
+  );
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {

@@ -203,7 +203,7 @@ function RelationshipCard({
     <button
       type="button"
       onClick={() => onSelect(id)}
-      className={`flex items-center gap-2 rounded-lg border border-[#e8dfd0] bg-white text-left transition-colors hover:border-[#d4c4a8] hover:bg-[#faf6ef] ${
+      className={`flex cursor-pointer items-center gap-2 rounded-lg border border-[#e8dfd0] bg-white text-left transition-colors hover:border-[#d4c4a8] hover:bg-[#faf6ef] ${
         compact ? "px-2 py-1.5" : "w-full px-3 py-2"
       }`}
     >
