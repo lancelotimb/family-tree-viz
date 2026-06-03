@@ -615,6 +615,49 @@ export function getLineagePersonIds(personId: string): Set<string> {
   return result;
 }
 
+export type UnionSearchEntry = {
+  id: string;
+  label: string;
+  partnerIds: string[];
+  marriageYear: number | null;
+  divorced: boolean;
+  childCount: number;
+};
+
+function formatUnionLabel(union: Union): string {
+  const names = union.partnerIds
+    .map((id) => individuals[id]?.name)
+    .filter(Boolean);
+  if (names.length === 0) return "Unknown union";
+  if (names.length === 1) return names[0]!;
+  return `${names[0]} & ${names[1]}`;
+}
+
+export const unionSearchIndex: UnionSearchEntry[] = Object.values(unions)
+  .map((union) => ({
+    id: union.id,
+    label: formatUnionLabel(union),
+    partnerIds: union.partnerIds,
+    marriageYear: union.marriage?.year ?? null,
+    divorced: union.divorce !== null,
+    childCount: union.childIds.length,
+  }))
+  .sort((a, b) => a.label.localeCompare(b.label));
+
+/** Lineage of every partner in a union, merged together. */
+export function getLineagePersonIdsForUnion(unionId: string): Set<string> {
+  const union = unions[unionId];
+  if (!union) return new Set();
+
+  const result = new Set<string>();
+  for (const partnerId of union.partnerIds) {
+    for (const id of getLineagePersonIds(partnerId)) {
+      result.add(id);
+    }
+  }
+  return result;
+}
+
 export function unionInLineage(unionId: string, lineagePersonIds: Set<string>): boolean {
   const union = unions[unionId];
   if (!union) return false;

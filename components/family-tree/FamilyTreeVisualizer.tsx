@@ -31,8 +31,10 @@ import {
   familyBranches,
   getFamilyHighlight,
   getLineagePersonIds,
+  getLineagePersonIdsForUnion,
   individuals,
   unionInLineage,
+  unions,
 } from "./familyGraph";
 import { computeLayout } from "./elkLayout";
 import { isDeceased } from "./personUtils";
@@ -85,6 +87,7 @@ function FamilyTreeCanvas() {
   const [pathFromId, setPathFromId] = useState("");
   const [pathToId, setPathToId] = useState("");
   const [focusPersonId, setFocusPersonId] = useState("");
+  const [focusUnionId, setFocusUnionId] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsSidebarExpanded, setSettingsSidebarExpanded] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -144,10 +147,21 @@ function FamilyTreeCanvas() {
     [hoveredId],
   );
 
-  const lineagePersonIds = useMemo(
-    () => (focusPersonId ? getLineagePersonIds(focusPersonId) : null),
-    [focusPersonId],
-  );
+  const lineagePersonIds = useMemo(() => {
+    if (focusPersonId) return getLineagePersonIds(focusPersonId);
+    if (focusUnionId) return getLineagePersonIdsForUnion(focusUnionId);
+    return null;
+  }, [focusPersonId, focusUnionId]);
+
+  const handleFocusPersonChange = useCallback((id: string) => {
+    setFocusPersonId(id);
+    if (id) setFocusUnionId("");
+  }, []);
+
+  const handleFocusUnionChange = useCallback((id: string) => {
+    setFocusUnionId(id);
+    if (id) setFocusPersonId("");
+  }, []);
 
   const isPersonVisible = useCallback(
     (id: string, familyName: string, visibleFamilies: Set<string>) => {
@@ -179,8 +193,13 @@ function FamilyTreeCanvas() {
       if (focusPersonId && !isVisible(focusPersonId)) {
         setFocusPersonId("");
       }
+      if (focusUnionId) {
+        const union = unions[focusUnionId];
+        const stillVisible = union?.partnerIds.some((id) => isVisible(id));
+        if (!stillVisible) setFocusUnionId("");
+      }
     },
-    [selectedId, pathFromId, pathToId, focusPersonId, isPersonVisible],
+    [selectedId, pathFromId, pathToId, focusPersonId, focusUnionId, isPersonVisible],
   );
 
   const handleFamilyVisibilityChange = useCallback(
@@ -311,23 +330,36 @@ function FamilyTreeCanvas() {
   ]);
 
   useEffect(() => {
-    if (!ready || !focusPersonId || !lineagePersonIds) return;
+    if (!ready || !lineagePersonIds || lineagePersonIds.size === 0) return;
 
     const visibleNodeIds = [...lineagePersonIds].filter((id) => {
       const person = individuals[id];
       return person && isPersonVisible(id, person.familyName, visibleFamilyNames);
     });
-    if (visibleNodeIds.length === 0) return;
+    if (visibleNodeIds.length === 0 && !focusUnionId) return;
+
+    const fitNodes = visibleNodeIds.map((id) => ({ id }));
+    if (focusUnionId && unions[focusUnionId]) {
+      fitNodes.push({ id: focusUnionId });
+    }
 
     requestAnimationFrame(() => {
       fitView({
-        nodes: visibleNodeIds.map((id) => ({ id })),
+        nodes: fitNodes,
         padding: 0.2,
         minZoom: MIN_ZOOM,
         duration: 500,
       });
     });
-  }, [ready, focusPersonId, lineagePersonIds, visibleFamilyNames, isPersonVisible, fitView]);
+  }, [
+    ready,
+    focusPersonId,
+    focusUnionId,
+    lineagePersonIds,
+    visibleFamilyNames,
+    isPersonVisible,
+    fitView,
+  ]);
 
   const handleNodeClick: NodeMouseHandler = useCallback((_event, node) => {
     const data = node.data as FamilyNodeData;
@@ -416,7 +448,9 @@ function FamilyTreeCanvas() {
     onPathToChange: setPathToId,
     pathStatus,
     focusPersonId,
-    onFocusPersonChange: setFocusPersonId,
+    onFocusPersonChange: handleFocusPersonChange,
+    focusUnionId,
+    onFocusUnionChange: handleFocusUnionChange,
     lineagePersonIds,
   };
 
