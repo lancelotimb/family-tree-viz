@@ -32,4 +32,14 @@ export const familyHighlight = {
     edge: "#48a066",
     edgeWidth: 3,
   },
+  focus: {
+    primary: {
+      border: "#7e22ce",
+      stroke: "#6b21a8",
+      text: "#581c87",
+      background: "#ede9fe",
+      marriageBorder: "#7e22ce",
+      marriageFill: "#d8b4fe",
+    },
+  },
 } as const;

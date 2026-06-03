@@ -12,6 +12,7 @@ export function MarriageNode({ data }: NodeProps) {
   const union = data as UnionNodeData;
   const hoverRelated = union.hoverRelated;
   const pathHighlighted = union.pathHighlighted && !hoverRelated;
+  const focusHighlighted = union.focusHighlighted && !hoverRelated && !pathHighlighted;
   const branchColor = union.branchColor;
   const colorByFamily = union.colorByFamily ?? true;
 
@@ -19,7 +20,9 @@ export function MarriageNode({ data }: NodeProps) {
     ? familyHighlight.hover.related
     : pathHighlighted
       ? familyHighlight.path.related
-      : null;
+      : focusHighlighted
+        ? familyHighlight.focus.primary
+        : null;
 
   return (
     <div className="relative flex h-7 w-7 items-center justify-center">
@@ -49,7 +52,13 @@ export function MarriageNode({ data }: NodeProps) {
               : "#efe6d4",
         }}
         className={`block rounded-full border transition-all duration-200 ${
-          hoverRelated ? "family-hover-union" : pathHighlighted ? "family-path-union" : ""
+          hoverRelated
+            ? "family-hover-union"
+            : pathHighlighted
+              ? "family-path-union"
+              : focusHighlighted
+                ? "family-focus-union"
+                : ""
         } ${union.singleParent ? "h-2.5 w-2.5" : "h-3.5 w-3.5"}`}
         title={
           union.marriageYear

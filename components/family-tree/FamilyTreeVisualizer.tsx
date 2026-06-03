@@ -153,6 +153,19 @@ function FamilyTreeCanvas() {
     return null;
   }, [focusPersonId, focusUnionId]);
 
+  const focusHighlightNodeIds = useMemo(() => {
+    if (focusPersonId) return new Set([focusPersonId]);
+    if (focusUnionId) {
+      const union = unions[focusUnionId];
+      const ids = new Set<string>([focusUnionId]);
+      for (const partnerId of union?.partnerIds ?? []) {
+        ids.add(partnerId);
+      }
+      return ids;
+    }
+    return null;
+  }, [focusPersonId, focusUnionId]);
+
   const handleFocusPersonChange = useCallback((id: string) => {
     setFocusPersonId(id);
     if (id) setFocusUnionId("");
@@ -247,6 +260,7 @@ function FamilyTreeCanvas() {
       current.map((node) => {
         const data = node.data;
         const pathHighlighted = pathNodeIds?.has(node.id) ?? false;
+        const focusHighlighted = focusHighlightNodeIds?.has(node.id) ?? false;
         if (data.kind === "person") {
           const deceased = isDeceased(data.birthYear, data.deathYear);
           const hidden = !isPersonVisible(node.id, data.familyName, visibleFamilyNames);
@@ -260,6 +274,7 @@ function FamilyTreeCanvas() {
               selected: !hidden && node.id === selectedId,
               greyed: greyDeceased && deceased,
               pathHighlighted: !hidden && pathHighlighted,
+              focusHighlighted: !hidden && focusHighlighted,
               hovered: !hidden && isHovered,
               hoverRelated: !hidden && inHoverFamily && !isHovered,
               colorByFamily,
@@ -278,6 +293,7 @@ function FamilyTreeCanvas() {
           data: {
             ...data,
             pathHighlighted: !hidden && pathHighlighted,
+            focusHighlighted: !hidden && focusHighlighted,
             hoverRelated: !hidden && inHoverFamily,
             colorByFamily,
           },
@@ -323,6 +339,7 @@ function FamilyTreeCanvas() {
     hoveredId,
     visibleFamilyNames,
     lineagePersonIds,
+    focusHighlightNodeIds,
     isPersonVisible,
     baseEdges,
     setNodes,

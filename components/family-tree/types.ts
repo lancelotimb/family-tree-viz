@@ -65,6 +65,7 @@ export type PersonNodeData = {
   selected?: boolean;
   greyed?: boolean;
   pathHighlighted?: boolean;
+  focusHighlighted?: boolean;
   hovered?: boolean;
   hoverRelated?: boolean;
   colorByFamily?: boolean;
@@ -78,6 +79,7 @@ export type UnionNodeData = {
   divorced: boolean;
   singleParent: boolean;
   pathHighlighted?: boolean;
+  focusHighlighted?: boolean;
   hovered?: boolean;
   hoverRelated?: boolean;
   colorByFamily?: boolean;
