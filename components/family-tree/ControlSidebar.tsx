@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronLeft, ChevronRight, GitBranch, GitFork, Palette, UserX } from "lucide-react";
+import { GitBranch, GitFork, Palette, UserX, X } from "lucide-react";
 import type { FamilyBranch } from "./branchPalette";
 import { PersonSelect } from "./PersonSelect";
+import { SettingsButton } from "./SettingsButton";
 
 export type ControlPanelProps = {
   greyDeceased: boolean;
@@ -108,32 +108,30 @@ export function ControlSidebarContent({
   );
 }
 
-export function ControlSidebar(props: ControlPanelProps) {
-  const [collapsed, setCollapsed] = useState(false);
+type ControlSidebarProps = ControlPanelProps & {
+  expanded: boolean;
+  onExpandedChange: (expanded: boolean) => void;
+};
+
+export function ControlSidebar({ expanded, onExpandedChange, ...props }: ControlSidebarProps) {
+  if (!expanded) {
+    return <SettingsButton onClick={() => onExpandedChange(true)} />;
+  }
 
   return (
-    <aside
-      className={`pointer-events-auto hidden shrink-0 flex-col overflow-hidden rounded-2xl border border-[#e8dfd0] bg-white/75 shadow-lg backdrop-blur-md transition-[width,padding] duration-300 ease-out md:flex ${
-        collapsed ? "w-12 p-2" : "w-64 gap-5 p-4"
-      }`}
-    >
-      <div className={`flex shrink-0 ${collapsed ? "justify-center" : "justify-end"}`}>
+    <aside className="pointer-events-auto flex w-64 shrink-0 flex-col gap-5 overflow-hidden rounded-2xl border border-[#e8dfd0] bg-white/75 p-4 shadow-lg backdrop-blur-md">
+      <div className="flex shrink-0 justify-end">
         <button
           type="button"
-          onClick={() => setCollapsed((value) => !value)}
+          onClick={() => onExpandedChange(false)}
           className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e8dfd0] bg-[#fffef9] text-[#8b7d6b] transition-colors hover:border-[#d4c4a8] hover:bg-[#faf6ef] hover:text-[#3d3428]"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label="Collapse settings"
+          title="Collapse settings"
         >
-          {collapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
+          <X className="h-4 w-4" />
         </button>
       </div>
-
-      {!collapsed && <ControlSidebarContent {...props} />}
+      <ControlSidebarContent {...props} />
     </aside>
   );
 }
