@@ -33,6 +33,7 @@ import {
   individuals,
 } from "./familyGraph";
 import { computeLayout } from "./elkLayout";
+import { familyHighlight } from "./familyHighlightColors";
 import { isDeceased } from "./personUtils";
 import type { FamilyNodeData } from "./types";
 
@@ -41,14 +42,14 @@ const allFamilyNames = familyBranches.map((branch) => branch.familyName);
 
 const defaultEdgeStyle = { stroke: "#c4b49a", strokeWidth: 1.5 };
 
-const highlightedEdgeStyle = {
-  stroke: "#7a9e6a",
-  strokeWidth: 3,
+const pathEdgeStyle = {
+  stroke: familyHighlight.path.edge,
+  strokeWidth: familyHighlight.path.edgeWidth,
 };
 
 const hoverEdgeStyle = {
-  stroke: "#2563eb",
-  strokeWidth: 4.5,
+  stroke: familyHighlight.hover.edge,
+  strokeWidth: familyHighlight.hover.edgeWidth,
 };
 
 function dimmedEdgeStyle(style: Edge["style"]) {
@@ -181,6 +182,14 @@ function FamilyTreeCanvas() {
     clearHiddenPeople(next);
   }, [clearHiddenPeople]);
 
+  const pathFocusNodeIds = useMemo(() => {
+    if (!pathNodeIds) return null;
+    const focus = new Set<string>();
+    if (hoveredId && pathNodeIds.has(hoveredId)) focus.add(hoveredId);
+    if (selectedId && pathNodeIds.has(selectedId)) focus.add(selectedId);
+    return focus.size > 0 ? focus : null;
+  }, [pathNodeIds, hoveredId, selectedId]);
+
   useEffect(() => {
     const visibleUnionNodeIds = new Set<string>();
     for (const edge of baseEdges) {
@@ -239,15 +248,21 @@ function FamilyTreeCanvas() {
         const visibleStyle = colorByFamily
           ? baseStyle
           : neutralEdgeStyle(baseEdge ?? edge);
-        const hoverDimOthers = familyHighlight !== null && !hidden && !pathActive;
+        const hoverDimOthers = familyHighlight !== null && !hidden && !hoverActive && !pathActive;
         return {
           ...edge,
           hidden,
-          className: !hidden && hoverActive ? "family-hover-edge" : undefined,
-          style: !hidden && pathActive
-            ? highlightedEdgeStyle
-            : !hidden && hoverActive
-              ? hoverEdgeStyle
+          className: !hidden
+            ? hoverActive
+              ? "family-hover-edge"
+              : pathActive
+                ? "family-path-edge"
+                : undefined
+            : undefined,
+          style: !hidden && hoverActive
+            ? hoverEdgeStyle
+            : !hidden && pathActive
+              ? pathEdgeStyle
               : hoverDimOthers
                 ? dimmedEdgeStyle(visibleStyle)
                 : visibleStyle,

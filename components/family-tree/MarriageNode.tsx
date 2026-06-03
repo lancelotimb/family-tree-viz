@@ -1,6 +1,7 @@
 "use client";
 
 import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { familyHighlight } from "./familyHighlightColors";
 import type { UnionNodeData } from "./types";
 
 /**
@@ -9,10 +10,16 @@ import type { UnionNodeData } from "./types";
  */
 export function MarriageNode({ data }: NodeProps) {
   const union = data as UnionNodeData;
-  const highlighted = union.pathHighlighted;
   const hoverRelated = union.hoverRelated;
+  const pathHighlighted = union.pathHighlighted && !hoverRelated;
   const branchColor = union.branchColor;
   const colorByFamily = union.colorByFamily ?? true;
+
+  const highlight = hoverRelated
+    ? familyHighlight.hover.related
+    : pathHighlighted
+      ? familyHighlight.path.related
+      : null;
 
   return (
     <div className="relative flex h-7 w-7 items-center justify-center">
@@ -30,24 +37,19 @@ export function MarriageNode({ data }: NodeProps) {
       />
       <span
         style={{
-          borderColor: highlighted
-            ? "#7a9e6a"
-            : hoverRelated
-              ? "#2563eb"
-              : colorByFamily
-                ? branchColor.border
-                : "#c4b49a",
-          backgroundColor: highlighted
-            ? "#9bc48a"
-            : hoverRelated
-              ? "#60a5fa"
-              : colorByFamily
-                ? branchColor.background
-                : "#efe6d4",
-          boxShadow: hoverRelated ? "0 0 12px rgba(37, 99, 235, 0.75)" : undefined,
+          borderColor: highlight
+            ? highlight.marriageBorder
+            : colorByFamily
+              ? branchColor.border
+              : "#c4b49a",
+          backgroundColor: highlight
+            ? highlight.marriageFill
+            : colorByFamily
+              ? branchColor.background
+              : "#efe6d4",
         }}
         className={`block rounded-full border transition-all duration-200 ${
-          hoverRelated ? "family-hover-union" : ""
+          hoverRelated ? "family-hover-union" : pathHighlighted ? "family-path-union" : ""
         } ${union.singleParent ? "h-2.5 w-2.5" : "h-3.5 w-3.5"}`}
         title={
           union.marriageYear

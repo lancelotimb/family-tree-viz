@@ -1,6 +1,7 @@
 "use client";
 
 import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { familyHighlight } from "./familyHighlightColors";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { NODE_HEIGHT, NODE_WIDTH } from "./layoutConstants";
 import type { PersonNodeData } from "./types";
@@ -13,57 +14,42 @@ function formatLifespan(birthYear: number | null, deathYear: number | null) {
 export function FamilyMemberNode({ data, selected }: NodeProps) {
   const member = data as PersonNodeData;
   const isGreyed = member.greyed;
-  const isPathHighlighted = member.pathHighlighted;
   const isHovered = member.hovered;
   const isHoverRelated = member.hoverRelated;
+  const isPathHighlighted = member.pathHighlighted && !isHovered && !isHoverRelated;
   const branchColor = member.branchColor;
   const colorByFamily = member.colorByFamily ?? true;
-  const cardBorderColor = isPathHighlighted
-    ? "#7a9e6a"
-    : isHovered
-      ? "#2563eb"
-      : isHoverRelated
-        ? "#3b82f6"
-        : colorByFamily
-          ? branchColor.border
-          : selected
-            ? "#b8956a"
-            : "#e8dfd0";
-  const avatarBorderColor = isPathHighlighted
-    ? "#7a9e6a"
-    : isHovered
-      ? "#2563eb"
-      : isHoverRelated
-        ? "#60a5fa"
-        : colorByFamily
-          ? branchColor.border
-          : "#e8dfd0";
-  const avatarColor = isPathHighlighted
-    ? "#5a7d4a"
-    : isHovered
-      ? "#1d4ed8"
-      : isHoverRelated
-        ? "#2563eb"
-        : colorByFamily
-          ? branchColor.stroke
-          : "#a8957a";
-  const cardBackground = isPathHighlighted
+
+  const highlight = isHovered
+    ? familyHighlight.hover.primary
+    : isHoverRelated
+      ? familyHighlight.hover.related
+      : isPathHighlighted
+        ? familyHighlight.path.related
+        : null;
+
+  const cardBorderColor = highlight
+    ? highlight.border
+    : colorByFamily
+      ? branchColor.border
+      : selected
+        ? "#b8956a"
+        : "#e8dfd0";
+  const avatarBorderColor = cardBorderColor;
+  const avatarColor = highlight
+    ? highlight.stroke
+    : colorByFamily
+      ? branchColor.stroke
+      : "#a8957a";
+  const cardBackground = highlight
     ? colorByFamily
+      ? `color-mix(in srgb, ${branchColor.background} 32%, ${highlight.background})`
+      : highlight.background
+    : colorByFamily
       ? `color-mix(in srgb, ${branchColor.background} 45%, #fffef9)`
-      : "#fffef9"
-    : isHovered
-      ? "#eff6ff"
-      : isHoverRelated
-        ? "#f0f7ff"
-        : colorByFamily
-          ? `color-mix(in srgb, ${branchColor.background} 45%, #fffef9)`
-          : "#fffef9";
+      : "#fffef9";
 
   return (
-    // Pin the card to the exact size the layout reserves (NODE_WIDTH ×
-    // NODE_HEIGHT) so every node is identical and never overflows the gap the
-    // layout left for it. The fixed height is what keeps long and short names
-    // from producing different-sized cards.
     <div
       style={{
         width: NODE_WIDTH,
@@ -73,12 +59,12 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
       }}
       title={`${member.name} (${member.familyName})`}
       className={`flex flex-col items-center rounded-xl border-2 px-4 py-3 shadow-sm transition-all duration-200 ${
-        isPathHighlighted
-          ? "shadow-md ring-2 ring-[#9bc48a]/60"
-          : isHovered
-            ? "family-hover-node z-10 scale-[1.05] border-[3px] shadow-xl ring-4 ring-[#60a5fa]/80"
-            : isHoverRelated
-              ? "z-[1] scale-[1.02] border-[2.5px] shadow-lg ring-2 ring-[#93c5fd]/75"
+        isHovered
+          ? "family-hover-node z-10 scale-[1.05] border-[2.5px] ring-2 ring-[#5a94d0]/70"
+          : isHoverRelated
+            ? "z-[1] scale-[1.02] border-[2.5px] ring-2 ring-[#7ab8e8]/60"
+            : isPathHighlighted
+              ? "z-[1] scale-[1.02] border-[2.5px] ring-2 ring-[#6ad088]/60"
               : selected
                 ? "shadow-md ring-2 ring-[#d4b896]/50"
                 : "hover:shadow-md"
@@ -112,21 +98,11 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
           strokeWidth={1.5}
         />
       </div>
-      {/* Fixed two-line box for the name: `line-clamp-2` truncates longer names
-          with an ellipsis (full name shown via the `title` tooltip), keeping the
-          card height constant no matter how long the name is. */}
       <div className="mt-2 flex h-10 w-full items-center justify-center">
         <p
           title={member.name}
-          className={`line-clamp-2 w-full break-words text-center font-serif text-base font-medium leading-tight ${
-            isPathHighlighted
-              ? "text-[#3d5230]"
-              : isHovered
-                ? "text-[#1e3a8a]"
-                : isHoverRelated
-                  ? "text-[#1e40af]"
-                  : "text-[#3d3428]"
-          }`}
+          className="line-clamp-2 w-full break-words text-center font-serif text-base font-medium leading-tight"
+          style={{ color: highlight?.text ?? "#3d3428" }}
         >
           {member.name}
         </p>
