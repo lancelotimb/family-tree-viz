@@ -19,7 +19,7 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
   const branchColor = member.branchColor;
   const colorByFamily = member.colorByFamily ?? true;
   const cardBorderColor = isPathHighlighted
-    ? "#7a9e6a"
+    ? "#94b38a"
     : isHovered
       ? "#2563eb"
       : isHoverRelated
@@ -30,7 +30,7 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
             ? "#b8956a"
             : "#e8dfd0";
   const avatarBorderColor = isPathHighlighted
-    ? "#7a9e6a"
+    ? "#94b38a"
     : isHovered
       ? "#2563eb"
       : isHoverRelated
@@ -39,7 +39,7 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
           ? branchColor.border
           : "#e8dfd0";
   const avatarColor = isPathHighlighted
-    ? "#5a7d4a"
+    ? "#78a06c"
     : isHovered
       ? "#1d4ed8"
       : isHoverRelated
@@ -74,7 +74,7 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
       title={`${member.name} (${member.familyName})`}
       className={`flex flex-col items-center rounded-xl border-2 px-4 py-3 shadow-sm transition-all duration-200 ${
         isPathHighlighted
-          ? "shadow-md ring-2 ring-[#9bc48a]/60"
+          ? "shadow-md ring-2 ring-[#b5d4ab]/50"
           : isHovered
             ? "family-hover-node z-10 scale-[1.05] border-[3px] shadow-xl ring-4 ring-[#60a5fa]/80"
             : isHoverRelated
@@ -120,7 +120,7 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
           title={member.name}
           className={`line-clamp-2 w-full break-words text-center font-serif text-base font-medium leading-tight ${
             isPathHighlighted
-              ? "text-[#3d5230]"
+              ? "text-[#526848]"
               : isHovered
                 ? "text-[#1e3a8a]"
                 : isHoverRelated

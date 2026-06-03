@@ -42,7 +42,7 @@ const allFamilyNames = familyBranches.map((branch) => branch.familyName);
 const defaultEdgeStyle = { stroke: "#c4b49a", strokeWidth: 1.5 };
 
 const highlightedEdgeStyle = {
-  stroke: "#7a9e6a",
+  stroke: "#94b38a",
   strokeWidth: 3,
 };
 

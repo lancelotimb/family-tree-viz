@@ -31,14 +31,14 @@ export function MarriageNode({ data }: NodeProps) {
       <span
         style={{
           borderColor: highlighted
-            ? "#7a9e6a"
+            ? "#94b38a"
             : hoverRelated
               ? "#2563eb"
               : colorByFamily
                 ? branchColor.border
                 : "#c4b49a",
           backgroundColor: highlighted
-            ? "#9bc48a"
+            ? "#b5d4ab"
             : hoverRelated
               ? "#60a5fa"
               : colorByFamily
