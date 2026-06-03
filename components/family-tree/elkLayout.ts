@@ -44,6 +44,10 @@ export async function computeLayout(): Promise<Map<string, LayoutPosition>> {
       // unit), so crossing minimization keeps spouses and siblings together.
       "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
       "elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
+      // Honour our DFS node order within each layer so each branch stays a
+      // contiguous block and siblings of different families don't interleave
+      // around couples that bridge two branches.
+      "elk.layered.crossingMinimization.forceNodeModelOrder": "true",
       "elk.layered.cycleBreaking.strategy": "GREEDY",
       "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
       "elk.edgeRouting": "ORTHOGONAL",
@@ -152,19 +156,26 @@ export async function computeLayout(): Promise<Map<string, LayoutPosition>> {
     positions.delete(couple.nodeId);
   }
 
-  // Cosmetic: horizontally center the marriage dot of the remaining loose
-  // two-partner unions (remarriages) between their partners.
+  // Loose unions (remarriages, single parents) were omitted from the ELK graph,
+  // so they have no computed position yet. Synthesize their marriage dot here:
+  // centered horizontally over the partner card(s) and dropped into the gap
+  // below them, mirroring the grouped-couple dot so both kinds read the same.
   for (const union of Object.values(unions)) {
-    if (union.partnerIds.length !== 2 || groupedUnions.has(union.id)) continue;
-    const unionPos = positions.get(union.id);
+    if (groupedUnions.has(union.id)) continue;
     const partnerPositions = union.partnerIds
       .map((id) => positions.get(id))
       .filter((pos): pos is LayoutPosition => Boolean(pos));
-    if (!unionPos || partnerPositions.length !== 2) continue;
+    if (partnerPositions.length === 0) continue;
 
-    unionPos.x =
-      average(partnerPositions.map((pos) => pos.x + NODE_WIDTH / 2)) -
-      UNION_SIZE / 2;
+    const centerX = average(
+      partnerPositions.map((pos) => pos.x + NODE_WIDTH / 2),
+    );
+    const topY = Math.min(...partnerPositions.map((pos) => pos.y));
+    positions.set(union.id, {
+      id: union.id,
+      x: centerX - UNION_SIZE / 2,
+      y: topY + COUPLE_UNION_DROP,
+    });
   }
 
   return positions;

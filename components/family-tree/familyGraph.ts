@@ -1,12 +1,7 @@
 import type { Edge, Node } from "@xyflow/react";
 import { colorForFamilyName, type FamilyBranch } from "./branchPalette";
 import { FAMILY_GEDCOM, parseGedcom } from "./gedcom";
-import {
-  COUPLE_WIDTH,
-  NODE_HEIGHT,
-  NODE_WIDTH,
-  UNION_SIZE,
-} from "./layoutConstants";
+import { COUPLE_WIDTH, NODE_HEIGHT, NODE_WIDTH } from "./layoutConstants";
 import type {
   FamilyGraph,
   FamilyNodeData,
@@ -21,16 +16,33 @@ import type {
  * their union, and married-in partners are pulled down to match their partner's
  * generation so couples share a row. Computed as a fixpoint relaxation, which
  * naturally handles multi-marriages and half-siblings.
+ *
+ * Generations model *contemporaneity*, not raw ancestral depth: a married
+ * couple share a row, so when someone marries into a deeper branch they are
+ * pulled down to their spouse's generation. To keep their birth family
+ * consistent we also pull a union down to sit one row above its *deepest* child
+ * (the `gen[childId] - 1` term below). That deepest child then drags the union,
+ * which in turn lifts every sibling onto the same row and propagates up the
+ * branch — so a short branch that marries into a deep one slides down as a unit
+ * instead of leaving the married-in member stranded generations below their
+ * parents and siblings.
  */
 function deriveGenerations(graph: FamilyGraph): void {
   const { individuals, unions } = graph;
   const gen: Record<string, number> = {};
   for (const id of Object.keys(individuals)) gen[id] = 0;
 
-  const partnerGenerationOf = (union: Union) =>
-    union.partnerIds.length
+  // A union sits as deep as the lower of: its own partners, or one row above its
+  // deepest child (so a child pulled down by their marriage drags the family).
+  const unionGenerationOf = (union: Union) => {
+    let result = union.partnerIds.length
       ? Math.max(...union.partnerIds.map((p) => gen[p] ?? 0))
       : 0;
+    for (const childId of union.childIds) {
+      result = Math.max(result, (gen[childId] ?? 0) - 1);
+    }
+    return result;
+  };
 
   const maxIterations =
     Object.keys(individuals).length + Object.keys(unions).length + 1;
@@ -39,7 +51,7 @@ function deriveGenerations(graph: FamilyGraph): void {
     let changed = false;
 
     for (const union of Object.values(unions)) {
-      const partnerGen = partnerGenerationOf(union);
+      const partnerGen = unionGenerationOf(union);
 
       for (const partnerId of union.partnerIds) {
         if ((gen[partnerId] ?? 0) < partnerGen) {
@@ -63,7 +75,7 @@ function deriveGenerations(graph: FamilyGraph): void {
     individual.generation = gen[individual.id] ?? 0;
   }
   for (const union of Object.values(unions)) {
-    union.generation = partnerGenerationOf(union);
+    union.generation = unionGenerationOf(union);
   }
 }
 
@@ -226,10 +238,11 @@ function planCouples(): {
 /**
  * Describe the graph for ELK, partitioned by generation. Each two-partner
  * couple collapses into a single node so ELK can never split spouses apart;
- * everyone else (single parents, remarried partners) stays a plain person node
- * connected through a marriage anchor. Edges connect partners to their union
- * and unions down to their children. The combined couple nodes are expanded
- * back into two partner positions after layout (see `computeLayout`).
+ * remarried partners and single parents stay plain person nodes. Only downward
+ * child edges are emitted (marriage anchors are positioned after layout), and
+ * the nodes are listed in a family-tree DFS order so ELK keeps each branch a
+ * contiguous block. The combined couple nodes are expanded back into two
+ * partner positions after layout (see `computeLayout`).
  */
 export function buildElkGraph(): {
   nodes: ElkNodeInput[];
@@ -276,16 +289,84 @@ export function buildElkGraph(): {
     }
   };
 
-  const orderedUnions = Object.values(unions).sort(
-    (a, b) => a.generation - b.generation,
-  );
+  // ---- Node emission order (model order) ----
+  // ELK's `forceNodeModelOrder` (set in computeLayout) makes it honour the
+  // order in which we list nodes within each generation. We emit them in a
+  // family-tree DFS: each founding union first, then recursively every child's
+  // own union(s), so a whole branch forms one contiguous left-to-right block.
+  // This stops siblings of different families from interleaving around a couple
+  // that bridges two branches (which previously produced overlapping sibling
+  // edges).
+  const visitedUnions = new Set<string>();
+  const unionsHeadedBy = (id: string) =>
+    (individuals[id]?.fams ?? [])
+      .filter((famId) => unions[famId])
+      .sort(
+        (a, b) =>
+          (unions[a].marriage?.year ?? Infinity) -
+          (unions[b].marriage?.year ?? Infinity),
+      );
 
-  for (const union of orderedUnions) {
+  const visitUnion = (union: Union) => {
+    if (visitedUnions.has(union.id)) return;
+    visitedUnions.add(union.id);
+
+    // Pull in each partner's *other* (loose) unions — i.e. remarriages where a
+    // partner is grouped into this couple but married again elsewhere. We emit
+    // the remarriage spouse on the outer side (before this couple) and merge the
+    // half-siblings into one birth-sorted group. This keeps a remarriage's
+    // children next to their half-siblings instead of letting them drift into a
+    // neighbouring branch, which otherwise creates a crossing sibling edge.
+    const mergedChildren = [...union.childIds];
+    for (const partnerId of union.partnerIds) {
+      for (const otherId of unionsHeadedBy(partnerId)) {
+        if (otherId === union.id || groupedUnions.has(otherId)) continue;
+        if (visitedUnions.has(otherId)) continue;
+        const other = unions[otherId];
+        const otherSpouses = other.partnerIds.filter((id) => id !== partnerId);
+        // Only fold in a simple remarriage: the extra spouse(s) must be plain
+        // married-in people, not themselves grouped into another couple, so we
+        // never drag an unrelated branch into this position.
+        if (otherSpouses.some((id) => personToUnion[id])) continue;
+        visitedUnions.add(otherId);
+        for (const spouseId of otherSpouses) addPersonNode(spouseId);
+        mergedChildren.push(...other.childIds);
+      }
+    }
+
+    for (const partnerId of union.partnerIds) addPersonNode(partnerId);
+
+    mergedChildren.sort(
+      (a, b) =>
+        (individuals[a]?.birth.year ?? 0) - (individuals[b]?.birth.year ?? 0),
+    );
+    for (const childId of mergedChildren) {
+      const childUnions = unionsHeadedBy(childId);
+      if (childUnions.length > 0) {
+        for (const famId of childUnions) visitUnion(unions[famId]);
+      } else {
+        addPersonNode(childId);
+      }
+    }
+  };
+
+  // Start from founding unions (partners with no recorded parents); document
+  // order anchors each branch's relative left-to-right placement.
+  for (const union of Object.values(unions)) {
+    if (union.partnerIds.every((id) => !individuals[id]?.famc)) {
+      visitUnion(union);
+    }
+  }
+  // Defensive: visit anything unreachable from a founding union (cycles), then
+  // emit any remaining person who belongs to no union at all.
+  for (const union of Object.values(unions)) visitUnion(union);
+  for (const id of Object.keys(individuals)) addPersonNode(id);
+
+  // ---- Child edges (their order does not affect the forced node order) ----
+  for (const union of Object.values(unions)) {
     if (groupedUnions.has(union.id)) {
-      // Partners live inside one combined node; the partner→marriage edges are
-      // implicit (internal to the node), so we only emit the node once (via
-      // either partner) and the downward edges to the children.
-      addPersonNode(union.partnerIds[0]);
+      // Partners share one combined node, so we only emit the downward edges to
+      // the children.
       for (const childId of union.childIds) {
         edges.push({
           id: `child-${union.id}-${childId}`,
@@ -296,38 +377,25 @@ export function buildElkGraph(): {
       continue;
     }
 
-    // Loose layout: partners around an explicit marriage anchor, emitted in
-    // order (partner, anchor, partner) so ELK's model order keeps a single
-    // parent next to their anchor.
-    const [first, second] = union.partnerIds;
-    if (first) addPersonNode(first);
-    nodes.push({
-      id: unionNodeId(union.id),
-      width: UNION_SIZE,
-      height: UNION_SIZE,
-      partition: union.generation,
-    });
-    if (second) addPersonNode(second);
-
-    for (const partnerId of union.partnerIds) {
-      edges.push({
-        id: `marriage-${union.id}-${partnerId}`,
-        source: nodeOf(partnerId),
-        target: unionNodeId(union.id),
-      });
-    }
+    // Loose unions (remarriages, single parents) have no anchor node; route the
+    // child edges straight from each partner. A partner may be grouped into a
+    // couple node, so two partners can map to the same ELK node — dedupe.
+    const emittedChildEdges = new Set<string>();
     for (const childId of union.childIds) {
-      edges.push({
-        id: `child-${union.id}-${childId}`,
-        source: unionNodeId(union.id),
-        target: nodeOf(childId),
-      });
+      for (const partnerId of union.partnerIds) {
+        const source = nodeOf(partnerId);
+        const target = nodeOf(childId);
+        const key = `${source}->${target}`;
+        if (emittedChildEdges.has(key)) continue;
+        emittedChildEdges.add(key);
+        edges.push({
+          id: `child-${union.id}-${partnerId}-${childId}`,
+          source,
+          target,
+        });
+      }
     }
   }
-
-  // Emit anyone not reached above (people with no union at all) so every
-  // individual still gets a node and a position.
-  for (const id of Object.keys(individuals)) addPersonNode(id);
 
   return { nodes, edges, couples };
 }
