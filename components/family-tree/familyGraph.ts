@@ -103,6 +103,17 @@ export function getIndividual(id: string | null): Individual | null {
   return individuals[id] ?? null;
 }
 
+/** Parents of a person via their birth union (GEDCOM FAMC). */
+export function getParents(id: string): Individual[] {
+  const person = individuals[id];
+  if (!person?.famc) return [];
+  const union = unions[person.famc];
+  if (!union) return [];
+  return union.partnerIds
+    .map((partnerId) => individuals[partnerId])
+    .filter((individual): individual is Individual => individual !== undefined);
+}
+
 /** Distinct spouses/partners of a person across all of their unions. */
 export function getSpouses(id: string): Individual[] {
   const person = individuals[id];

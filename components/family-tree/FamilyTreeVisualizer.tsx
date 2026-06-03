@@ -6,6 +6,7 @@ import {
   ReactFlowProvider,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   type Edge,
   type Node,
   type NodeMouseHandler,
@@ -71,9 +72,12 @@ function FamilyTreeCanvas() {
   const [pathFromId, setPathFromId] = useState("");
   const [pathToId, setPathToId] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsSidebarExpanded, setSettingsSidebarExpanded] = useState(true);
+  const [searchOpen, setSearchOpen] = useState(false);
   const instanceRef = useRef<ReactFlowInstance<Node<FamilyNodeData>, Edge> | null>(
     null,
   );
+  const { fitView, getNode } = useReactFlow();
 
   useEffect(() => {
     let cancelled = false;
@@ -243,6 +247,71 @@ function FamilyTreeCanvas() {
     setPanelOpen(false);
   }, []);
 
+  const closeProfilePanel = useCallback(() => {
+    setPanelOpen(false);
+    setSelectedId(null);
+  }, []);
+
+  const handleSelectPerson = useCallback(
+    (id: string) => {
+      setSelectedId(id);
+      setPanelOpen(true);
+      const node = getNode(id);
+      if (node && !node.hidden) {
+        fitView({
+          nodes: [{ id }],
+          duration: 500,
+          padding: 0.4,
+          maxZoom: 1.2,
+          minZoom: MIN_ZOOM,
+        });
+      }
+    },
+    [fitView, getNode],
+  );
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (searchOpen) return;
+
+      if (settingsOpen) {
+        e.preventDefault();
+        setSettingsOpen(false);
+        return;
+      }
+      if (panelOpen) {
+        e.preventDefault();
+        closeProfilePanel();
+        return;
+      }
+      if (settingsSidebarExpanded) {
+        e.preventDefault();
+        setSettingsSidebarExpanded(false);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [searchOpen, settingsOpen, panelOpen, settingsSidebarExpanded, closeProfilePanel]);
+
+  const controlPanelProps = {
+    greyDeceased,
+    onGreyDeceasedChange: setGreyDeceased,
+    colorByFamily,
+    onColorByFamilyChange: setColorByFamily,
+    familyBranches,
+    visibleFamilyNames,
+    onFamilyVisibilityChange: handleFamilyVisibilityChange,
+    onShowAllBranches: showAllBranches,
+    onHideAllBranches: hideAllBranches,
+    pathFromId,
+    pathToId,
+    onPathFromChange: setPathFromId,
+    onPathToChange: setPathToId,
+    pathStatus,
+  };
+
   return (
     <div className="relative h-full w-full bg-[#fdfbf7]">
       <ReactFlow
@@ -280,28 +349,22 @@ function FamilyTreeCanvas() {
       )}
 
       <div className="pointer-events-none absolute inset-0 z-10 flex flex-col">
-        <header className="flex justify-center px-6 pt-6">
-          <SearchBar visibleFamilyNames={visibleFamilyNames} />
+        <header className="relative flex justify-center px-6 pt-6">
+          <div className="w-full max-w-md">
+            <SearchBar
+              visibleFamilyNames={visibleFamilyNames}
+              onOpenChange={setSearchOpen}
+            />
+          </div>
+          <div className="pointer-events-auto absolute left-6 top-6 hidden md:block">
+            <ControlSidebar
+              expanded={settingsSidebarExpanded}
+              onExpandedChange={setSettingsSidebarExpanded}
+              {...controlPanelProps}
+            />
+          </div>
         </header>
-        <div className="flex flex-1 items-start p-6">
-          <ControlSidebar
-            greyDeceased={greyDeceased}
-            onGreyDeceasedChange={setGreyDeceased}
-            colorByFamily={colorByFamily}
-            onColorByFamilyChange={setColorByFamily}
-            familyBranches={familyBranches}
-            visibleFamilyNames={visibleFamilyNames}
-            onFamilyVisibilityChange={handleFamilyVisibilityChange}
-            onShowAllBranches={showAllBranches}
-            onHideAllBranches={hideAllBranches}
-            pathFromId={pathFromId}
-            pathToId={pathToId}
-            onPathFromChange={setPathFromId}
-            onPathToChange={setPathToId}
-            pathStatus={pathStatus}
-          />
-        </div>
-        <div className="flex justify-end pb-3 pr-3">
+        <div className="mt-auto flex justify-end pb-3 pr-3">
           <ZoomControls onSettingsClick={() => setSettingsOpen(true)} />
         </div>
       </div>
@@ -309,29 +372,14 @@ function FamilyTreeCanvas() {
       <ControlDrawer
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
-        greyDeceased={greyDeceased}
-        onGreyDeceasedChange={setGreyDeceased}
-        colorByFamily={colorByFamily}
-        onColorByFamilyChange={setColorByFamily}
-        familyBranches={familyBranches}
-        visibleFamilyNames={visibleFamilyNames}
-        onFamilyVisibilityChange={handleFamilyVisibilityChange}
-        onShowAllBranches={showAllBranches}
-        onHideAllBranches={hideAllBranches}
-        pathFromId={pathFromId}
-        pathToId={pathToId}
-        onPathFromChange={setPathFromId}
-        onPathToChange={setPathToId}
-        pathStatus={pathStatus}
+        {...controlPanelProps}
       />
 
       <ProfilePanel
         memberId={selectedId}
         open={panelOpen}
-        onClose={() => {
-          setPanelOpen(false);
-          setSelectedId(null);
-        }}
+        onClose={closeProfilePanel}
+        onSelectPerson={handleSelectPerson}
       />
     </div>
   );
