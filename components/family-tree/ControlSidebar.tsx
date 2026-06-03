@@ -107,11 +107,13 @@ export function ControlSidebarContent({
         </div>
         {focusPersonId ? (
           <p className="mt-2 text-xs text-[#6b7d5a]">
-            Showing this person and their ascendants and descendants.
+            Showing this person, their ascendants, descendants, and each
+            descendant&apos;s spouse when they have children together.
           </p>
         ) : focusUnionId ? (
           <p className="mt-2 text-xs text-[#6b7d5a]">
-            Showing both partners and all of their ascendants and descendants.
+            Showing both partners, their ascendants, descendants, and each
+            descendant&apos;s spouse when they have children together.
           </p>
         ) : (
           <p className="mt-2 text-xs text-[#8b7d6b]">

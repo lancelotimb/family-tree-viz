@@ -600,7 +600,12 @@ export function getLineagePersonIds(personId: string): Set<string> {
     if (!person) return;
     for (const unionId of person.fams) {
       const union = unions[unionId];
-      if (!union) continue;
+      if (!union || union.childIds.length === 0) continue;
+
+      for (const partnerId of union.partnerIds) {
+        result.add(partnerId);
+      }
+
       for (const childId of union.childIds) {
         if (result.has(childId)) continue;
         result.add(childId);
