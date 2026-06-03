@@ -21,9 +21,9 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
   const cardBorderColor = isPathHighlighted
     ? "#7a9e6a"
     : isHovered
-      ? "#b8956a"
+      ? "#2563eb"
       : isHoverRelated
-        ? "#d4b896"
+        ? "#3b82f6"
         : colorByFamily
           ? branchColor.border
           : selected
@@ -31,18 +31,33 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
             : "#e8dfd0";
   const avatarBorderColor = isPathHighlighted
     ? "#7a9e6a"
-    : isHovered || isHoverRelated
-      ? "#b8956a"
-      : colorByFamily
-        ? branchColor.border
-        : "#e8dfd0";
+    : isHovered
+      ? "#2563eb"
+      : isHoverRelated
+        ? "#60a5fa"
+        : colorByFamily
+          ? branchColor.border
+          : "#e8dfd0";
   const avatarColor = isPathHighlighted
     ? "#5a7d4a"
-    : isHovered || isHoverRelated
-      ? "#8b6b45"
-      : colorByFamily
-        ? branchColor.stroke
-        : "#a8957a";
+    : isHovered
+      ? "#1d4ed8"
+      : isHoverRelated
+        ? "#2563eb"
+        : colorByFamily
+          ? branchColor.stroke
+          : "#a8957a";
+  const cardBackground = isPathHighlighted
+    ? colorByFamily
+      ? `color-mix(in srgb, ${branchColor.background} 45%, #fffef9)`
+      : "#fffef9"
+    : isHovered
+      ? "#eff6ff"
+      : isHoverRelated
+        ? "#f0f7ff"
+        : colorByFamily
+          ? `color-mix(in srgb, ${branchColor.background} 45%, #fffef9)`
+          : "#fffef9";
 
   return (
     // Pin the card to the exact size the layout reserves (NODE_WIDTH ×
@@ -54,18 +69,16 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
         width: NODE_WIDTH,
         height: NODE_HEIGHT,
         borderColor: cardBorderColor,
-        backgroundColor: colorByFamily
-          ? `color-mix(in srgb, ${branchColor.background} 45%, #fffef9)`
-          : "#fffef9",
+        backgroundColor: cardBackground,
       }}
       title={`${member.name} (${member.familyName})`}
-      className={`flex flex-col items-center rounded-xl border-2 px-4 py-3 shadow-sm transition-all duration-300 ${
+      className={`flex flex-col items-center rounded-xl border-2 px-4 py-3 shadow-sm transition-all duration-200 ${
         isPathHighlighted
           ? "shadow-md ring-2 ring-[#9bc48a]/60"
           : isHovered
-            ? "z-10 scale-[1.03] shadow-lg ring-2 ring-[#d4b896]/70"
+            ? "family-hover-node z-10 scale-[1.05] border-[3px] shadow-xl ring-4 ring-[#60a5fa]/80"
             : isHoverRelated
-              ? "shadow-md ring-2 ring-[#d4b896]/35"
+              ? "z-[1] scale-[1.02] border-[2.5px] shadow-lg ring-2 ring-[#93c5fd]/75"
               : selected
                 ? "shadow-md ring-2 ring-[#d4b896]/50"
                 : "hover:shadow-md"
@@ -108,9 +121,11 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
           className={`line-clamp-2 w-full break-words text-center font-serif text-base font-medium leading-tight ${
             isPathHighlighted
               ? "text-[#3d5230]"
-              : isHovered || isHoverRelated
-                ? "text-[#4a3d2a]"
-                : "text-[#3d3428]"
+              : isHovered
+                ? "text-[#1e3a8a]"
+                : isHoverRelated
+                  ? "text-[#1e40af]"
+                  : "text-[#3d3428]"
           }`}
         >
           {member.name}

@@ -47,9 +47,13 @@ const highlightedEdgeStyle = {
 };
 
 const hoverEdgeStyle = {
-  stroke: "#b8956a",
-  strokeWidth: 3,
+  stroke: "#2563eb",
+  strokeWidth: 4.5,
 };
+
+function dimmedEdgeStyle(style: Edge["style"]) {
+  return { ...(typeof style === "object" && style ? style : defaultEdgeStyle), strokeOpacity: 0.18 };
+}
 
 type BranchEdgeData = {
   familyName?: string;
@@ -235,14 +239,18 @@ function FamilyTreeCanvas() {
         const visibleStyle = colorByFamily
           ? baseStyle
           : neutralEdgeStyle(baseEdge ?? edge);
+        const hoverDimOthers = familyHighlight !== null && !hidden && !pathActive;
         return {
           ...edge,
           hidden,
+          className: !hidden && hoverActive ? "family-hover-edge" : undefined,
           style: !hidden && pathActive
             ? highlightedEdgeStyle
             : !hidden && hoverActive
               ? hoverEdgeStyle
-              : visibleStyle,
+              : hoverDimOthers
+                ? dimmedEdgeStyle(visibleStyle)
+                : visibleStyle,
           animated: !hidden && (pathActive || hoverActive),
         };
       }),

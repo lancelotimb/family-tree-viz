@@ -33,20 +33,21 @@ export function MarriageNode({ data }: NodeProps) {
           borderColor: highlighted
             ? "#7a9e6a"
             : hoverRelated
-              ? "#b8956a"
+              ? "#2563eb"
               : colorByFamily
                 ? branchColor.border
                 : "#c4b49a",
           backgroundColor: highlighted
             ? "#9bc48a"
             : hoverRelated
-              ? "#e8d4b8"
+              ? "#60a5fa"
               : colorByFamily
                 ? branchColor.background
                 : "#efe6d4",
+          boxShadow: hoverRelated ? "0 0 12px rgba(37, 99, 235, 0.75)" : undefined,
         }}
-        className={`block rounded-full border transition-all duration-300 ${
-          hoverRelated ? "scale-125 shadow-sm ring-2 ring-[#d4b896]/50" : ""
+        className={`block rounded-full border transition-all duration-200 ${
+          hoverRelated ? "family-hover-union" : ""
         } ${union.singleParent ? "h-2.5 w-2.5" : "h-3.5 w-3.5"}`}
         title={
           union.marriageYear
