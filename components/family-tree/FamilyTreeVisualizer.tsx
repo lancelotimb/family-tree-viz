@@ -116,17 +116,24 @@ function FamilyTreeCanvas() {
     return null;
   }, [focusPersonId, focusUnionId]);
 
+  const allBranchesVisible = useMemo(
+    () => allFamilyNames.every((name) => visibleFamilyNames.has(name)),
+    [visibleFamilyNames],
+  );
+
+  /** When set, ELK lays out only these people (branch and/or lineage filter). */
   const layoutPersonIds = useMemo(() => {
-    if (!lineagePersonIds) return null;
+    const needsFilteredLayout = !allBranchesVisible || lineagePersonIds !== null;
+    if (!needsFilteredLayout) return null;
+
     const ids = new Set<string>();
-    for (const id of lineagePersonIds) {
-      const person = individuals[id];
-      if (person && visibleFamilyNames.has(person.familyName)) {
-        ids.add(id);
-      }
+    for (const person of Object.values(individuals)) {
+      if (!visibleFamilyNames.has(person.familyName)) continue;
+      if (lineagePersonIds && !lineagePersonIds.has(person.id)) continue;
+      ids.add(person.id);
     }
-    return ids.size > 0 ? ids : lineagePersonIds;
-  }, [lineagePersonIds, visibleFamilyNames]);
+    return ids;
+  }, [allBranchesVisible, visibleFamilyNames, lineagePersonIds]);
 
   useEffect(() => {
     let cancelled = false;
@@ -134,7 +141,7 @@ function FamilyTreeCanvas() {
     async function runLayout() {
       setLayouting(true);
       try {
-        if (!layoutPersonIds) {
+        if (layoutPersonIds === null) {
           const positions =
             fullLayoutRef.current ?? (await computeLayout());
           if (cancelled) return;
@@ -142,6 +149,9 @@ function FamilyTreeCanvas() {
             fullLayoutRef.current = positions;
           }
           applyLayout(positions);
+        } else if (layoutPersonIds.size === 0) {
+          if (cancelled) return;
+          applyLayout(new Map());
         } else {
           const positions = await computeLayout({ personIds: layoutPersonIds });
           if (cancelled) return;
@@ -162,20 +172,19 @@ function FamilyTreeCanvas() {
   useEffect(() => {
     if (!ready || layouting) return;
     requestAnimationFrame(() => {
-      if (lineagePersonIds) {
-        const visibleNodeIds = [...lineagePersonIds].filter((id) => {
-          const person = individuals[id];
-          return (
-            person && visibleFamilyNames.has(person.familyName)
-          );
-        });
-        const fitNodes = visibleNodeIds.map((id) => ({ id }));
+      if (layoutPersonIds !== null) {
+        const fitNodeIds = new Set<string>(layoutPersonIds);
         if (focusUnionId && unions[focusUnionId]) {
-          fitNodes.push({ id: focusUnionId });
+          fitNodeIds.add(focusUnionId);
         }
-        if (fitNodes.length === 0) return;
+        for (const union of Object.values(unions)) {
+          if (union.partnerIds.some((id) => layoutPersonIds.has(id))) {
+            fitNodeIds.add(union.id);
+          }
+        }
+        if (fitNodeIds.size === 0) return;
         fitView({
-          nodes: fitNodes,
+          nodes: [...fitNodeIds].map((id) => ({ id })),
           padding: 0.2,
           minZoom: MIN_ZOOM,
           duration: 500,
@@ -188,14 +197,7 @@ function FamilyTreeCanvas() {
         });
       }
     });
-  }, [
-    ready,
-    layouting,
-    lineagePersonIds,
-    focusUnionId,
-    visibleFamilyNames,
-    fitView,
-  ]);
+  }, [ready, layouting, layoutPersonIds, focusUnionId, fitView]);
 
   const adjacency = useMemo(() => buildAdjacencyList(baseEdges), [baseEdges]);
 
