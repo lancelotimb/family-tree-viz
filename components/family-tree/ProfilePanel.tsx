@@ -214,7 +214,7 @@ function RelationshipCard({
       >
         <ProfileAvatar
           gender={gender}
-          className={`${compact ? "h-3.5 w-3.5" : "h-4 w-4"} text-[#a8957a]`}
+          className={`${compact ? "h-4.5 w-4.5" : "h-5 w-5"} text-[#a8957a]`}
           strokeWidth={1.25}
         />
       </div>
