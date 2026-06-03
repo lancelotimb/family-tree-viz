@@ -536,3 +536,45 @@ export function buildFlowEdges(_positions: Map<string, Positioned>): Edge[] {
 
   return edges;
 }
+
+/** Nodes and edges connecting a person to their parents, children, and spouses. */
+export function getFamilyHighlight(personId: string): {
+  nodeIds: Set<string>;
+  edgeIds: Set<string>;
+} {
+  const person = individuals[personId];
+  if (!person) return { nodeIds: new Set(), edgeIds: new Set() };
+
+  const nodeIds = new Set<string>([personNodeId(personId)]);
+  const edgeIds = new Set<string>();
+
+  const addUnion = (unionId: string) => {
+    const union = unions[unionId];
+    if (!union) return;
+    nodeIds.add(unionNodeId(unionId));
+    for (const partnerId of union.partnerIds) {
+      nodeIds.add(personNodeId(partnerId));
+      edgeIds.add(`marriage-${unionId}-${partnerId}`);
+    }
+    for (const childId of union.childIds) {
+      nodeIds.add(personNodeId(childId));
+      edgeIds.add(`child-${unionId}-${childId}`);
+    }
+  };
+
+  for (const unionId of person.fams) addUnion(unionId);
+
+  if (person.famc) {
+    const union = unions[person.famc];
+    if (union) {
+      nodeIds.add(unionNodeId(person.famc));
+      for (const partnerId of union.partnerIds) {
+        nodeIds.add(personNodeId(partnerId));
+        edgeIds.add(`marriage-${person.famc}-${partnerId}`);
+      }
+      edgeIds.add(`child-${person.famc}-${personId}`);
+    }
+  }
+
+  return { nodeIds, edgeIds };
+}

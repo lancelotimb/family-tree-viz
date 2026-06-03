@@ -29,9 +29,11 @@ import {
   buildFlowEdges,
   buildFlowNodes,
   familyBranches,
+  getFamilyHighlight,
   individuals,
 } from "./familyGraph";
 import { computeLayout } from "./elkLayout";
+import { isDeceased } from "./personUtils";
 import type { FamilyNodeData } from "./types";
 
 const nodeTypes = { familyMember: FamilyMemberNode, union: MarriageNode };
@@ -43,6 +45,15 @@ const highlightedEdgeStyle = {
   stroke: "#7a9e6a",
   strokeWidth: 3,
 };
+
+const hoverEdgeStyle = {
+  stroke: "#2563eb",
+  strokeWidth: 4.5,
+};
+
+function dimmedEdgeStyle(style: Edge["style"]) {
+  return { ...(typeof style === "object" && style ? style : defaultEdgeStyle), strokeOpacity: 0.18 };
+}
 
 type BranchEdgeData = {
   familyName?: string;
@@ -74,6 +85,7 @@ function FamilyTreeCanvas() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsSidebarExpanded, setSettingsSidebarExpanded] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const instanceRef = useRef<ReactFlowInstance<Node<FamilyNodeData>, Edge> | null>(
     null,
   );
@@ -123,6 +135,11 @@ function FamilyTreeCanvas() {
     if (pathResult) return "ready";
     return "no-path";
   }, [pathFromId, pathToId, pathResult]);
+
+  const familyHighlight = useMemo(
+    () => (hoveredId ? getFamilyHighlight(hoveredId) : null),
+    [hoveredId],
+  );
 
   const clearHiddenPeople = useCallback((nextVisibleFamilyNames: Set<string>) => {
     const isVisiblePerson = (id: string) =>
@@ -178,28 +195,34 @@ function FamilyTreeCanvas() {
         const data = node.data;
         const pathHighlighted = pathNodeIds?.has(node.id) ?? false;
         if (data.kind === "person") {
-          const isDeceased = data.deathYear !== null;
+          const deceased = isDeceased(data.birthYear, data.deathYear);
           const hidden = !visibleFamilyNames.has(data.familyName);
+          const inHoverFamily = familyHighlight?.nodeIds.has(node.id) ?? false;
+          const isHovered = hoveredId === node.id;
           return {
             ...node,
             hidden,
             data: {
               ...data,
               selected: !hidden && node.id === selectedId,
-              greyed: greyDeceased && isDeceased,
+              greyed: greyDeceased && deceased,
               pathHighlighted: !hidden && pathHighlighted,
+              hovered: !hidden && isHovered,
+              hoverRelated: !hidden && inHoverFamily && !isHovered,
               colorByFamily,
             },
           };
         }
         const hidden =
           !visibleUnionNodeIds.has(node.id) && !visibleFamilyNames.has(data.familyName);
+        const inHoverFamily = familyHighlight?.nodeIds.has(node.id) ?? false;
         return {
           ...node,
           hidden,
           data: {
             ...data,
             pathHighlighted: !hidden && pathHighlighted,
+            hoverRelated: !hidden && inHoverFamily,
             colorByFamily,
           },
         };
@@ -207,7 +230,8 @@ function FamilyTreeCanvas() {
     );
     setEdges((current) =>
       current.map((edge) => {
-        const highlighted = pathEdgeIdSet?.has(edge.id) ?? false;
+        const pathActive = pathEdgeIdSet?.has(edge.id) ?? false;
+        const hoverActive = familyHighlight?.edgeIds.has(edge.id) ?? false;
         const familyName = edgeFamilyName(edge);
         const hidden = !familyName || !visibleFamilyNames.has(familyName);
         const baseEdge = baseEdges.find((e) => e.id === edge.id);
@@ -215,11 +239,19 @@ function FamilyTreeCanvas() {
         const visibleStyle = colorByFamily
           ? baseStyle
           : neutralEdgeStyle(baseEdge ?? edge);
+        const hoverDimOthers = familyHighlight !== null && !hidden && !pathActive;
         return {
           ...edge,
           hidden,
-          style: !hidden && highlighted ? highlightedEdgeStyle : visibleStyle,
-          animated: !hidden && highlighted,
+          className: !hidden && hoverActive ? "family-hover-edge" : undefined,
+          style: !hidden && pathActive
+            ? highlightedEdgeStyle
+            : !hidden && hoverActive
+              ? hoverEdgeStyle
+              : hoverDimOthers
+                ? dimmedEdgeStyle(visibleStyle)
+                : visibleStyle,
+          animated: !hidden && (pathActive || hoverActive),
         };
       }),
     );
@@ -229,6 +261,8 @@ function FamilyTreeCanvas() {
     colorByFamily,
     pathNodeIds,
     pathEdgeIdSet,
+    familyHighlight,
+    hoveredId,
     visibleFamilyNames,
     baseEdges,
     setNodes,
@@ -242,9 +276,20 @@ function FamilyTreeCanvas() {
     setPanelOpen(true);
   }, []);
 
+  const handleNodeMouseEnter: NodeMouseHandler = useCallback((_event, node) => {
+    const data = node.data as FamilyNodeData;
+    if (data.kind !== "person" || node.hidden) return;
+    setHoveredId(node.id);
+  }, []);
+
+  const handleNodeMouseLeave: NodeMouseHandler = useCallback(() => {
+    setHoveredId(null);
+  }, []);
+
   const handlePaneClick = useCallback(() => {
     setSelectedId(null);
     setPanelOpen(false);
+    setHoveredId(null);
   }, []);
 
   const closeProfilePanel = useCallback(() => {
@@ -329,6 +374,8 @@ function FamilyTreeCanvas() {
         elementsSelectable={false}
         selectNodesOnDrag={false}
         onNodeClick={handleNodeClick}
+        onNodeMouseEnter={handleNodeMouseEnter}
+        onNodeMouseLeave={handleNodeMouseLeave}
         panOnDrag
         zoomOnScroll
         minZoom={MIN_ZOOM}

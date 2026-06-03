@@ -57,7 +57,7 @@ export function ProfilePanel({
               <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full border-2 border-[#e8dfd0] bg-gradient-to-b from-[#faf6ef] to-[#f0e8da]">
                 <ProfileAvatar
                   gender={profile.gender}
-                  className="h-12 w-12 text-[#a8957a]"
+                  className="h-16 w-16 text-[#a8957a]"
                   strokeWidth={1.25}
                 />
               </div>
@@ -214,7 +214,7 @@ function RelationshipCard({
       >
         <ProfileAvatar
           gender={gender}
-          className={`${compact ? "h-3.5 w-3.5" : "h-4 w-4"} text-[#a8957a]`}
+          className={`${compact ? "h-4.5 w-4.5" : "h-5 w-5"} text-[#a8957a]`}
           strokeWidth={1.25}
         />
       </div>

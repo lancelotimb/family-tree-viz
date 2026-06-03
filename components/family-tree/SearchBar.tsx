@@ -146,7 +146,7 @@ export function SearchBar({ onOpenChange, visibleFamilyNames }: SearchBarProps) 
                 }`}
               >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#e8dfd0] bg-[#faf6ef]">
-                  <ProfileAvatar gender={item.gender} className="h-4 w-4 text-[#a8957a]" />
+                  <ProfileAvatar gender={item.gender} className="h-5 w-5 text-[#a8957a]" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-[#3d3428]">{item.name}</p>
