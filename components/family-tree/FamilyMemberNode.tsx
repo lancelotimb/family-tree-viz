@@ -72,7 +72,7 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
             : isPathHighlighted
               ? "z-[1] scale-[1.02] border-[2.5px] ring-2 ring-[#6ad088]/60"
               : isFocusHighlighted
-                ? "family-focus-node z-[2] scale-[1.04] border-[2.5px] ring-2 ring-[#9333ea]/75"
+                ? "family-focus-node z-[2] scale-[1.04] border-[2.5px] ring-2 ring-[#c08080]/55"
                 : selected
                   ? "shadow-md ring-2 ring-[#d4b896]/50"
                   : "hover:shadow-md"
