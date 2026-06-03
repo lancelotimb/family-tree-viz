@@ -181,6 +181,21 @@ function applyFamilyRoleGenders(
   }
 }
 
+/** Back-fill missing FAMC pointers from FAM `CHIL` links (common GEDCOM omission). */
+function linkChildrenToBirthFamilies(
+  unions: Record<string, Union>,
+  individuals: Record<string, Individual>,
+): void {
+  for (const union of Object.values(unions)) {
+    for (const childId of union.childIds) {
+      const child = individuals[childId];
+      if (child && !child.famc) {
+        child.famc = union.id;
+      }
+    }
+  }
+}
+
 /** Parse a GEDCOM document into a {@link FamilyGraph} (generations unset). */
 export function parseGedcom(text: string): FamilyGraph {
   const individuals: Record<string, Individual> = {};
@@ -203,6 +218,8 @@ export function parseGedcom(text: string): FamilyGraph {
       applyFamilyRoleGenders(record, individuals, indiNodes);
     }
   }
+
+  linkChildrenToBirthFamilies(unions, individuals);
 
   return { individuals, unions };
 }
