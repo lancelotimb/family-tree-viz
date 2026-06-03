@@ -75,10 +75,24 @@ export function ControlSidebarContent({
       </div>
 
       <div>
-        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
-          <GitBranch className="h-3.5 w-3.5" />
-          Highlight link
-        </p>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
+            <GitBranch className="h-3.5 w-3.5" />
+            Highlight link
+          </p>
+          {pathFromId || pathToId ? (
+            <button
+              type="button"
+              onClick={() => {
+                onPathFromChange("");
+                onPathToChange("");
+              }}
+              className="shrink-0 rounded-md px-2 py-1 text-[10px] font-medium text-[#8b7d6b] transition-colors hover:bg-[#f5efe4] hover:text-[#3d3428]"
+            >
+              Reset
+            </button>
+          ) : null}
+        </div>
         <div className="flex flex-col gap-2">
           <PersonSearchInput
             label="From"

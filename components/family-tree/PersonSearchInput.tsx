@@ -106,7 +106,7 @@ export function PersonSearchInput({
         {label}
       </span>
       <div
-        className={`flex items-center gap-2 rounded-full border bg-[#fffef9] px-3 py-2 shadow-sm transition-all ${
+        className={`flex items-center gap-2 rounded-xl border bg-[#fffef9] px-3 py-2 shadow-sm transition-all ${
           open ? "border-[#c9b896] ring-2 ring-[#d4b896]/30" : "border-[#e8dfd0]"
         }`}
       >
