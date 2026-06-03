@@ -60,11 +60,11 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
       title={`${member.name} (${member.familyName})`}
       className={`flex flex-col items-center rounded-xl border-2 px-4 py-3 shadow-sm transition-all duration-200 ${
         isHovered
-          ? "family-hover-node z-10 scale-[1.05] border-[2.5px] ring-2 ring-[#8eb0d4]/55"
+          ? "family-hover-node z-10 scale-[1.05] border-[2.5px] ring-2 ring-[#6a9fd4]/65"
           : isHoverRelated
-            ? "z-[1] scale-[1.02] border-[2.5px] ring-2 ring-[#b4cfe4]/45"
+            ? "z-[1] scale-[1.02] border-[2.5px] ring-2 ring-[#8fc0e8]/55"
             : isPathHighlighted
-              ? "z-[1] scale-[1.02] border-[2.5px] ring-2 ring-[#b4d4bc]/45"
+              ? "z-[1] scale-[1.02] border-[2.5px] ring-2 ring-[#7ec894]/55"
               : selected
                 ? "shadow-md ring-2 ring-[#d4b896]/50"
                 : "hover:shadow-md"
