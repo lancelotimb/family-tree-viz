@@ -120,7 +120,7 @@ export function ControlSidebar({ expanded, onExpandedChange, ...props }: Control
 
   return (
     <aside className="pointer-events-auto flex w-64 shrink-0 flex-col gap-3 overflow-hidden rounded-2xl border border-[#e8dfd0] bg-white/75 px-4 pb-4 pt-2 shadow-lg backdrop-blur-md">
-      <div className="flex shrink-0 items-center justify-end gap-2">
+      <div className="flex shrink-0 items-center justify-between gap-2">
         <h2 className="font-serif text-base font-medium text-[#3d3428]">Parameters</h2>
         <button
           type="button"
