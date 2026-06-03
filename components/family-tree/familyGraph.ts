@@ -310,8 +310,37 @@ export function buildElkGraph(): {
   const visitUnion = (union: Union) => {
     if (visitedUnions.has(union.id)) return;
     visitedUnions.add(union.id);
+
+    // Pull in each partner's *other* (loose) unions — i.e. remarriages where a
+    // partner is grouped into this couple but married again elsewhere. We emit
+    // the remarriage spouse on the outer side (before this couple) and merge the
+    // half-siblings into one birth-sorted group. This keeps a remarriage's
+    // children next to their half-siblings instead of letting them drift into a
+    // neighbouring branch, which otherwise creates a crossing sibling edge.
+    const mergedChildren = [...union.childIds];
+    for (const partnerId of union.partnerIds) {
+      for (const otherId of unionsHeadedBy(partnerId)) {
+        if (otherId === union.id || groupedUnions.has(otherId)) continue;
+        if (visitedUnions.has(otherId)) continue;
+        const other = unions[otherId];
+        const otherSpouses = other.partnerIds.filter((id) => id !== partnerId);
+        // Only fold in a simple remarriage: the extra spouse(s) must be plain
+        // married-in people, not themselves grouped into another couple, so we
+        // never drag an unrelated branch into this position.
+        if (otherSpouses.some((id) => personToUnion[id])) continue;
+        visitedUnions.add(otherId);
+        for (const spouseId of otherSpouses) addPersonNode(spouseId);
+        mergedChildren.push(...other.childIds);
+      }
+    }
+
     for (const partnerId of union.partnerIds) addPersonNode(partnerId);
-    for (const childId of union.childIds) {
+
+    mergedChildren.sort(
+      (a, b) =>
+        (individuals[a]?.birth.year ?? 0) - (individuals[b]?.birth.year ?? 0),
+    );
+    for (const childId of mergedChildren) {
       const childUnions = unionsHeadedBy(childId);
       if (childUnions.length > 0) {
         for (const famId of childUnions) visitUnion(unions[famId]);
