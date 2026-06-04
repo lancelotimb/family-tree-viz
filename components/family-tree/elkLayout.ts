@@ -2,9 +2,9 @@ import ELK, { type ElkNode } from "elkjs/lib/elk.bundled.js";
 import { buildElkGraph, individuals, unions, type ElkGraphOptions } from "./familyGraph";
 import {
   COUPLE_INNER_GAP,
-  COUPLE_UNION_DROP,
   COUPLE_WIDTH,
   LAYER_GAP,
+  NODE_HEIGHT,
   NODE_WIDTH,
   UNION_SIZE,
 } from "./layoutConstants";
@@ -27,6 +27,12 @@ export async function computeLayout(
   options: ElkGraphOptions = {},
 ): Promise<Map<string, LayoutPosition>> {
   const { nodes, edges, couples } = buildElkGraph(options);
+  const focusedLayout = Boolean(options.personIds);
+  const layerSpacing = focusedLayout
+    ? Math.max(Math.round(LAYER_GAP * 0.72), NODE_HEIGHT + UNION_SIZE + 20)
+    : LAYER_GAP;
+  const nodeSpacing = focusedLayout ? 38 : 55;
+  const unionDrop = NODE_HEIGHT + (layerSpacing - UNION_SIZE) / 2;
   // Unions rendered as a single combined node; used below to skip them in the
   // loose-anchor pass (their dot is positioned during couple expansion).
   const groupedUnions = new Set(couples.map((c) => c.unionId));
@@ -40,8 +46,8 @@ export async function computeLayout(
       // Force each generation into its own layer band: `partition` (set per node
       // below) maps 1:1 to a generation, so people never drift across rows.
       "elk.partitioning.activate": "true",
-      "elk.layered.spacing.nodeNodeBetweenLayers": String(LAYER_GAP),
-      "elk.spacing.nodeNode": "55",
+      "elk.layered.spacing.nodeNodeBetweenLayers": String(layerSpacing),
+      "elk.spacing.nodeNode": String(nodeSpacing),
       // Honour the order in which we emit nodes/edges (couples are emitted as a
       // unit), so crossing minimization keeps spouses and siblings together.
       "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
@@ -152,7 +158,7 @@ export async function computeLayout(
     positions.set(couple.unionId, {
       id: couple.unionId,
       x: combined.x + NODE_WIDTH + COUPLE_INNER_GAP / 2 - UNION_SIZE / 2,
-      y: combined.y + COUPLE_UNION_DROP,
+      y: combined.y + unionDrop,
     });
     // Drop the placeholder combined node now that the real cards exist.
     positions.delete(couple.nodeId);
@@ -176,7 +182,7 @@ export async function computeLayout(
     positions.set(union.id, {
       id: union.id,
       x: centerX - UNION_SIZE / 2,
-      y: topY + COUPLE_UNION_DROP,
+      y: topY + unionDrop,
     });
   }
 
