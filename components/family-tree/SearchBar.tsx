@@ -8,6 +8,7 @@ import { searchIndex } from "./familyGraph";
 
 type SearchBarProps = {
   onOpenChange?: (open: boolean) => void;
+  onDismissRef?: React.MutableRefObject<(() => void) | null>;
   visibleFamilyNames?: Set<string>;
   lineagePersonIds?: Set<string> | null;
 };
@@ -19,6 +20,7 @@ function formatLifespan(birthYear: number | null, deathYear: number | null) {
 
 export function SearchBar({
   onOpenChange,
+  onDismissRef,
   visibleFamilyNames,
   lineagePersonIds,
 }: SearchBarProps) {
@@ -50,6 +52,11 @@ export function SearchBar({
     [onOpenChange],
   );
 
+  const dismissSearch = useCallback(() => {
+    setDropdownOpen(false);
+    inputRef.current?.blur();
+  }, [setDropdownOpen]);
+
   const focusNode = useCallback(
     (id: string) => {
       const node = getNode(id);
@@ -79,14 +86,34 @@ export function SearchBar({
   }, [setDropdownOpen]);
 
   useEffect(() => {
+    if (!onDismissRef) return;
+    onDismissRef.current = dismissSearch;
+    return () => {
+      onDismissRef.current = null;
+    };
+  }, [dismissSearch, onDismissRef]);
+
+  useEffect(() => {
     const onPointerDown = (e: MouseEvent) => {
       if (!containerRef.current?.contains(e.target as globalThis.Node)) {
-        setDropdownOpen(false);
+        dismissSearch();
       }
     };
     document.addEventListener("mousedown", onPointerDown);
     return () => document.removeEventListener("mousedown", onPointerDown);
-  }, [setDropdownOpen]);
+  }, [dismissSearch]);
+
+  useEffect(() => {
+    const onWheel = (e: WheelEvent) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest(".family-tree-flow")) {
+        dismissSearch();
+      }
+    };
+    document.addEventListener("wheel", onWheel, { passive: true });
+    return () => document.removeEventListener("wheel", onWheel);
+  }, [dismissSearch]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!open && e.key !== "ArrowDown") return;
@@ -100,8 +127,7 @@ export function SearchBar({
       e.preventDefault();
       focusNode(results[activeIndex].id);
     } else if (e.key === "Escape") {
-      setDropdownOpen(false);
-      inputRef.current?.blur();
+      dismissSearch();
     }
   };
 
@@ -131,9 +157,6 @@ export function SearchBar({
           aria-controls="search-results"
           role="combobox"
         />
-        <kbd className="hidden shrink-0 rounded border border-[#e8dfd0] bg-[#faf6ef] px-1.5 py-0.5 text-[10px] font-medium text-[#8b7d6b] sm:inline">
-          ⌘K
-        </kbd>
       </div>
 
       {open && results.length > 0 && (

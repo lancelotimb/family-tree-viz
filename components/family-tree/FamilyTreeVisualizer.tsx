@@ -98,6 +98,7 @@ function FamilyTreeCanvas() {
   const instanceRef = useRef<ReactFlowInstance<Node<FamilyNodeData>, Edge> | null>(
     null,
   );
+  const dismissSearchRef = useRef<(() => void) | null>(null);
   const { fitView, getNode } = useReactFlow();
 
   const applyLayout = useCallback(
@@ -435,6 +436,7 @@ function FamilyTreeCanvas() {
   ]);
 
   const handleNodeClick: NodeMouseHandler = useCallback((_event, node) => {
+    dismissSearchRef.current?.();
     const data = node.data as FamilyNodeData;
     if (data.kind !== "person" || node.hidden) return;
     setSelectedId(node.id);
@@ -452,6 +454,7 @@ function FamilyTreeCanvas() {
   }, []);
 
   const handlePaneClick = useCallback(() => {
+    dismissSearchRef.current?.();
     setSelectedId(null);
     setPanelOpen(false);
     setHoveredId(null);
@@ -552,6 +555,7 @@ function FamilyTreeCanvas() {
         maxZoom={MAX_ZOOM}
         proOptions={{ hideAttribution: true }}
         onPaneClick={handlePaneClick}
+        onMoveStart={() => dismissSearchRef.current?.()}
         fitView
         fitViewOptions={{ padding: 0.15, minZoom: MIN_ZOOM }}
         className="family-tree-flow"
@@ -579,6 +583,7 @@ function FamilyTreeCanvas() {
               visibleFamilyNames={visibleFamilyNames}
               lineagePersonIds={lineagePersonIds}
               onOpenChange={setSearchOpen}
+              onDismissRef={dismissSearchRef}
             />
           </div>
         </header>
