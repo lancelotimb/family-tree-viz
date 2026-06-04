@@ -17,7 +17,14 @@ import { MarriageNode } from "./MarriageNode";
 import { SearchBar } from "./SearchBar";
 import { ControlDrawer } from "./ControlDrawer";
 import { ControlSidebar } from "./ControlSidebar";
-import { MAX_ZOOM, MIN_ZOOM } from "./layoutConstants";
+import {
+  MAX_ZOOM,
+  MIN_ZOOM,
+  NODE_HEIGHT,
+  NODE_WIDTH,
+  PERSON_FOCUS_DURATION_MS,
+  PERSON_FOCUS_ZOOM,
+} from "./layoutConstants";
 import { ZoomControls } from "./ZoomControls";
 import { ProfilePanel } from "./ProfilePanel";
 import {
@@ -117,7 +124,8 @@ function FamilyTreeCanvas() {
   const instanceRef = useRef<ReactFlowInstance<Node<FamilyNodeData>, Edge> | null>(
     null,
   );
-  const { fitView, getNode } = useReactFlow();
+  const dismissSearchRef = useRef<(() => void) | null>(null);
+  const { fitView, getNode, setCenter } = useReactFlow();
 
   const applyLayout = useCallback(
     (positions: Map<string, LayoutPosition>, personIds?: Set<string>) => {
@@ -533,6 +541,7 @@ function FamilyTreeCanvas() {
   ]);
 
   const handleNodeClick: NodeMouseHandler = useCallback((_event, node) => {
+    dismissSearchRef.current?.();
     if (suppressNextNodeClickRef.current) {
       suppressNextNodeClickRef.current = false;
       return;
@@ -554,6 +563,7 @@ function FamilyTreeCanvas() {
   }, []);
 
   const handlePaneClick = useCallback(() => {
+    dismissSearchRef.current?.();
     closeContextMenu();
     setSelectedId(null);
     setPanelOpen(false);
@@ -571,16 +581,17 @@ function FamilyTreeCanvas() {
       setPanelOpen(true);
       const node = getNode(id);
       if (node && !node.hidden) {
-        fitView({
-          nodes: [{ id }],
-          duration: 500,
-          padding: 0.4,
-          maxZoom: 1.2,
-          minZoom: MIN_ZOOM,
+        const width = node.width ?? node.measured?.width ?? NODE_WIDTH;
+        const height = node.height ?? node.measured?.height ?? NODE_HEIGHT;
+        const centerX = node.position.x + width / 2;
+        const centerY = node.position.y + height / 2;
+        void setCenter(centerX, centerY, {
+          zoom: PERSON_FOCUS_ZOOM,
+          duration: PERSON_FOCUS_DURATION_MS,
         });
       }
     },
-    [fitView, getNode],
+    [getNode, setCenter],
   );
 
   useEffect(() => {
@@ -671,6 +682,7 @@ function FamilyTreeCanvas() {
         maxZoom={MAX_ZOOM}
         proOptions={{ hideAttribution: true }}
         onPaneClick={handlePaneClick}
+        onMoveStart={() => dismissSearchRef.current?.()}
         onPaneContextMenu={(event) => event.preventDefault()}
         fitView
         fitViewOptions={{ padding: 0.15, minZoom: MIN_ZOOM }}
@@ -686,7 +698,7 @@ function FamilyTreeCanvas() {
       ) : null}
 
       <div className="pointer-events-none absolute inset-0 z-10 flex flex-col">
-        <header className="flex items-start gap-2 p-3">
+        <header className="flex items-start justify-between gap-2 overflow-visible p-3">
           <div className="pointer-events-auto hidden shrink-0 md:block">
             <ControlSidebar
               expanded={settingsSidebarExpanded}
@@ -694,11 +706,12 @@ function FamilyTreeCanvas() {
               {...controlPanelProps}
             />
           </div>
-          <div className="pointer-events-auto min-w-0 flex-1">
+          <div className="pointer-events-auto min-w-0 w-full md:w-[450px] md:shrink-0">
             <SearchBar
               visibleFamilyNames={visibleFamilyNames}
               lineagePersonIds={lineagePersonIds}
               onOpenChange={setSearchOpen}
+              onDismissRef={dismissSearchRef}
             />
           </div>
         </header>
