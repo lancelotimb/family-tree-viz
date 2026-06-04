@@ -50,7 +50,7 @@ export function ControlSidebarContent({
   lineagePersonIds,
 }: ControlPanelProps) {
   return (
-    <>
+    <div className="flex flex-col gap-5">
       <div>
         <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
           <Eye className="h-3.5 w-3.5" />
@@ -124,20 +124,6 @@ export function ControlSidebarContent({
       </div>
 
       <div>
-        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
-          <GitFork className="h-3.5 w-3.5" />
-          Branches
-        </p>
-        <BranchSelector
-          branches={familyBranches}
-          visibleFamilyNames={visibleFamilyNames}
-          onFamilyVisibilityChange={onFamilyVisibilityChange}
-          onShowAllBranches={onShowAllBranches}
-          onHideAllBranches={onHideAllBranches}
-        />
-      </div>
-
-      <div>
         <div className="mb-2 flex items-center justify-between gap-2">
           <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
             <GitBranch className="h-3.5 w-3.5" />
@@ -183,7 +169,21 @@ export function ControlSidebarContent({
           <p className="mt-2 text-xs text-[#6b7d5a]">Path highlighted on the tree.</p>
         )}
       </div>
-    </>
+
+      <div>
+        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
+          <GitFork className="h-3.5 w-3.5" />
+          Branches
+        </p>
+        <BranchSelector
+          branches={familyBranches}
+          visibleFamilyNames={visibleFamilyNames}
+          onFamilyVisibilityChange={onFamilyVisibilityChange}
+          onShowAllBranches={onShowAllBranches}
+          onHideAllBranches={onHideAllBranches}
+        />
+      </div>
+    </div>
   );
 }
 

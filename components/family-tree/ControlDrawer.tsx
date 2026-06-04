@@ -41,7 +41,7 @@ export function ControlDrawer({ open, onClose, ...controlProps }: ControlDrawerP
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="flex flex-col gap-5 overflow-visible px-5 py-5">
+        <div className="overflow-visible px-5 py-5">
           <ControlSidebarContent {...controlProps} />
         </div>
       </aside>
