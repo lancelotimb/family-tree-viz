@@ -598,6 +598,8 @@ function FamilyTreeCanvas() {
         open={panelOpen}
         onClose={closeProfilePanel}
         onSelectPerson={handleSelectPerson}
+        focusPersonId={focusPersonId}
+        onFocusLineage={handleFocusPersonChange}
       />
     </div>
   );
