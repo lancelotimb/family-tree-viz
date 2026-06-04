@@ -67,6 +67,60 @@ function separationShift(accum: Contour, incoming: Contour, gap: number): number
   return constrained ? shift : 0;
 }
 
+type Interval = [number, number];
+
+/** Intersection of two ascending, non-overlapping interval lists. */
+function intersectIntervals(a: Interval[], b: Interval[]): Interval[] {
+  const out: Interval[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < a.length && j < b.length) {
+    const lo = Math.max(a[i][0], b[j][0]);
+    const hi = Math.min(a[i][1], b[j][1]);
+    if (lo <= hi) out.push([lo, hi]);
+    if (a[i][1] < b[j][1]) i++;
+    else j++;
+  }
+  return out;
+}
+
+/**
+ * Place a box of width `w` as close to `desired` (a left-edge x) as possible
+ * without overlapping any `others` interval, keeping `gap` clearance. `others`
+ * must be ascending.
+ */
+function nearestFreeX(
+  desired: number,
+  w: number,
+  others: Interval[],
+  gap: number,
+): number | null {
+  let best: number | null = null;
+  let bestDist = Infinity;
+  let prevHi = -Infinity;
+  for (let i = 0; i <= others.length; i++) {
+    const curLo = i < others.length ? others[i][0] : Infinity;
+    const gapLo = prevHi === -Infinity ? -Infinity : prevHi + gap;
+    const gapHi = curLo === Infinity ? Infinity : curLo - gap;
+    if (gapHi - gapLo >= w) {
+      const lo = gapLo;
+      const hi = Number.isFinite(gapHi) ? gapHi - w : Infinity;
+      const cand = Math.max(
+        Number.isFinite(lo) ? lo : -Infinity,
+        Math.min(Number.isFinite(hi) ? hi : Infinity, desired),
+      );
+      const resolved = Number.isFinite(cand) ? cand : desired;
+      const dist = Math.abs(resolved - desired);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = resolved;
+      }
+    }
+    if (i < others.length) prevHi = Math.max(prevHi, others[i][1]);
+  }
+  return best;
+}
+
 /**
  * Re-arrange the horizontal (x) positions of the ELK boxes so each parent box
  * (a single person or a combined couple) is centered over the midpoint of its
@@ -80,16 +134,24 @@ function separationShift(accum: Contour, incoming: Contour, gap: number): number
  * blood line), so e.g. the Imberton main line keeps descending under the
  * Imberton grandparents and stays beside its siblings instead of being adopted
  * into the spouse's branch. Otherwise we fall back to the parent whose ELK
- * center is closest, keeping the result near ELK's arrangement. Secondary links
- * still render as edges; they just don't drive centering.
+ * center is closest, keeping the result near ELK's arrangement.
  *
- * Married-in spouses from a *loose* union (e.g. a remarriage that wasn't merged
- * into a combined couple box) have no parents of their own, so on their own
- * they would look like independent roots and get packed next to the founding
- * ancestors — far from their actual spouse. We instead detect them as
- * "satellites" of their anchored partner, keep them out of the forest, and
- * after centering translate them (preserving ELK's adjacency) by however far
- * that partner moved, so they ride along beside them.
+ * Married-in spouses from a *loose* union (a remarriage that wasn't merged into
+ * a combined couple box) have no parents of their own, so on their own they
+ * would look like independent roots and get packed next to the founding
+ * ancestors. We detect them as "satellites" of their anchored partner and slide
+ * them along beside that partner after centering.
+ *
+ * When one child's subtree dwarfs its siblings (a brother with a huge line of
+ * descendants next to childless/small siblings), the small siblings otherwise
+ * end up stranded at the far edge of the big fan, far from their sibling and
+ * joined by a very long edge. `tuckMinorSiblings` pulls those small subtrees
+ * back in next to the dominant sibling, slotting them into the open space in its
+ * upper generations. It only ever moves a subtree into a position free of node
+ * overlaps; descendant *edges* of the big sibling may cross over the tucked-in
+ * siblings, which is the accepted trade-off for keeping siblings together.
+ * Afterwards `reCenterParents` nudges any parent left stranded well off to the
+ * side of its (now moved) children back over their midpoint.
  */
 function centerParentsOverChildren(
   positions: Map<string, LayoutPosition>,
@@ -124,8 +186,7 @@ function centerParentsOverChildren(
     personToCoupleNode.get(personId) ?? personId;
 
   // The ELK box that represents a person's parent union (their `famc`), if it is
-  // laid out: the combined node when the parents are grouped, else a positioned
-  // partner of the loose parent union.
+  // laid out.
   const parentBoxOfPerson = (personId: string): string | null => {
     const famc = individuals[personId]?.famc;
     if (!famc) return null;
@@ -150,14 +211,12 @@ function centerParentsOverChildren(
   }
 
   // A "satellite" is a parentless person box whose spouse, through a loose
-  // union, sits in an anchored box (a combined couple, or a partner who has
-  // their own parents). Such spouses should follow their partner, not float off
-  // among the roots. Map each satellite box to the anchor box it rides with.
+  // union, sits in an anchored box. Such spouses should follow their partner.
   const satelliteAnchor = new Map<string, string>();
   for (const id of positions.keys()) {
-    if (parentsOf.has(id)) continue; // has parents → laid out normally
+    if (parentsOf.has(id)) continue;
     const person = individuals[id];
-    if (!person) continue; // only loose person boxes can be satellites
+    if (!person) continue;
     let anchor: string | null = null;
     for (const unionId of person.fams ?? []) {
       const union = unions[unionId];
@@ -180,8 +239,6 @@ function centerParentsOverChildren(
   /**
    * For a combined couple box with parents on both partners' sides, the parent
    * box on the side of the partner whose surname the couple's children carry.
-   * Returns null when that can't be determined unambiguously (so the caller
-   * falls back to the closest-center heuristic).
    */
   const bloodParentBox = (coupleNode: string, pool: string[]): string | null => {
     const couple = coupleByNodeId.get(coupleNode);
@@ -207,7 +264,7 @@ function centerParentsOverChildren(
     const matching = [couple.leftId, couple.rightId].filter(
       (p) => individuals[p]?.familyName === childFamily,
     );
-    if (matching.length !== 1) return null; // ambiguous (same surname, or none)
+    if (matching.length !== 1) return null;
 
     const box = parentBoxOfPerson(matching[0]);
     if (box && !satelliteAnchor.has(box) && pool.includes(box)) return box;
@@ -215,8 +272,7 @@ function centerParentsOverChildren(
   };
 
   // Each box keeps one primary parent. Couples prefer their blood-line side;
-  // everything else takes the horizontally closest parent. Satellites are
-  // skipped as parents when an anchored alternative exists.
+  // everything else takes the horizontally closest parent.
   const primaryParent = new Map<string, string>();
   for (const [child, parents] of parentsOf) {
     const anchored = parents.filter((p) => !satelliteAnchor.has(p));
@@ -246,19 +302,26 @@ function centerParentsOverChildren(
   for (const [child, parent] of primaryParent) {
     primaryChildren.get(parent)?.push(child);
   }
-  // A satellite that nonetheless ended up owning a child (its loose union's only
-  // anchor) can't float — promote it back to a normal root.
   for (const [satellite] of satelliteAnchor) {
     if ((primaryChildren.get(satellite)?.length ?? 0) > 0) {
       satelliteAnchor.delete(satellite);
     }
   }
-  // Preserve ELK's left-to-right ordering of siblings.
   for (const kids of primaryChildren.values()) {
     kids.sort((a, b) => currentX(a) - currentX(b));
   }
 
+  const anchorToSatellites = new Map<string, string[]>();
+  for (const [sat, anchor] of satelliteAnchor) {
+    const arr = anchorToSatellites.get(anchor);
+    if (arr) arr.push(sat);
+    else anchorToSatellites.set(anchor, [sat]);
+  }
+
   const newX = new Map<string, number>();
+  // Full set of boxes in each node's subtree (the node plus all descendants),
+  // captured during the walk so the tuck pass can move a whole subtree as a unit.
+  const subtreeOf = new Map<string, string[]>();
 
   const layoutSubtree = (
     node: string,
@@ -269,6 +332,7 @@ function centerParentsOverChildren(
 
     if (kids.length === 0) {
       newX.set(node, 0);
+      subtreeOf.set(node, [node]);
       return { contour: new Map([[layer, { min: 0, max: w }]]), members: [node] };
     }
 
@@ -285,7 +349,6 @@ function centerParentsOverChildren(
       childCenters.push((newX.get(kid) ?? 0) + width(kid) / 2);
     }
 
-    // Center the parent over the midpoint of its outermost children.
     const center = (childCenters[0] + childCenters[childCenters.length - 1]) / 2;
     newX.set(node, center - w / 2);
     mergeContour(
@@ -293,12 +356,11 @@ function centerParentsOverChildren(
       new Map([[layer, { min: center - w / 2, max: center + w / 2 }]]),
     );
     members.push(node);
+    subtreeOf.set(node, members);
 
     return { contour: accum, members };
   };
 
-  // Roots are boxes nobody points down to and that aren't satellites; lay them
-  // out left-to-right.
   const roots = [...positions.keys()]
     .filter((id) => !primaryParent.has(id) && !satelliteAnchor.has(id))
     .sort((a, b) => currentX(a) - currentX(b));
@@ -311,8 +373,6 @@ function centerParentsOverChildren(
     mergeContour(forest, sub.contour, shift);
   }
 
-  // Slide each satellite by the same amount its anchor moved, keeping the
-  // ELK-chosen offset (and thus the adjacency) to its spouse.
   for (const [satellite, anchor] of satelliteAnchor) {
     const anchorNew = newX.get(anchor);
     if (anchorNew === undefined) continue;
@@ -320,9 +380,172 @@ function centerParentsOverChildren(
     newX.set(satellite, currentX(satellite) + delta);
   }
 
+  tuckMinorSiblings();
+  reCenterParents();
+
   for (const [id, x] of newX) {
     const pos = positions.get(id);
     if (pos) pos.x = x;
+  }
+
+  /** Boxes (excluding `exclude`) currently occupying a given generation layer. */
+  function occupantsAtLayer(layer: number, exclude?: Set<string>): Interval[] {
+    const out: Interval[] = [];
+    for (const b of positions.keys()) {
+      if (exclude?.has(b)) continue;
+      if ((layerOf.get(b) ?? 0) !== layer) continue;
+      const lo = newX.get(b);
+      if (lo === undefined) continue;
+      out.push([lo, lo + width(b)]);
+    }
+    out.sort((p, q) => p[0] - q[0]);
+    return out;
+  }
+
+  /**
+   * Pull each parent's much-smaller child subtrees in next to its dominant
+   * child, slotting them into the free space in the dominant child's upper
+   * generations. Only node-overlap-free placements are used.
+   */
+  function tuckMinorSiblings(): void {
+    const DOMINANT_MIN = 6; // dominant subtree must be at least this many boxes
+    const RATIO = 3; // a minor subtree is at most 1/RATIO of the dominant size
+
+    const moveSubtree = (members: string[], delta: number) => {
+      for (const b of members) newX.set(b, (newX.get(b) ?? 0) + delta);
+    };
+
+    // Process shallow parents first so large upper structures settle before
+    // their descendants are considered.
+    const parents = [...primaryChildren.keys()]
+      .filter((p) => (primaryChildren.get(p)?.length ?? 0) >= 2)
+      .sort((a, b) => (layerOf.get(a) ?? 0) - (layerOf.get(b) ?? 0));
+
+    for (const parent of parents) {
+      const kids = primaryChildren.get(parent)!;
+      const sized = kids.map((k) => ({ k, size: subtreeOf.get(k)?.length ?? 1 }));
+      const dominant = sized.reduce((a, b) => (b.size > a.size ? b : a));
+      if (dominant.size < DOMINANT_MIN) continue;
+
+      const domX = newX.get(dominant.k) ?? 0;
+      const domW = width(dominant.k);
+
+      const minors = sized
+        .filter((s) => s.k !== dominant.k && s.size * RATIO <= dominant.size)
+        .sort(
+          (a, b) =>
+            Math.abs((newX.get(a.k) ?? 0) - domX) -
+            Math.abs((newX.get(b.k) ?? 0) - domX),
+        );
+      if (minors.length === 0) continue;
+
+      for (const minor of minors) {
+        const members = subtreeOf.get(minor.k) ?? [minor.k];
+        const memberSet = new Set(members);
+        const mRootX = newX.get(minor.k) ?? 0;
+        const mRootW = width(minor.k);
+        const isLeft = mRootX < domX;
+
+        // Per-layer footprint of the moving subtree.
+        const foot = new Map<number, { lo: number; hi: number }>();
+        for (const b of members) {
+          const L = layerOf.get(b) ?? 0;
+          const lo = newX.get(b) ?? 0;
+          const hi = lo + width(b);
+          const f = foot.get(L);
+          if (!f) foot.set(L, { lo, hi });
+          else {
+            f.lo = Math.min(f.lo, lo);
+            f.hi = Math.max(f.hi, hi);
+          }
+        }
+
+        // Feasible translations: a delta that keeps every layer's footprint
+        // inside a gap (with `gap` clearance) of the other boxes on that layer.
+        let feasible: Interval[] | null = null;
+        for (const [L, f] of foot) {
+          const others = occupantsAtLayer(L, memberSet);
+          const w = f.hi - f.lo;
+          const allowed: Interval[] = [];
+          let prevHi = -Infinity;
+          for (let i = 0; i <= others.length; i++) {
+            const curLo = i < others.length ? others[i][0] : Infinity;
+            const gapLo = prevHi === -Infinity ? -Infinity : prevHi + gap;
+            const gapHi = curLo === Infinity ? Infinity : curLo - gap;
+            if (gapHi - gapLo >= w) {
+              const dLo = gapLo === -Infinity ? -Infinity : gapLo - f.lo;
+              const dHi = gapHi === Infinity ? Infinity : gapHi - f.hi;
+              allowed.push([dLo, dHi]);
+            }
+            if (i < others.length) prevHi = Math.max(prevHi, others[i][1]);
+          }
+          feasible = feasible === null ? allowed : intersectIntervals(feasible, allowed);
+          if (feasible.length === 0) break;
+        }
+        if (!feasible || feasible.length === 0) continue;
+
+        // Desired: minor's near edge just beside the dominant child's trunk.
+        const desiredDelta = isLeft
+          ? domX - gap - (mRootX + mRootW)
+          : domX + domW + gap - mRootX;
+
+        let bestDelta: number | null = null;
+        let bestDist = Infinity;
+        for (const [lo, hi] of feasible) {
+          const cand = Math.max(lo, Math.min(hi, desiredDelta));
+          if (!Number.isFinite(cand)) continue;
+          const dist = Math.abs(cand - desiredDelta);
+          if (dist < bestDist) {
+            bestDist = dist;
+            bestDelta = cand;
+          }
+        }
+        if (bestDelta === null) continue;
+        // Only tuck inward (toward the dominant sibling).
+        if (isLeft && bestDelta <= 0) continue;
+        if (!isLeft && bestDelta >= 0) continue;
+
+        moveSubtree(members, bestDelta);
+      }
+    }
+  }
+
+  /**
+   * Tucking moves a parent's minor children far toward the dominant sibling,
+   * which can leave the parent itself stranded well off to the side of its
+   * children. Slide such a parent (and any satellite spouses anchored to it)
+   * back over the midpoint of its children, to the nearest spot free of overlaps
+   * on the parent's row. We only touch parents that are badly off-center, so
+   * well-placed parents (and the dominant trunk lines) are left untouched and
+   * the layout doesn't re-flow.
+   */
+  function reCenterParents(): void {
+    // Tolerate the small natural offset between a couple's dot and its
+    // children's midpoint; only correct genuinely stranded parents.
+    const THRESHOLD = COUPLE_WIDTH; // ~ a couple's width
+
+    const parents = [...primaryChildren.keys()]
+      .filter((p) => (primaryChildren.get(p)?.length ?? 0) > 0)
+      .sort((a, b) => (layerOf.get(b) ?? 0) - (layerOf.get(a) ?? 0)); // deepest first
+
+    for (const parent of parents) {
+      const kids = primaryChildren.get(parent)!;
+      const centers = kids.map((k) => (newX.get(k) ?? 0) + width(k) / 2);
+      const mid = (Math.min(...centers) + Math.max(...centers)) / 2;
+      const w = width(parent);
+      const curCenter = (newX.get(parent) ?? 0) + w / 2;
+      if (Math.abs(curCenter - mid) <= THRESHOLD) continue;
+
+      const sats = anchorToSatellites.get(parent) ?? [];
+      const exclude = new Set<string>([parent, ...sats]);
+      const others = occupantsAtLayer(layerOf.get(parent) ?? 0, exclude);
+      const placed = nearestFreeX(mid - w / 2, w, others, gap);
+      if (placed === null) continue;
+      const delta = placed - (newX.get(parent) ?? 0);
+      if (delta === 0) continue;
+      newX.set(parent, placed);
+      for (const s of sats) newX.set(s, (newX.get(s) ?? 0) + delta);
+    }
   }
 }
 
