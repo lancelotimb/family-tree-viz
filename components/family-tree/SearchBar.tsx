@@ -5,6 +5,7 @@ import { useReactFlow } from "@xyflow/react";
 import { Search } from "lucide-react";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { searchIndex } from "./familyGraph";
+import { personFocusFitViewOptions } from "./layoutConstants";
 
 type SearchBarProps = {
   onOpenChange?: (open: boolean) => void;
@@ -60,12 +61,10 @@ export function SearchBar({
   const focusNode = useCallback(
     (id: string) => {
       const node = getNode(id);
-      if (!node) return;
+      if (!node || node.hidden) return;
       fitView({
         nodes: [{ id }],
-        duration: 500,
-        padding: 0.4,
-        maxZoom: 1.2,
+        ...personFocusFitViewOptions,
       });
       setDropdownOpen(false);
       setQuery("");

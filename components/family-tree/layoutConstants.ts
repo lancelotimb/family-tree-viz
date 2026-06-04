@@ -36,3 +36,11 @@ export const ZOOM_STEP = 1.7;
 /** Minimum scale — prevents zooming out so far that the tree becomes tiny. */
 export const MIN_ZOOM = 0.1;
 export const MAX_ZOOM = 1.8;
+
+/** Viewport options when centering on a single person (search, profile relatives). */
+export const personFocusFitViewOptions = {
+  duration: 500,
+  padding: 0.15,
+  minZoom: 1.4,
+  maxZoom: MAX_ZOOM,
+} as const;

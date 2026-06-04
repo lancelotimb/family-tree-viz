@@ -17,7 +17,7 @@ import { MarriageNode } from "./MarriageNode";
 import { SearchBar } from "./SearchBar";
 import { ControlDrawer } from "./ControlDrawer";
 import { ControlSidebar } from "./ControlSidebar";
-import { MAX_ZOOM, MIN_ZOOM } from "./layoutConstants";
+import { MAX_ZOOM, MIN_ZOOM, personFocusFitViewOptions } from "./layoutConstants";
 import { ZoomControls } from "./ZoomControls";
 import { ProfilePanel } from "./ProfilePanel";
 import {
@@ -473,10 +473,7 @@ function FamilyTreeCanvas() {
       if (node && !node.hidden) {
         fitView({
           nodes: [{ id }],
-          duration: 500,
-          padding: 0.4,
-          maxZoom: 1.2,
-          minZoom: MIN_ZOOM,
+          ...personFocusFitViewOptions,
         });
       }
     },
