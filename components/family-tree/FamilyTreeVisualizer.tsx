@@ -24,6 +24,7 @@ import {
   buildAdjacencyList,
   findShortestPath,
   pathEdgeIds,
+  pruneOrphanedFamilyNames,
 } from "./graphPath";
 import {
   buildFlowEdges,
@@ -296,11 +297,19 @@ function FamilyTreeCanvas() {
         next.add(familyName);
       } else {
         next.delete(familyName);
+        const pruned = pruneOrphanedFamilyNames(
+          next,
+          baseEdges,
+          individuals,
+          unions,
+        );
+        next.clear();
+        for (const name of pruned) next.add(name);
       }
       setVisibleFamilyNames(next);
       clearHiddenPeople(next);
     },
-    [clearHiddenPeople, visibleFamilyNames],
+    [clearHiddenPeople, visibleFamilyNames, baseEdges],
   );
 
   const showAllBranches = useCallback(() => {
