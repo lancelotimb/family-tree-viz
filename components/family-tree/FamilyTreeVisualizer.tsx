@@ -79,6 +79,15 @@ function neutralEdgeStyle(edge: Edge) {
   return dash ? { ...defaultEdgeStyle, strokeDasharray: dash } : defaultEdgeStyle;
 }
 
+function visibleFamilyNamesKey(names: Set<string>): string {
+  return [...names].sort().join("\0");
+}
+
+function layoutPersonIdsKey(personIds: Set<string> | null): string {
+  if (personIds === null) return "full";
+  return [...personIds].sort().join("\0");
+}
+
 function FamilyTreeCanvas() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<FamilyNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -103,6 +112,7 @@ function FamilyTreeCanvas() {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [contextMenuTarget, setContextMenuTarget] =
     useState<NodeContextMenuTarget | null>(null);
+  const [layoutRequestNonce, setLayoutRequestNonce] = useState(0);
   const suppressNextNodeClickRef = useRef(false);
   const instanceRef = useRef<ReactFlowInstance<Node<FamilyNodeData>, Edge> | null>(
     null,
@@ -145,6 +155,29 @@ function FamilyTreeCanvas() {
     return ids;
   }, [allBranchesVisible, visibleFamilyNames, lineagePersonIds]);
 
+  /** Stable key so layout re-runs when focus/visibility changes, not only Set identity. */
+  const layoutRequestKey = useMemo(
+    () =>
+      [
+        layoutRequestNonce,
+        focusPersonId,
+        focusUnionId,
+        visibleFamilyNamesKey(visibleFamilyNames),
+        layoutPersonIdsKey(layoutPersonIds),
+      ].join("|"),
+    [
+      layoutRequestNonce,
+      focusPersonId,
+      focusUnionId,
+      visibleFamilyNames,
+      layoutPersonIds,
+    ],
+  );
+
+  const bumpLayoutRequest = useCallback(() => {
+    setLayoutRequestNonce((nonce) => nonce + 1);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -177,7 +210,7 @@ function FamilyTreeCanvas() {
     return () => {
       cancelled = true;
     };
-  }, [layoutPersonIds, applyLayout]);
+  }, [layoutRequestKey, layoutPersonIds, applyLayout]);
 
   useEffect(() => {
     if (!ready || layouting) return;
@@ -207,7 +240,7 @@ function FamilyTreeCanvas() {
         });
       }
     });
-  }, [ready, layouting, layoutPersonIds, focusUnionId, fitView]);
+  }, [ready, layouting, layoutRequestKey, layoutPersonIds, focusPersonId, focusUnionId, fitView]);
 
   const adjacency = useMemo(() => buildAdjacencyList(baseEdges), [baseEdges]);
 
@@ -250,15 +283,23 @@ function FamilyTreeCanvas() {
     return null;
   }, [focusPersonId, focusUnionId]);
 
-  const handleFocusPersonChange = useCallback((id: string) => {
-    setFocusPersonId(id);
-    if (id) setFocusUnionId("");
-  }, []);
+  const handleFocusPersonChange = useCallback(
+    (id: string) => {
+      setFocusPersonId(id);
+      if (id) setFocusUnionId("");
+      bumpLayoutRequest();
+    },
+    [bumpLayoutRequest],
+  );
 
-  const handleFocusUnionChange = useCallback((id: string) => {
-    setFocusUnionId(id);
-    if (id) setFocusPersonId("");
-  }, []);
+  const handleFocusUnionChange = useCallback(
+    (id: string) => {
+      setFocusUnionId(id);
+      if (id) setFocusPersonId("");
+      bumpLayoutRequest();
+    },
+    [bumpLayoutRequest],
+  );
 
   const closeContextMenu = useCallback(() => {
     setContextMenuTarget(null);
@@ -288,7 +329,8 @@ function FamilyTreeCanvas() {
   const handleUnfocusLineage = useCallback(() => {
     setFocusPersonId("");
     setFocusUnionId("");
-  }, []);
+    bumpLayoutRequest();
+  }, [bumpLayoutRequest]);
 
   const handleNodeContextMenu: NodeMouseHandler = useCallback((event, node) => {
     event.preventDefault();
