@@ -18,7 +18,7 @@ export const familyHighlight = {
       marriageFill: "#c0daf2",
     },
     edge: "#4a8ac8",
-    edgeWidth: 3,
+    edgeWidth: 4,
   },
   path: {
     related: {
@@ -30,6 +30,16 @@ export const familyHighlight = {
       marriageFill: "#b4dfc0",
     },
     edge: "#48a066",
-    edgeWidth: 3,
+    edgeWidth: 4,
+  },
+  focus: {
+    primary: {
+      border: "#c86464",
+      stroke: "#b04a4a",
+      text: "#802828",
+      background: "#fae0e0",
+      marriageBorder: "#c86464",
+      marriageFill: "#eeb8b8",
+    },
   },
 } as const;

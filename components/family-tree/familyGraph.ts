@@ -206,7 +206,7 @@ export const coupleNodeId = (unionId: string) => `couple:${unionId}`;
  * only belong to one combined couple, so for the rare remarriage we keep the
  * earliest union grouped and let the others fall back to the loose edge layout.
  */
-function planCouples(): {
+function planCouples(personFilter?: Set<string>): {
   couples: CoupleGroup[];
   groupedUnions: Set<string>;
   personToUnion: Record<string, string>;
@@ -216,6 +216,8 @@ function planCouples(): {
   // Records which combined couple a person already belongs to, so nobody is
   // grouped twice.
   const personToUnion: Record<string, string> = {};
+
+  const includesPerson = (id: string) => !personFilter || personFilter.has(id);
 
   // Process oldest generation first, and within a generation the earliest
   // marriage first. This makes the "first marriage wins" tie-break for a
@@ -229,6 +231,7 @@ function planCouples(): {
     // Only two-partner marriages can be merged into one node.
     if (union.partnerIds.length !== 2) continue;
     const [left, right] = union.partnerIds;
+    if (!includesPerson(left) || !includesPerson(right)) continue;
     // If either partner is already in a couple (a remarriage), this union stays
     // loose so the person isn't claimed by two combined nodes.
     if (personToUnion[left] || personToUnion[right]) continue;
@@ -246,6 +249,11 @@ function planCouples(): {
   return { couples, groupedUnions, personToUnion };
 }
 
+export type ElkGraphOptions = {
+  /** When set, only these people (and their connecting unions) are laid out. */
+  personIds?: Set<string>;
+};
+
 /**
  * Describe the graph for ELK, partitioned by generation. Each two-partner
  * couple collapses into a single node so ELK can never split spouses apart;
@@ -255,18 +263,34 @@ function planCouples(): {
  * contiguous block. The combined couple nodes are expanded back into two
  * partner positions after layout (see `computeLayout`).
  */
-export function buildElkGraph(): {
+export function buildElkGraph(options: ElkGraphOptions = {}): {
   nodes: ElkNodeInput[];
   edges: ElkEdgeInput[];
   couples: CoupleGroup[];
 } {
+  const personFilter = options.personIds;
+  const includesPerson = (id: string) => !personFilter || personFilter.has(id);
+  const includesUnion = (union: Union) =>
+    !personFilter || unionInLineage(union.id, personFilter);
+
+  let generationOffset = 0;
+  if (personFilter && personFilter.size > 0) {
+    generationOffset = Math.min(
+      ...[...personFilter].map((id) => individuals[id]?.generation ?? Infinity),
+    );
+    if (!Number.isFinite(generationOffset)) generationOffset = 0;
+  }
+  const partitionOfPerson = (id: string) =>
+    (individuals[id]?.generation ?? 0) - generationOffset;
+  const partitionOfUnion = (union: Union) => union.generation - generationOffset;
+
   const nodes: ElkNodeInput[] = [];
   const edges: ElkEdgeInput[] = [];
   // Guards against emitting the same ELK node twice (a person can be referenced
   // as a partner and as a child).
   const emitted = new Set<string>();
 
-  const { couples, groupedUnions, personToUnion } = planCouples();
+  const { couples, groupedUnions, personToUnion } = planCouples(personFilter);
 
   /**
    * Map a person to the ELK node that represents them: their combined couple
@@ -277,6 +301,7 @@ export function buildElkGraph(): {
     personToUnion[id] ? coupleNodeId(personToUnion[id]) : personNodeId(id);
 
   const addPersonNode = (id: string) => {
+    if (!includesPerson(id)) return;
     const groupUnion = personToUnion[id];
     const nodeId = nodeOf(id);
     if (emitted.has(nodeId)) return;
@@ -288,14 +313,14 @@ export function buildElkGraph(): {
         id: nodeId,
         width: COUPLE_WIDTH,
         height: NODE_HEIGHT,
-        partition: unions[groupUnion].generation,
+        partition: partitionOfUnion(unions[groupUnion]),
       });
     } else {
       nodes.push({
         id: nodeId,
         width: NODE_WIDTH,
         height: NODE_HEIGHT,
-        partition: individuals[id].generation,
+        partition: partitionOfPerson(id),
       });
     }
   };
@@ -319,6 +344,7 @@ export function buildElkGraph(): {
       );
 
   const visitUnion = (union: Union) => {
+    if (!includesUnion(union)) return;
     if (visitedUnions.has(union.id)) return;
     visitedUnions.add(union.id);
 
@@ -352,6 +378,7 @@ export function buildElkGraph(): {
         (individuals[a]?.birth.year ?? 0) - (individuals[b]?.birth.year ?? 0),
     );
     for (const childId of mergedChildren) {
+      if (!includesPerson(childId)) continue;
       const childUnions = unionsHeadedBy(childId);
       if (childUnions.length > 0) {
         for (const famId of childUnions) visitUnion(unions[famId]);
@@ -364,7 +391,7 @@ export function buildElkGraph(): {
   // Start from founding unions (partners with no recorded parents); document
   // order anchors each branch's relative left-to-right placement.
   for (const union of Object.values(unions)) {
-    if (union.partnerIds.every((id) => !individuals[id]?.famc)) {
+    if (union.partnerIds.every((id) => !individuals[id]?.famc) && includesUnion(union)) {
       visitUnion(union);
     }
   }
@@ -375,10 +402,12 @@ export function buildElkGraph(): {
 
   // ---- Child edges (their order does not affect the forced node order) ----
   for (const union of Object.values(unions)) {
+    if (!includesUnion(union)) continue;
     if (groupedUnions.has(union.id)) {
       // Partners share one combined node, so we only emit the downward edges to
       // the children.
       for (const childId of union.childIds) {
+        if (!includesPerson(childId)) continue;
         edges.push({
           id: `child-${union.id}-${childId}`,
           source: coupleNodeId(union.id),
@@ -393,6 +422,7 @@ export function buildElkGraph(): {
     // couple node, so two partners can map to the same ELK node — dedupe.
     const emittedChildEdges = new Set<string>();
     for (const childId of union.childIds) {
+      if (!includesPerson(childId)) continue;
       for (const partnerId of union.partnerIds) {
         const source = nodeOf(partnerId);
         const target = nodeOf(childId);
@@ -494,14 +524,21 @@ function edgeStyleForFamily(familyName: string) {
  * union branches down to every child. Both edge kinds mirror the graph
  * connectivity, so shortest-path queries traverse the union nodes naturally.
  */
-export function buildFlowEdges(_positions: Map<string, Positioned>): Edge[] {
+export function buildFlowEdges(
+  _positions: Map<string, Positioned>,
+  options: ElkGraphOptions = {},
+): Edge[] {
   void _positions;
+  const personFilter = options.personIds;
+  const includesPerson = (id: string) => !personFilter || personFilter.has(id);
   const edges: Edge[] = [];
 
   for (const union of Object.values(unions)) {
+    if (personFilter && !unionInLineage(union.id, personFilter)) continue;
     const unionId = unionNodeId(union.id);
 
     for (const partnerId of union.partnerIds) {
+      if (!includesPerson(partnerId)) continue;
       const familyName = individuals[partnerId]?.familyName ?? unionFamilyName(union);
       edges.push({
         id: `marriage-${union.id}-${partnerId}`,
@@ -519,6 +556,7 @@ export function buildFlowEdges(_positions: Map<string, Positioned>): Edge[] {
     }
 
     for (const childId of union.childIds) {
+      if (!includesPerson(childId)) continue;
       const familyName = individuals[childId]?.familyName ?? unionFamilyName(union);
       edges.push({
         id: `child-${union.id}-${childId}`,
@@ -577,4 +615,97 @@ export function getFamilyHighlight(personId: string): {
   }
 
   return { nodeIds, edgeIds };
+}
+
+/** Every blood ancestor and descendant of a person (the person is included). */
+export function getLineagePersonIds(personId: string): Set<string> {
+  const result = new Set<string>();
+
+  const visitAscendants = (id: string) => {
+    if (result.has(id)) return;
+    result.add(id);
+    const person = individuals[id];
+    if (!person?.famc) return;
+    const union = unions[person.famc];
+    if (!union) return;
+    for (const parentId of union.partnerIds) {
+      visitAscendants(parentId);
+    }
+  };
+
+  const visitDescendants = (id: string) => {
+    const person = individuals[id];
+    if (!person) return;
+    for (const unionId of person.fams) {
+      const union = unions[unionId];
+      if (!union || union.childIds.length === 0) continue;
+
+      for (const partnerId of union.partnerIds) {
+        result.add(partnerId);
+      }
+
+      for (const childId of union.childIds) {
+        if (result.has(childId)) continue;
+        result.add(childId);
+        visitDescendants(childId);
+      }
+    }
+  };
+
+  visitAscendants(personId);
+  visitDescendants(personId);
+
+  return result;
+}
+
+export type UnionSearchEntry = {
+  id: string;
+  label: string;
+  partnerIds: string[];
+  marriageYear: number | null;
+  divorced: boolean;
+  childCount: number;
+};
+
+function formatUnionLabel(union: Union): string {
+  const names = union.partnerIds
+    .map((id) => individuals[id]?.name)
+    .filter(Boolean);
+  if (names.length === 0) return "Unknown union";
+  if (names.length === 1) return names[0]!;
+  return `${names[0]} & ${names[1]}`;
+}
+
+export const unionSearchIndex: UnionSearchEntry[] = Object.values(unions)
+  .map((union) => ({
+    id: union.id,
+    label: formatUnionLabel(union),
+    partnerIds: union.partnerIds,
+    marriageYear: union.marriage?.year ?? null,
+    divorced: union.divorce !== null,
+    childCount: union.childIds.length,
+  }))
+  .sort((a, b) => a.label.localeCompare(b.label));
+
+/** Lineage of every partner in a union, merged together. */
+export function getLineagePersonIdsForUnion(unionId: string): Set<string> {
+  const union = unions[unionId];
+  if (!union) return new Set();
+
+  const result = new Set<string>();
+  for (const partnerId of union.partnerIds) {
+    for (const id of getLineagePersonIds(partnerId)) {
+      result.add(id);
+    }
+  }
+  return result;
+}
+
+export function unionInLineage(unionId: string, lineagePersonIds: Set<string>): boolean {
+  const union = unions[unionId];
+  if (!union) return false;
+  return (
+    union.partnerIds.some((id) => lineagePersonIds.has(id)) ||
+    union.childIds.some((id) => lineagePersonIds.has(id))
+  );
 }

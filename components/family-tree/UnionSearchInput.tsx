@@ -1,34 +1,39 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { Search, X } from "lucide-react";
-import { ProfileAvatar } from "./ProfileAvatar";
-import { searchIndex } from "./familyGraph";
+import { Heart, Search, X } from "lucide-react";
+import { individuals, unionSearchIndex } from "./familyGraph";
 
-type PersonSearchInputProps = {
+type UnionSearchInputProps = {
   label: string;
   value: string;
   onChange: (id: string) => void;
-  excludeId?: string;
   visibleFamilyNames?: Set<string>;
-  lineagePersonIds?: Set<string> | null;
   placeholder?: string;
 };
 
-function formatLifespan(birthYear: number | null, deathYear: number | null) {
-  const birth = birthYear ?? "?";
-  return deathYear ? `${birth} – ${deathYear}` : `${birth} –`;
+function formatUnionMeta(
+  marriageYear: number | null,
+  divorced: boolean,
+  childCount: number,
+) {
+  const parts: string[] = [];
+  if (marriageYear) {
+    parts.push(divorced ? `Married ${marriageYear}, divorced` : `Married ${marriageYear}`);
+  } else if (divorced) {
+    parts.push("Divorced");
+  }
+  parts.push(childCount === 1 ? "1 child" : `${childCount} children`);
+  return parts.join(" · ");
 }
 
-export function PersonSearchInput({
+export function UnionSearchInput({
   label,
   value,
   onChange,
-  excludeId,
   visibleFamilyNames,
-  lineagePersonIds,
-  placeholder = "Search ancestors…",
-}: PersonSearchInputProps) {
+  placeholder = "Search a union…",
+}: UnionSearchInputProps) {
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -36,26 +41,26 @@ export function PersonSearchInput({
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
 
-  const selectedPerson = useMemo(
-    () => searchIndex.find((person) => person.id === value),
+  const selectedUnion = useMemo(
+    () => unionSearchIndex.find((union) => union.id === value),
     [value],
   );
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const visiblePeople = searchIndex.filter(
-      (person) =>
-        person.id !== excludeId &&
-        (!visibleFamilyNames || visibleFamilyNames.has(person.familyName)) &&
-        (!lineagePersonIds || lineagePersonIds.has(person.id)),
-    );
-    if (!q) return visiblePeople.slice(0, 6);
-    return visiblePeople
-      .filter((person) => person.name.toLowerCase().includes(q))
+    const visibleUnions = unionSearchIndex.filter((union) => {
+      if (!visibleFamilyNames) return true;
+      return union.partnerIds.some((partnerId) =>
+        visibleFamilyNames.has(individuals[partnerId]?.familyName ?? ""),
+      );
+    });
+    if (!q) return visibleUnions.slice(0, 6);
+    return visibleUnions
+      .filter((union) => union.label.toLowerCase().includes(q))
       .slice(0, 8);
-  }, [query, excludeId, visibleFamilyNames, lineagePersonIds]);
+  }, [query, visibleFamilyNames]);
 
-  const selectPerson = useCallback(
+  const selectUnion = useCallback(
     (id: string) => {
       onChange(id);
       setQuery("");
@@ -93,7 +98,7 @@ export function PersonSearchInput({
       setActiveIndex((index) => Math.max(index - 1, 0));
     } else if (e.key === "Enter" && results[activeIndex]) {
       e.preventDefault();
-      selectPerson(results[activeIndex].id);
+      selectUnion(results[activeIndex].id);
     } else if (e.key === "Escape") {
       setOpen(false);
       setQuery("");
@@ -101,7 +106,7 @@ export function PersonSearchInput({
     }
   };
 
-  const inputValue = open ? query : (selectedPerson?.name ?? query);
+  const inputValue = open ? query : (selectedUnion?.label ?? query);
 
   return (
     <div ref={containerRef} className="relative w-full">
@@ -126,7 +131,7 @@ export function PersonSearchInput({
           }}
           onFocus={() => {
             setOpen(true);
-            if (selectedPerson) {
+            if (selectedUnion) {
               setQuery("");
             }
           }}
@@ -156,23 +161,23 @@ export function PersonSearchInput({
           role="listbox"
           className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-52 overflow-y-auto rounded-xl border border-[#e8dfd0] bg-white/95 py-1 shadow-xl backdrop-blur-md"
         >
-          {results.map((person, index) => (
-            <li key={person.id} role="option" aria-selected={index === activeIndex}>
+          {results.map((union, index) => (
+            <li key={union.id} role="option" aria-selected={index === activeIndex}>
               <button
                 type="button"
                 onMouseEnter={() => setActiveIndex(index)}
-                onClick={() => selectPerson(person.id)}
+                onClick={() => selectUnion(union.id)}
                 className={`flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors ${
                   index === activeIndex ? "bg-[#f5efe4]" : "hover:bg-[#faf6ef]"
                 }`}
               >
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#e8dfd0] bg-[#faf6ef]">
-                  <ProfileAvatar gender={person.gender} className="h-4 w-4 text-[#a8957a]" />
+                  <Heart className="h-4 w-4 text-[#a8957a]" aria-hidden />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-[#3d3428]">{person.name}</p>
+                  <p className="truncate text-sm font-medium text-[#3d3428]">{union.label}</p>
                   <p className="text-xs text-[#8b7d6b]">
-                    {formatLifespan(person.birthYear, person.deathYear)}
+                    {formatUnionMeta(union.marriageYear, union.divorced, union.childCount)}
                   </p>
                 </div>
               </button>

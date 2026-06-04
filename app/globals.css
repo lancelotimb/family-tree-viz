@@ -54,12 +54,12 @@ body {
 
 .family-tree-flow .family-hover-edge .react-flow__edge-path {
   stroke: #4a8ac8 !important;
-  stroke-width: 3px !important;
+  stroke-width: 4px !important;
 }
 
 .family-tree-flow .family-path-edge .react-flow__edge-path {
   stroke: #48a066 !important;
-  stroke-width: 3px !important;
+  stroke-width: 4px !important;
 }
 
 .family-tree-flow .family-hover-union {
@@ -68,6 +68,16 @@ body {
 
 .family-tree-flow .family-path-union {
   animation: family-path-pulse 1.1s ease-in-out infinite;
+}
+
+.family-tree-flow .family-focus-node {
+  box-shadow:
+    0 0 0 3px rgba(200, 100, 100, 0.38),
+    0 8px 20px rgba(128, 40, 40, 0.24);
+}
+
+.family-tree-flow .family-focus-union {
+  animation: family-focus-pulse 1.1s ease-in-out infinite;
 }
 
 @keyframes family-hover-pulse {
@@ -87,5 +97,15 @@ body {
   }
   50% {
     transform: scale(1.6);
+  }
+}
+
+@keyframes family-focus-pulse {
+  0%,
+  100% {
+    transform: scale(1.45);
+  }
+  50% {
+    transform: scale(1.65);
   }
 }

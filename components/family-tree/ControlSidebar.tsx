@@ -1,9 +1,10 @@
 "use client";
 
-import { GitBranch, GitFork, Palette, UserX, X } from "lucide-react";
+import { GitBranch, GitFork, Palette, UserX, Users, X } from "lucide-react";
 import type { FamilyBranch } from "./branchPalette";
 import { PersonSearchInput } from "./PersonSearchInput";
 import { SettingsButton } from "./SettingsButton";
+import { UnionSearchInput } from "./UnionSearchInput";
 
 export type ControlPanelProps = {
   greyDeceased: boolean;
@@ -20,6 +21,11 @@ export type ControlPanelProps = {
   onPathFromChange: (id: string) => void;
   onPathToChange: (id: string) => void;
   pathStatus: "idle" | "ready" | "no-path";
+  focusPersonId: string;
+  onFocusPersonChange: (id: string) => void;
+  focusUnionId: string;
+  onFocusUnionChange: (id: string) => void;
+  lineagePersonIds: Set<string> | null;
 };
 
 export function ControlSidebarContent({
@@ -37,6 +43,11 @@ export function ControlSidebarContent({
   onPathFromChange,
   onPathToChange,
   pathStatus,
+  focusPersonId,
+  onFocusPersonChange,
+  focusUnionId,
+  onFocusUnionChange,
+  lineagePersonIds,
 }: ControlPanelProps) {
   return (
     <>
@@ -58,6 +69,57 @@ export function ControlSidebarContent({
             onChange={onColorByFamilyChange}
           />
         </div>
+      </div>
+
+      <div>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
+            <Users className="h-3.5 w-3.5" />
+            Focus lineage
+          </p>
+          {focusPersonId || focusUnionId ? (
+            <button
+              type="button"
+              onClick={() => {
+                onFocusPersonChange("");
+                onFocusUnionChange("");
+              }}
+              className="shrink-0 rounded-md px-2 py-1 text-[10px] font-medium text-[#8b7d6b] transition-colors hover:bg-[#f5efe4] hover:text-[#3d3428]"
+            >
+              Reset
+            </button>
+          ) : null}
+        </div>
+        <div className="flex flex-col gap-2">
+          <PersonSearchInput
+            label="Person"
+            value={focusPersonId}
+            onChange={onFocusPersonChange}
+            placeholder="Search a person…"
+          />
+          <UnionSearchInput
+            label="Union"
+            value={focusUnionId}
+            onChange={onFocusUnionChange}
+            visibleFamilyNames={visibleFamilyNames}
+            placeholder="Search a union…"
+          />
+        </div>
+        {focusPersonId ? (
+          <p className="mt-2 text-xs text-[#6b7d5a]">
+            Showing this person, their ascendants, descendants, and each
+            descendant&apos;s spouse when they have children together.
+          </p>
+        ) : focusUnionId ? (
+          <p className="mt-2 text-xs text-[#6b7d5a]">
+            Showing both partners, their ascendants, descendants, and each
+            descendant&apos;s spouse when they have children together.
+          </p>
+        ) : (
+          <p className="mt-2 text-xs text-[#8b7d6b]">
+            Leave empty to show the full tree.
+          </p>
+        )}
       </div>
 
       <div>
@@ -100,6 +162,7 @@ export function ControlSidebarContent({
             onChange={onPathFromChange}
             excludeId={pathToId}
             visibleFamilyNames={visibleFamilyNames}
+            lineagePersonIds={lineagePersonIds}
           />
           <PersonSearchInput
             label="To"
@@ -107,6 +170,7 @@ export function ControlSidebarContent({
             onChange={onPathToChange}
             excludeId={pathFromId}
             visibleFamilyNames={visibleFamilyNames}
+            lineagePersonIds={lineagePersonIds}
           />
         </div>
         {pathStatus === "no-path" && (

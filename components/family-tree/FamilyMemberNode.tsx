@@ -17,6 +17,10 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
   const isHovered = member.hovered;
   const isHoverRelated = member.hoverRelated;
   const isPathHighlighted = member.pathHighlighted && !isHovered && !isHoverRelated;
+  const isFocusHighlighted =
+    member.focusHighlighted && !isHovered && !isHoverRelated && !isPathHighlighted;
+  const shouldGreyOut =
+    isGreyed && !isHovered && !isHoverRelated && !isFocusHighlighted;
   const branchColor = member.branchColor;
   const colorByFamily = member.colorByFamily ?? true;
 
@@ -26,7 +30,9 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
       ? familyHighlight.hover.related
       : isPathHighlighted
         ? familyHighlight.path.related
-        : null;
+        : isFocusHighlighted
+          ? familyHighlight.focus.primary
+          : null;
 
   const cardBorderColor = highlight
     ? highlight.border
@@ -65,10 +71,12 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
             ? "z-[1] scale-[1.02] border-[2.5px] ring-2 ring-[#7ab8e8]/60"
             : isPathHighlighted
               ? "z-[1] scale-[1.02] border-[2.5px] ring-2 ring-[#6ad088]/60"
-              : selected
-                ? "shadow-md ring-2 ring-[#d4b896]/50"
-                : "hover:shadow-md"
-      } ${isGreyed ? "opacity-45 grayscale" : ""}`}
+              : isFocusHighlighted
+                ? "family-focus-node z-[2] scale-[1.04] border-[2.5px] ring-2 ring-[#d87878]/65"
+                : selected
+                  ? "shadow-md ring-2 ring-[#d4b896]/50"
+                  : "hover:shadow-md"
+      } ${shouldGreyOut ? "opacity-45 grayscale" : ""}`}
     >
       <Handle
         id="child"
