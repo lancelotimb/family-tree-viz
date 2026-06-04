@@ -3,6 +3,7 @@ import {
   buildElkGraph,
   individuals,
   unions,
+  type CoupleGroup,
   type ElkEdgeInput,
   type ElkGraphOptions,
   type ElkNodeInput,
@@ -78,11 +79,20 @@ function separationShift(accum: Contour, incoming: Contour, gap: number): number
  * center is closest, which keeps the result near ELK's crossing-minimized
  * arrangement. Secondary parent/child links still render as edges; they simply
  * aren't the ones used to drive centering.
+ *
+ * Married-in spouses from a *loose* union (e.g. a remarriage that wasn't merged
+ * into a combined couple box) have no parents of their own, so on their own
+ * they would look like independent roots and get packed next to the founding
+ * ancestors — far from their actual spouse. We instead detect them as
+ * "satellites" of their anchored partner, keep them out of the forest, and
+ * after centering translate them (preserving ELK's adjacency) by however far
+ * that partner moved, so they ride along beside them.
  */
 function centerParentsOverChildren(
   positions: Map<string, LayoutPosition>,
   nodes: ElkNodeInput[],
   edges: ElkEdgeInput[],
+  couples: CoupleGroup[],
 ): void {
   const gap = H_GAP;
   const widthOf = new Map<string, number>();
@@ -96,6 +106,16 @@ function centerParentsOverChildren(
   const width = (id: string) => widthOf.get(id) ?? NODE_WIDTH;
   const currentCenter = (id: string) => currentX(id) + width(id) / 2;
 
+  // The ELK box a person maps to: their combined couple node when grouped,
+  // otherwise their own person node.
+  const personToCoupleNode = new Map<string, string>();
+  for (const couple of couples) {
+    personToCoupleNode.set(couple.leftId, couple.nodeId);
+    personToCoupleNode.set(couple.rightId, couple.nodeId);
+  }
+  const boxOf = (personId: string) =>
+    personToCoupleNode.get(personId) ?? personId;
+
   // Build parent adjacency from the (downward) child edges ELK was given.
   const parentsOf = new Map<string, string[]>();
   for (const edge of edges) {
@@ -105,13 +125,44 @@ function centerParentsOverChildren(
     else parentsOf.set(edge.target, [edge.source]);
   }
 
+  // A "satellite" is a parentless person box whose spouse, through a loose
+  // union, sits in an anchored box (a combined couple, or a partner who has
+  // their own parents). Such spouses should follow their partner, not float off
+  // among the roots. Map each satellite box to the anchor box it rides with.
+  const satelliteAnchor = new Map<string, string>();
+  for (const id of positions.keys()) {
+    if (parentsOf.has(id)) continue; // has parents → laid out normally
+    const person = individuals[id];
+    if (!person) continue; // only loose person boxes can be satellites
+    let anchor: string | null = null;
+    for (const unionId of person.fams ?? []) {
+      const union = unions[unionId];
+      if (!union) continue;
+      for (const partnerId of union.partnerIds) {
+        if (partnerId === id) continue;
+        const partnerBox = boxOf(partnerId);
+        if (partnerBox === id || !positions.has(partnerBox)) continue;
+        const partnerIsCouple = partnerBox !== partnerId;
+        if (partnerIsCouple || parentsOf.has(partnerBox)) {
+          anchor = partnerBox;
+          break;
+        }
+      }
+      if (anchor) break;
+    }
+    if (anchor) satelliteAnchor.set(id, anchor);
+  }
+
   // Each box keeps one primary parent: the one whose center is horizontally
-  // closest, so the spanning forest hugs ELK's existing layout.
+  // closest, so the spanning forest hugs ELK's existing layout. Satellites are
+  // skipped as parents when an anchored alternative exists.
   const primaryParent = new Map<string, string>();
   for (const [child, parents] of parentsOf) {
-    let best = parents[0];
+    const anchored = parents.filter((p) => !satelliteAnchor.has(p));
+    const pool = anchored.length > 0 ? anchored : parents;
+    let best = pool[0];
     let bestDistance = Infinity;
-    for (const parent of parents) {
+    for (const parent of pool) {
       const distance = Math.abs(currentCenter(parent) - currentCenter(child));
       if (distance < bestDistance) {
         bestDistance = distance;
@@ -125,6 +176,13 @@ function centerParentsOverChildren(
   for (const id of positions.keys()) primaryChildren.set(id, []);
   for (const [child, parent] of primaryParent) {
     primaryChildren.get(parent)?.push(child);
+  }
+  // A satellite that nonetheless ended up owning a child (its loose union's only
+  // anchor) can't float — promote it back to a normal root.
+  for (const [satellite] of satelliteAnchor) {
+    if ((primaryChildren.get(satellite)?.length ?? 0) > 0) {
+      satelliteAnchor.delete(satellite);
+    }
   }
   // Preserve ELK's left-to-right ordering of siblings.
   for (const kids of primaryChildren.values()) {
@@ -170,9 +228,10 @@ function centerParentsOverChildren(
     return { contour: accum, members };
   };
 
-  // Roots are boxes nobody points down to; lay them out left-to-right.
+  // Roots are boxes nobody points down to and that aren't satellites; lay them
+  // out left-to-right.
   const roots = [...positions.keys()]
-    .filter((id) => !primaryParent.has(id))
+    .filter((id) => !primaryParent.has(id) && !satelliteAnchor.has(id))
     .sort((a, b) => currentX(a) - currentX(b));
 
   const forest: Contour = new Map();
@@ -181,6 +240,15 @@ function centerParentsOverChildren(
     const shift = separationShift(forest, sub.contour, gap);
     for (const id of sub.members) newX.set(id, (newX.get(id) ?? 0) + shift);
     mergeContour(forest, sub.contour, shift);
+  }
+
+  // Slide each satellite by the same amount its anchor moved, keeping the
+  // ELK-chosen offset (and thus the adjacency) to its spouse.
+  for (const [satellite, anchor] of satelliteAnchor) {
+    const anchorNew = newX.get(anchor);
+    if (anchorNew === undefined) continue;
+    const delta = anchorNew - currentX(anchor);
+    newX.set(satellite, currentX(satellite) + delta);
   }
 
   for (const [id, x] of newX) {
@@ -257,7 +325,7 @@ export async function computeLayout(
   // the center of its children. Runs while couples are still single boxes, so a
   // couple's center is exactly the midpoint that later carries the marriage dot.
   if (options.centerParentsOverChildren) {
-    centerParentsOverChildren(positions, nodes, edges);
+    centerParentsOverChildren(positions, nodes, edges, couples);
   }
 
   // Snapshot the combined couple centers before mutating, so they stay usable
