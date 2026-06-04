@@ -1,6 +1,6 @@
 "use client";
 
-import { Heart, MapPin, Users, X } from "lucide-react";
+import { Heart, MapPin, Users, X, type LucideIcon } from "lucide-react";
 import { ProfileAvatar } from "./ProfileAvatar";
 import type { MemberGender } from "./types";
 import { getChildren, getIndividual, getParents, getSpouses } from "./familyGraph";
@@ -10,6 +10,8 @@ type ProfilePanelProps = {
   open: boolean;
   onClose: () => void;
   onSelectPerson: (id: string) => void;
+  focusPersonId: string;
+  onFocusLineage: (id: string) => void;
 };
 
 function formatLifespan(birthYear: number | null, deathYear: number | null) {
@@ -22,6 +24,8 @@ export function ProfilePanel({
   open,
   onClose,
   onSelectPerson,
+  focusPersonId,
+  onFocusLineage,
 }: ProfilePanelProps) {
   const profile = getIndividual(memberId);
   const parents = profile ? getParents(profile.id) : [];
@@ -73,6 +77,16 @@ export function ProfilePanel({
                   {profile.birth.place}
                 </p>
               )}
+              <div className="mt-4 flex justify-center">
+                <ProfileActionButton
+                  icon={Users}
+                  label={
+                    focusPersonId === profile.id ? "Lineage focused" : "Focus lineage"
+                  }
+                  active={focusPersonId === profile.id}
+                  onClick={() => onFocusLineage(profile.id)}
+                />
+              </div>
             </header>
 
             <div className="flex-1 overflow-y-auto px-6 py-5">
@@ -181,6 +195,34 @@ export function ProfilePanel({
         )}
       </aside>
     </>
+  );
+}
+
+function ProfileActionButton({
+  icon: Icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: LucideIcon;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+        active
+          ? "border-[#6b7d5a] bg-[#eef4e8] text-[#4a5c3d]"
+          : "border-[#e8dfd0] bg-white text-[#3d3428] hover:border-[#d4c4a8] hover:bg-[#faf6ef]"
+      }`}
+      aria-pressed={active}
+    >
+      <Icon className="h-4 w-4 shrink-0" aria-hidden />
+      {label}
+    </button>
   );
 }
 
