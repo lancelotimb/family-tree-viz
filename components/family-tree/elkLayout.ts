@@ -1,9 +1,17 @@
 import ELK, { type ElkNode } from "elkjs/lib/elk.bundled.js";
-import { buildElkGraph, individuals, unions, type ElkGraphOptions } from "./familyGraph";
+import {
+  buildElkGraph,
+  individuals,
+  unions,
+  type ElkEdgeInput,
+  type ElkGraphOptions,
+  type ElkNodeInput,
+} from "./familyGraph";
 import {
   COUPLE_INNER_GAP,
   COUPLE_UNION_DROP,
   COUPLE_WIDTH,
+  H_GAP,
   LAYER_GAP,
   NODE_WIDTH,
   UNION_SIZE,
@@ -15,6 +23,171 @@ const elk = new ELK();
 
 const average = (values: number[]) =>
   values.reduce((sum, value) => sum + value, 0) / values.length;
+
+/**
+ * Horizontal extent of a subtree, recorded per generation layer as the left and
+ * right edges occupied at that layer. Used to slide neighbouring subtrees apart
+ * by only as much as the layers they actually share require.
+ */
+type Contour = Map<number, { min: number; max: number }>;
+
+function mergeContour(into: Contour, from: Contour, shift = 0): void {
+  for (const [layer, range] of from) {
+    const min = range.min + shift;
+    const max = range.max + shift;
+    const existing = into.get(layer);
+    if (!existing) {
+      into.set(layer, { min, max });
+    } else {
+      existing.min = Math.min(existing.min, min);
+      existing.max = Math.max(existing.max, max);
+    }
+  }
+}
+
+/**
+ * Smallest shift that places `incoming` to the right of everything already in
+ * `accum`, keeping at least `gap` between boxes that share a generation layer.
+ * Layers that don't overlap can't collide (different rows), so they don't
+ * constrain the shift.
+ */
+function separationShift(accum: Contour, incoming: Contour, gap: number): number {
+  let shift = 0;
+  let constrained = false;
+  for (const [layer, range] of incoming) {
+    const existing = accum.get(layer);
+    if (!existing) continue;
+    const needed = existing.max + gap - range.min;
+    if (!constrained || needed > shift) {
+      shift = needed;
+      constrained = true;
+    }
+  }
+  return constrained ? shift : 0;
+}
+
+/**
+ * Re-arrange the horizontal (x) positions of the ELK boxes so each parent box
+ * (a single person or a combined couple) is centered over the midpoint of its
+ * children, à la Reingold–Tilford. Vertical layering, box widths, and the
+ * left-to-right ordering ELK chose are all preserved; only x changes.
+ *
+ * The family graph is a DAG (a couple box has a parent on each partner's side,
+ * children can be shared across unions), so we first reduce it to a spanning
+ * forest by giving each box a single "primary" parent — the parent whose ELK
+ * center is closest, which keeps the result near ELK's crossing-minimized
+ * arrangement. Secondary parent/child links still render as edges; they simply
+ * aren't the ones used to drive centering.
+ */
+function centerParentsOverChildren(
+  positions: Map<string, LayoutPosition>,
+  nodes: ElkNodeInput[],
+  edges: ElkEdgeInput[],
+): void {
+  const gap = H_GAP;
+  const widthOf = new Map<string, number>();
+  const layerOf = new Map<string, number>();
+  for (const node of nodes) {
+    widthOf.set(node.id, node.width);
+    layerOf.set(node.id, node.partition);
+  }
+
+  const currentX = (id: string) => positions.get(id)?.x ?? 0;
+  const width = (id: string) => widthOf.get(id) ?? NODE_WIDTH;
+  const currentCenter = (id: string) => currentX(id) + width(id) / 2;
+
+  // Build parent adjacency from the (downward) child edges ELK was given.
+  const parentsOf = new Map<string, string[]>();
+  for (const edge of edges) {
+    if (!positions.has(edge.source) || !positions.has(edge.target)) continue;
+    const parents = parentsOf.get(edge.target);
+    if (parents) parents.push(edge.source);
+    else parentsOf.set(edge.target, [edge.source]);
+  }
+
+  // Each box keeps one primary parent: the one whose center is horizontally
+  // closest, so the spanning forest hugs ELK's existing layout.
+  const primaryParent = new Map<string, string>();
+  for (const [child, parents] of parentsOf) {
+    let best = parents[0];
+    let bestDistance = Infinity;
+    for (const parent of parents) {
+      const distance = Math.abs(currentCenter(parent) - currentCenter(child));
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = parent;
+      }
+    }
+    primaryParent.set(child, best);
+  }
+
+  const primaryChildren = new Map<string, string[]>();
+  for (const id of positions.keys()) primaryChildren.set(id, []);
+  for (const [child, parent] of primaryParent) {
+    primaryChildren.get(parent)?.push(child);
+  }
+  // Preserve ELK's left-to-right ordering of siblings.
+  for (const kids of primaryChildren.values()) {
+    kids.sort((a, b) => currentX(a) - currentX(b));
+  }
+
+  const newX = new Map<string, number>();
+
+  const layoutSubtree = (
+    node: string,
+  ): { contour: Contour; members: string[] } => {
+    const layer = layerOf.get(node) ?? 0;
+    const w = width(node);
+    const kids = primaryChildren.get(node) ?? [];
+
+    if (kids.length === 0) {
+      newX.set(node, 0);
+      return { contour: new Map([[layer, { min: 0, max: w }]]), members: [node] };
+    }
+
+    const accum: Contour = new Map();
+    const members: string[] = [];
+    const childCenters: number[] = [];
+
+    for (const kid of kids) {
+      const sub = layoutSubtree(kid);
+      const shift = separationShift(accum, sub.contour, gap);
+      for (const id of sub.members) newX.set(id, (newX.get(id) ?? 0) + shift);
+      mergeContour(accum, sub.contour, shift);
+      members.push(...sub.members);
+      childCenters.push((newX.get(kid) ?? 0) + width(kid) / 2);
+    }
+
+    // Center the parent over the midpoint of its outermost children.
+    const center = (childCenters[0] + childCenters[childCenters.length - 1]) / 2;
+    newX.set(node, center - w / 2);
+    mergeContour(
+      accum,
+      new Map([[layer, { min: center - w / 2, max: center + w / 2 }]]),
+    );
+    members.push(node);
+
+    return { contour: accum, members };
+  };
+
+  // Roots are boxes nobody points down to; lay them out left-to-right.
+  const roots = [...positions.keys()]
+    .filter((id) => !primaryParent.has(id))
+    .sort((a, b) => currentX(a) - currentX(b));
+
+  const forest: Contour = new Map();
+  for (const root of roots) {
+    const sub = layoutSubtree(root);
+    const shift = separationShift(forest, sub.contour, gap);
+    for (const id of sub.members) newX.set(id, (newX.get(id) ?? 0) + shift);
+    mergeContour(forest, sub.contour, shift);
+  }
+
+  for (const [id, x] of newX) {
+    const pos = positions.get(id);
+    if (pos) pos.x = x;
+  }
+}
 
 /**
  * Run ELK's layered algorithm. Generations become layers (DOWN direction) via
@@ -78,6 +251,13 @@ export async function computeLayout(
       x: child.x ?? 0,
       y: child.y ?? 0,
     });
+  }
+
+  // Optional pass: re-space boxes horizontally so each parent/couple sits over
+  // the center of its children. Runs while couples are still single boxes, so a
+  // couple's center is exactly the midpoint that later carries the marriage dot.
+  if (options.centerParentsOverChildren) {
+    centerParentsOverChildren(positions, nodes, edges);
   }
 
   // Snapshot the combined couple centers before mutating, so they stay usable
