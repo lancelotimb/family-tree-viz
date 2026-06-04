@@ -101,11 +101,15 @@ function FamilyTreeCanvas() {
   const [baseEdges, setBaseEdges] = useState<Edge[]>([]);
   const [ready, setReady] = useState(false);
   const [layouting, setLayouting] = useState(true);
-  const fullLayoutRef = useRef<Map<string, LayoutPosition> | null>(null);
+  const fullLayoutRef = useRef<{
+    centerParents: boolean;
+    positions: Map<string, LayoutPosition>;
+  } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [greyDeceased, setGreyDeceased] = useState(false);
   const [colorByFamily, setColorByFamily] = useState(true);
+  const [centerParents, setCenterParents] = useState(false);
   const [visibleFamilyNames, setVisibleFamilyNames] = useState<Set<string>>(
     () => new Set(allFamilyNames),
   );
@@ -193,18 +197,24 @@ function FamilyTreeCanvas() {
       setLayouting(true);
       try {
         if (layoutPersonIds === null) {
+          const cached =
+            fullLayoutRef.current?.centerParents === centerParents
+              ? fullLayoutRef.current.positions
+              : null;
           const positions =
-            fullLayoutRef.current ?? (await computeLayout());
+            cached ??
+            (await computeLayout({ centerParentsOverChildren: centerParents }));
           if (cancelled) return;
-          if (!fullLayoutRef.current) {
-            fullLayoutRef.current = positions;
-          }
+          fullLayoutRef.current = { centerParents, positions };
           applyLayout(positions);
         } else if (layoutPersonIds.size === 0) {
           if (cancelled) return;
           applyLayout(new Map());
         } else {
-          const positions = await computeLayout({ personIds: layoutPersonIds });
+          const positions = await computeLayout({
+            personIds: layoutPersonIds,
+            centerParentsOverChildren: centerParents,
+          });
           if (cancelled) return;
           applyLayout(positions, layoutPersonIds);
         }
@@ -218,7 +228,7 @@ function FamilyTreeCanvas() {
     return () => {
       cancelled = true;
     };
-  }, [layoutRequestKey, layoutPersonIds, applyLayout]);
+  }, [layoutRequestKey, layoutPersonIds, applyLayout, centerParents]);
 
   useEffect(() => {
     if (!ready || layouting) return;
@@ -638,6 +648,8 @@ function FamilyTreeCanvas() {
     onGreyDeceasedChange: setGreyDeceased,
     colorByFamily,
     onColorByFamilyChange: setColorByFamily,
+    centerParents,
+    onCenterParentsChange: setCenterParents,
     familyBranches,
     visibleFamilyNames,
     onFamilyVisibilityChange: handleFamilyVisibilityChange,

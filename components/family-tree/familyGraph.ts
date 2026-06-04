@@ -252,6 +252,12 @@ function planCouples(personFilter?: Set<string>): {
 export type ElkGraphOptions = {
   /** When set, only these people (and their connecting unions) are laid out. */
   personIds?: Set<string>;
+  /**
+   * When true, a post-layout pass re-arranges horizontal spacing so each
+   * parent (or couple) is centered over the midpoint of its children. This can
+   * widen the tree but makes the parent/child relationship read more clearly.
+   */
+  centerParentsOverChildren?: boolean;
 };
 
 /**

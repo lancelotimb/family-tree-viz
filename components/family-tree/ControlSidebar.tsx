@@ -1,6 +1,15 @@
 "use client";
 
-import { Eye, GitBranch, GitFork, Palette, UserX, Users, X } from "lucide-react";
+import {
+  AlignCenterHorizontal,
+  Eye,
+  GitBranch,
+  GitFork,
+  Palette,
+  UserX,
+  Users,
+  X,
+} from "lucide-react";
 import type { FamilyBranch } from "./branchPalette";
 import { PersonSearchInput } from "./PersonSearchInput";
 import { SettingsButton } from "./SettingsButton";
@@ -11,6 +20,8 @@ export type ControlPanelProps = {
   onGreyDeceasedChange: (enabled: boolean) => void;
   colorByFamily: boolean;
   onColorByFamilyChange: (enabled: boolean) => void;
+  centerParents: boolean;
+  onCenterParentsChange: (enabled: boolean) => void;
   familyBranches: FamilyBranch[];
   visibleFamilyNames: Set<string>;
   onFamilyVisibilityChange: (familyName: string, visible: boolean) => void;
@@ -33,6 +44,8 @@ export function ControlSidebarContent({
   onGreyDeceasedChange,
   colorByFamily,
   onColorByFamilyChange,
+  centerParents,
+  onCenterParentsChange,
   familyBranches,
   visibleFamilyNames,
   onFamilyVisibilityChange,
@@ -68,6 +81,14 @@ export function ControlSidebarContent({
             icon={<Palette className="h-4 w-4" />}
             checked={colorByFamily}
             onChange={onColorByFamilyChange}
+          />
+        </div>
+        <div className="mt-2">
+          <ToggleRow
+            label="Center parents over children"
+            icon={<AlignCenterHorizontal className="h-4 w-4" />}
+            checked={centerParents}
+            onChange={onCenterParentsChange}
           />
         </div>
       </div>
