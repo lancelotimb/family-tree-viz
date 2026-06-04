@@ -5,7 +5,12 @@ import { useReactFlow } from "@xyflow/react";
 import { Search } from "lucide-react";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { searchIndex } from "./familyGraph";
-import { personFocusFitViewOptions } from "./layoutConstants";
+import {
+  NODE_HEIGHT,
+  NODE_WIDTH,
+  PERSON_FOCUS_DURATION_MS,
+  PERSON_FOCUS_ZOOM,
+} from "./layoutConstants";
 
 type SearchBarProps = {
   onOpenChange?: (open: boolean) => void;
@@ -25,7 +30,7 @@ export function SearchBar({
   visibleFamilyNames,
   lineagePersonIds,
 }: SearchBarProps) {
-  const { fitView, getNode } = useReactFlow();
+  const { getNode, setCenter } = useReactFlow();
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
@@ -62,14 +67,18 @@ export function SearchBar({
     (id: string) => {
       const node = getNode(id);
       if (!node || node.hidden) return;
-      fitView({
-        nodes: [{ id }],
-        ...personFocusFitViewOptions,
+      const width = node.width ?? node.measured?.width ?? NODE_WIDTH;
+      const height = node.height ?? node.measured?.height ?? NODE_HEIGHT;
+      const centerX = node.position.x + width / 2;
+      const centerY = node.position.y + height / 2;
+      void setCenter(centerX, centerY, {
+        zoom: PERSON_FOCUS_ZOOM,
+        duration: PERSON_FOCUS_DURATION_MS,
       });
       setDropdownOpen(false);
       setQuery("");
     },
-    [fitView, getNode, setDropdownOpen],
+    [getNode, setCenter, setDropdownOpen],
   );
 
   useEffect(() => {

@@ -17,7 +17,14 @@ import { MarriageNode } from "./MarriageNode";
 import { SearchBar } from "./SearchBar";
 import { ControlDrawer } from "./ControlDrawer";
 import { ControlSidebar } from "./ControlSidebar";
-import { MAX_ZOOM, MIN_ZOOM, personFocusFitViewOptions } from "./layoutConstants";
+import {
+  MAX_ZOOM,
+  MIN_ZOOM,
+  NODE_HEIGHT,
+  NODE_WIDTH,
+  PERSON_FOCUS_DURATION_MS,
+  PERSON_FOCUS_ZOOM,
+} from "./layoutConstants";
 import { ZoomControls } from "./ZoomControls";
 import { ProfilePanel } from "./ProfilePanel";
 import {
@@ -118,7 +125,7 @@ function FamilyTreeCanvas() {
     null,
   );
   const dismissSearchRef = useRef<(() => void) | null>(null);
-  const { fitView, getNode } = useReactFlow();
+  const { fitView, getNode, setCenter } = useReactFlow();
 
   const applyLayout = useCallback(
     (positions: Map<string, LayoutPosition>, personIds?: Set<string>) => {
@@ -574,13 +581,17 @@ function FamilyTreeCanvas() {
       setPanelOpen(true);
       const node = getNode(id);
       if (node && !node.hidden) {
-        fitView({
-          nodes: [{ id }],
-          ...personFocusFitViewOptions,
+        const width = node.width ?? node.measured?.width ?? NODE_WIDTH;
+        const height = node.height ?? node.measured?.height ?? NODE_HEIGHT;
+        const centerX = node.position.x + width / 2;
+        const centerY = node.position.y + height / 2;
+        void setCenter(centerX, centerY, {
+          zoom: PERSON_FOCUS_ZOOM,
+          duration: PERSON_FOCUS_DURATION_MS,
         });
       }
     },
-    [fitView, getNode],
+    [getNode, setCenter],
   );
 
   useEffect(() => {
