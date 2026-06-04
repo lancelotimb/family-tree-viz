@@ -19,7 +19,7 @@ export function ControlDrawer({ open, onClose, ...controlProps }: ControlDrawerP
         aria-hidden={!open}
       />
       <aside
-        className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[min(75vh,32rem)] flex-col overflow-visible rounded-t-2xl border border-b-0 border-[#e8dfd0] bg-[#fffef9] shadow-2xl transition-transform duration-300 ease-out md:hidden ${
+        className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[min(75vh,32rem)] flex-col overflow-y-auto overflow-x-visible rounded-t-2xl border border-b-0 border-[#e8dfd0] bg-[#fffef9] shadow-2xl transition-transform duration-300 ease-out md:hidden ${
           open ? "translate-y-0" : "pointer-events-none translate-y-full"
         }`}
         aria-hidden={!open}
@@ -41,7 +41,7 @@ export function ControlDrawer({ open, onClose, ...controlProps }: ControlDrawerP
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overflow-x-visible px-5 py-5">
+        <div className="flex flex-col gap-5 overflow-visible px-5 py-5">
           <ControlSidebarContent {...controlProps} />
         </div>
       </aside>

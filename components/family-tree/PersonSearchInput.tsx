@@ -13,7 +13,6 @@ type PersonSearchInputProps = {
   visibleFamilyNames?: Set<string>;
   lineagePersonIds?: Set<string> | null;
   placeholder?: string;
-  expandUp?: boolean;
 };
 
 function formatLifespan(birthYear: number | null, deathYear: number | null) {
@@ -29,7 +28,6 @@ export function PersonSearchInput({
   visibleFamilyNames,
   lineagePersonIds,
   placeholder = "Search ancestors…",
-  expandUp = false,
 }: PersonSearchInputProps) {
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -156,9 +154,7 @@ export function PersonSearchInput({
         <ul
           id={listId}
           role="listbox"
-          className={`absolute left-0 right-0 z-50 max-h-52 overflow-y-auto rounded-xl border border-[#e8dfd0] bg-white/95 py-1 shadow-xl backdrop-blur-md ${
-            expandUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"
-          }`}
+          className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-52 overflow-y-auto rounded-xl border border-[#e8dfd0] bg-white/95 py-1 shadow-xl backdrop-blur-md"
         >
           {results.map((person, index) => (
             <li key={person.id} role="option" aria-selected={index === activeIndex}>

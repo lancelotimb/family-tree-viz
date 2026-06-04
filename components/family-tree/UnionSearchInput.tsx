@@ -10,7 +10,6 @@ type UnionSearchInputProps = {
   onChange: (id: string) => void;
   visibleFamilyNames?: Set<string>;
   placeholder?: string;
-  expandUp?: boolean;
 };
 
 function formatUnionMeta(
@@ -34,7 +33,6 @@ export function UnionSearchInput({
   onChange,
   visibleFamilyNames,
   placeholder = "Search a union…",
-  expandUp = false,
 }: UnionSearchInputProps) {
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -161,9 +159,7 @@ export function UnionSearchInput({
         <ul
           id={listId}
           role="listbox"
-          className={`absolute left-0 right-0 z-50 max-h-52 overflow-y-auto rounded-xl border border-[#e8dfd0] bg-white/95 py-1 shadow-xl backdrop-blur-md ${
-            expandUp ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"
-          }`}
+          className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-52 overflow-y-auto rounded-xl border border-[#e8dfd0] bg-white/95 py-1 shadow-xl backdrop-blur-md"
         >
           {results.map((union, index) => (
             <li key={union.id} role="option" aria-selected={index === activeIndex}>
