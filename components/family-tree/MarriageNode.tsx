@@ -1,15 +1,44 @@
 "use client";
 
+import { useCallback } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { useFamilyTreeActions } from "./familyTreeActionsContext";
 import { familyHighlight } from "./familyHighlightColors";
+import { unionSearchIndex } from "./familyGraph";
 import type { UnionNodeData } from "./types";
+import { useLongPress } from "./useLongPress";
 
 /**
  * The "marriage node": partners connect to its top and children branch from its
  * bottom, giving every child a single shared anchor instead of a faked midpoint.
  */
-export function MarriageNode({ data }: NodeProps) {
+export function MarriageNode({ id, data }: NodeProps) {
   const union = data as UnionNodeData;
+  const { openNodeContextMenu, suppressNextNodeClick } = useFamilyTreeActions();
+
+  const unionLabel =
+    unionSearchIndex.find((entry) => entry.id === id)?.label ?? "Union";
+
+  const showContextMenu = useCallback(
+    (clientX: number, clientY: number) => {
+      openNodeContextMenu({
+        nodeId: id,
+        kind: "union",
+        label: unionLabel,
+        x: clientX,
+        y: clientY,
+      });
+    },
+    [id, unionLabel, openNodeContextMenu],
+  );
+
+  const { longPressHandlers } = useLongPress({
+    onLongPress: (event) => {
+      event.preventDefault();
+      suppressNextNodeClick();
+      showContextMenu(event.clientX, event.clientY);
+    },
+  });
   const hoverRelated = union.hoverRelated;
   const pathHighlighted = union.pathHighlighted && !hoverRelated;
   const focusHighlighted = union.focusHighlighted && !hoverRelated && !pathHighlighted;
@@ -25,7 +54,11 @@ export function MarriageNode({ data }: NodeProps) {
         : null;
 
   return (
-    <div className="relative flex h-7 w-7 items-center justify-center">
+    <div
+      {...longPressHandlers}
+      className="relative flex h-7 w-7 items-center justify-center"
+      style={{ touchAction: "manipulation" }}
+    >
       <Handle
         id="union-top"
         type="target"

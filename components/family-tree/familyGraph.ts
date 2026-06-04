@@ -414,10 +414,13 @@ export function buildElkGraph(options: ElkGraphOptions = {}): {
       // the children.
       for (const childId of union.childIds) {
         if (!includesPerson(childId)) continue;
+        const source = coupleNodeId(union.id);
+        const target = nodeOf(childId);
+        if (!emitted.has(source) || !emitted.has(target)) continue;
         edges.push({
           id: `child-${union.id}-${childId}`,
-          source: coupleNodeId(union.id),
-          target: nodeOf(childId),
+          source,
+          target,
         });
       }
       continue;
@@ -430,8 +433,10 @@ export function buildElkGraph(options: ElkGraphOptions = {}): {
     for (const childId of union.childIds) {
       if (!includesPerson(childId)) continue;
       for (const partnerId of union.partnerIds) {
+        if (!includesPerson(partnerId)) continue;
         const source = nodeOf(partnerId);
         const target = nodeOf(childId);
+        if (!emitted.has(source) || !emitted.has(target)) continue;
         const key = `${source}->${target}`;
         if (emittedChildEdges.has(key)) continue;
         emittedChildEdges.add(key);

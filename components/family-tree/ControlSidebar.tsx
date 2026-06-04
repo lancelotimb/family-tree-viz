@@ -2,6 +2,7 @@
 
 import {
   AlignCenterHorizontal,
+  Eye,
   GitBranch,
   GitFork,
   Palette,
@@ -62,9 +63,10 @@ export function ControlSidebarContent({
   lineagePersonIds,
 }: ControlPanelProps) {
   return (
-    <>
+    <div className="flex flex-col gap-5">
       <div>
-        <p className="mb-2 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
+        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
+          <Eye className="h-3.5 w-3.5" />
           Display
         </p>
         <ToggleRow
@@ -143,20 +145,6 @@ export function ControlSidebarContent({
       </div>
 
       <div>
-        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
-          <GitFork className="h-3.5 w-3.5" />
-          Branches
-        </p>
-        <BranchSelector
-          branches={familyBranches}
-          visibleFamilyNames={visibleFamilyNames}
-          onFamilyVisibilityChange={onFamilyVisibilityChange}
-          onShowAllBranches={onShowAllBranches}
-          onHideAllBranches={onHideAllBranches}
-        />
-      </div>
-
-      <div>
         <div className="mb-2 flex items-center justify-between gap-2">
           <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
             <GitBranch className="h-3.5 w-3.5" />
@@ -202,7 +190,21 @@ export function ControlSidebarContent({
           <p className="mt-2 text-xs text-[#6b7d5a]">Path highlighted on the tree.</p>
         )}
       </div>
-    </>
+
+      <div>
+        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
+          <GitFork className="h-3.5 w-3.5" />
+          Branches
+        </p>
+        <BranchSelector
+          branches={familyBranches}
+          visibleFamilyNames={visibleFamilyNames}
+          onFamilyVisibilityChange={onFamilyVisibilityChange}
+          onShowAllBranches={onShowAllBranches}
+          onHideAllBranches={onHideAllBranches}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -213,11 +215,18 @@ type ControlSidebarProps = ControlPanelProps & {
 
 export function ControlSidebar({ expanded, onExpandedChange, ...props }: ControlSidebarProps) {
   if (!expanded) {
-    return <SettingsButton onClick={() => onExpandedChange(true)} />;
+    return (
+      <SettingsButton
+        label="Parameters"
+        iconPosition="right"
+        variant="panel-header"
+        onClick={() => onExpandedChange(true)}
+      />
+    );
   }
 
   return (
-    <aside className="pointer-events-auto flex w-64 shrink-0 flex-col gap-3 overflow-hidden rounded-2xl border border-[#e8dfd0] bg-white/75 px-4 pb-4 pt-2 shadow-lg backdrop-blur-md">
+    <aside className="pointer-events-auto flex w-[300px] shrink-0 flex-col gap-3 overflow-visible rounded-2xl border border-[#e8dfd0] bg-white/75 px-4 pb-4 pt-2 shadow-lg backdrop-blur-md">
       <div className="flex shrink-0 items-center justify-between gap-2">
         <h2 className="font-serif text-base font-medium text-[#3d3428]">Parameters</h2>
         <button
