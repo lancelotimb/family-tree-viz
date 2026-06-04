@@ -550,6 +550,79 @@ function centerParentsOverChildren(
 }
 
 /**
+ * For every union with exactly one laid-out child, slide the parents (their
+ * partner cards and marriage dot) horizontally so the dot sits directly above
+ * that child's own card — not above the midpoint of the child and their spouse.
+ * Processed deepest-child-first so a chain of single children lines up, and only
+ * applied when the parents stay clear of other cards on their row.
+ */
+function alignSingleChildParents(positions: Map<string, LayoutPosition>): void {
+  const gap = H_GAP;
+
+  const onlyChildUnions = Object.values(unions)
+    .map((u) => ({
+      u,
+      kids: u.childIds.filter((c) => positions.has(c)),
+      partners: u.partnerIds.filter((p) => positions.has(p)),
+    }))
+    .filter((e) => e.kids.length === 1 && e.partners.length > 0);
+
+  // Deepest child first, so single-child chains settle bottom-up.
+  onlyChildUnions.sort(
+    (a, b) => positions.get(b.kids[0])!.y - positions.get(a.kids[0])!.y,
+  );
+
+  for (const { u, kids, partners } of onlyChildUnions) {
+    // Skip if a parent belongs to another laid-out union (e.g. a remarriage);
+    // moving them would disturb that union.
+    const entangled = partners.some(
+      (p) =>
+        (individuals[p]?.fams ?? []).filter(
+          (f) => f !== u.id && positions.has(f),
+        ).length > 0,
+    );
+    if (entangled) continue;
+
+    const child = kids[0];
+    const dot = positions.get(u.id);
+    const targetX = positions.get(child)!.x + NODE_WIDTH / 2;
+    const parentCenter = dot
+      ? dot.x + UNION_SIZE / 2
+      : average(partners.map((p) => positions.get(p)!.x + NODE_WIDTH / 2));
+    const desired = targetX - parentCenter;
+    if (Math.abs(desired) < 1) continue;
+
+    // Footprint of the parent cards and the other cards sharing their row.
+    const y = Math.round(positions.get(partners[0])!.y);
+    const lefts = partners.map((p) => positions.get(p)!.x);
+    const lo = Math.min(...lefts);
+    const hi = Math.max(...lefts) + NODE_WIDTH;
+    const partnerSet = new Set(partners);
+    const others: Interval[] = [];
+    for (const [id, p] of positions) {
+      if (!individuals[id] || partnerSet.has(id)) continue;
+      if (Math.round(p.y) !== y) continue;
+      others.push([p.x, p.x + NODE_WIDTH]);
+    }
+    others.sort((a, b) => a[0] - b[0]);
+
+    const placedLeft = nearestFreeX(lo + desired, hi - lo, others, gap);
+    if (placedLeft === null) continue;
+    const applied = placedLeft - lo;
+    // Only move if it brings the parents closer to sitting over the child.
+    if (
+      Math.abs(parentCenter + applied - targetX) >=
+      Math.abs(parentCenter - targetX)
+    ) {
+      continue;
+    }
+
+    for (const p of partners) positions.get(p)!.x += applied;
+    if (dot) dot.x += applied;
+  }
+}
+
+/**
  * Run ELK's layered algorithm. Generations become layers (DOWN direction) via
  * partitioning. Each couple is handed to ELK as a single combined node so
  * spouses can never be pulled apart by crossing minimization; afterwards we
@@ -718,6 +791,13 @@ export async function computeLayout(
       x: centerX - UNION_SIZE / 2,
       y: topY + COUPLE_UNION_DROP,
     });
+  }
+
+  // Optional refinement: when parents have a single child, slide the parents so
+  // their marriage dot sits directly over that child's card (rather than over
+  // the midpoint of the child and their spouse). Runs on the expanded cards.
+  if (options.centerParentsOverChildren) {
+    alignSingleChildParents(positions);
   }
 
   return positions;
