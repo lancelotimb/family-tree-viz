@@ -21,6 +21,11 @@ import { MAX_ZOOM, MIN_ZOOM, personFocusFitViewOptions } from "./layoutConstants
 import { ZoomControls } from "./ZoomControls";
 import { ProfilePanel } from "./ProfilePanel";
 import {
+  FamilyTreeActionsContext,
+  type NodeContextMenuTarget,
+} from "./familyTreeActionsContext";
+import { NodeContextMenu } from "./NodeContextMenu";
+import {
   buildAdjacencyList,
   findShortestPath,
   pathEdgeIds,
@@ -35,6 +40,7 @@ import {
   getLineagePersonIdsForUnion,
   individuals,
   unionInLineage,
+  unionSearchIndex,
   unions,
 } from "./familyGraph";
 import { computeLayout, type LayoutPosition } from "./elkLayout";
@@ -73,6 +79,15 @@ function neutralEdgeStyle(edge: Edge) {
   return dash ? { ...defaultEdgeStyle, strokeDasharray: dash } : defaultEdgeStyle;
 }
 
+function visibleFamilyNamesKey(names: Set<string>): string {
+  return [...names].sort().join("\0");
+}
+
+function layoutPersonIdsKey(personIds: Set<string> | null): string {
+  if (personIds === null) return "full";
+  return [...personIds].sort().join("\0");
+}
+
 function FamilyTreeCanvas() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<FamilyNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -95,6 +110,10 @@ function FamilyTreeCanvas() {
   const [settingsSidebarExpanded, setSettingsSidebarExpanded] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [contextMenuTarget, setContextMenuTarget] =
+    useState<NodeContextMenuTarget | null>(null);
+  const [layoutRequestNonce, setLayoutRequestNonce] = useState(0);
+  const suppressNextNodeClickRef = useRef(false);
   const instanceRef = useRef<ReactFlowInstance<Node<FamilyNodeData>, Edge> | null>(
     null,
   );
@@ -137,6 +156,29 @@ function FamilyTreeCanvas() {
     return ids;
   }, [allBranchesVisible, visibleFamilyNames, lineagePersonIds]);
 
+  /** Stable key so layout re-runs when focus/visibility changes, not only Set identity. */
+  const layoutRequestKey = useMemo(
+    () =>
+      [
+        layoutRequestNonce,
+        focusPersonId,
+        focusUnionId,
+        visibleFamilyNamesKey(visibleFamilyNames),
+        layoutPersonIdsKey(layoutPersonIds),
+      ].join("|"),
+    [
+      layoutRequestNonce,
+      focusPersonId,
+      focusUnionId,
+      visibleFamilyNames,
+      layoutPersonIds,
+    ],
+  );
+
+  const bumpLayoutRequest = useCallback(() => {
+    setLayoutRequestNonce((nonce) => nonce + 1);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -169,7 +211,7 @@ function FamilyTreeCanvas() {
     return () => {
       cancelled = true;
     };
-  }, [layoutPersonIds, applyLayout]);
+  }, [layoutRequestKey, layoutPersonIds, applyLayout]);
 
   useEffect(() => {
     if (!ready || layouting) return;
@@ -199,7 +241,7 @@ function FamilyTreeCanvas() {
         });
       }
     });
-  }, [ready, layouting, layoutPersonIds, focusUnionId, fitView]);
+  }, [ready, layouting, layoutRequestKey, layoutPersonIds, focusPersonId, focusUnionId, fitView]);
 
   const adjacency = useMemo(() => buildAdjacencyList(baseEdges), [baseEdges]);
 
@@ -242,14 +284,70 @@ function FamilyTreeCanvas() {
     return null;
   }, [focusPersonId, focusUnionId]);
 
-  const handleFocusPersonChange = useCallback((id: string) => {
-    setFocusPersonId(id);
-    if (id) setFocusUnionId("");
+  const handleFocusPersonChange = useCallback(
+    (id: string) => {
+      setFocusPersonId(id);
+      if (id) setFocusUnionId("");
+      bumpLayoutRequest();
+    },
+    [bumpLayoutRequest],
+  );
+
+  const handleFocusUnionChange = useCallback(
+    (id: string) => {
+      setFocusUnionId(id);
+      if (id) setFocusPersonId("");
+      bumpLayoutRequest();
+    },
+    [bumpLayoutRequest],
+  );
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenuTarget(null);
   }, []);
 
-  const handleFocusUnionChange = useCallback((id: string) => {
-    setFocusUnionId(id);
-    if (id) setFocusPersonId("");
+  const familyTreeActions = useMemo(
+    () => ({
+      openNodeContextMenu: setContextMenuTarget,
+      suppressNextNodeClick: () => {
+        suppressNextNodeClickRef.current = true;
+      },
+    }),
+    [],
+  );
+
+  const handleFocusLineageFromContextMenu = useCallback(
+    (target: NodeContextMenuTarget) => {
+      if (target.kind === "person") {
+        handleFocusPersonChange(target.nodeId);
+      } else {
+        handleFocusUnionChange(target.nodeId);
+      }
+    },
+    [handleFocusPersonChange, handleFocusUnionChange],
+  );
+
+  const handleUnfocusLineage = useCallback(() => {
+    setFocusPersonId("");
+    setFocusUnionId("");
+    bumpLayoutRequest();
+  }, [bumpLayoutRequest]);
+
+  const handleNodeContextMenu: NodeMouseHandler = useCallback((event, node) => {
+    event.preventDefault();
+    if (node.hidden) return;
+    const data = node.data as FamilyNodeData;
+    const label =
+      data.kind === "person"
+        ? data.name
+        : (unionSearchIndex.find((union) => union.id === node.id)?.label ?? "Union");
+    setContextMenuTarget({
+      nodeId: node.id,
+      kind: data.kind === "person" ? "person" : "union",
+      label,
+      x: event.clientX,
+      y: event.clientY,
+    });
   }, []);
 
   const isPersonVisible = useCallback(
@@ -437,6 +535,10 @@ function FamilyTreeCanvas() {
 
   const handleNodeClick: NodeMouseHandler = useCallback((_event, node) => {
     dismissSearchRef.current?.();
+    if (suppressNextNodeClickRef.current) {
+      suppressNextNodeClickRef.current = false;
+      return;
+    }
     const data = node.data as FamilyNodeData;
     if (data.kind !== "person" || node.hidden) return;
     setSelectedId(node.id);
@@ -455,10 +557,11 @@ function FamilyTreeCanvas() {
 
   const handlePaneClick = useCallback(() => {
     dismissSearchRef.current?.();
+    closeContextMenu();
     setSelectedId(null);
     setPanelOpen(false);
     setHoveredId(null);
-  }, []);
+  }, [closeContextMenu]);
 
   const closeProfilePanel = useCallback(() => {
     setPanelOpen(false);
@@ -485,6 +588,12 @@ function FamilyTreeCanvas() {
       if (e.key !== "Escape") return;
       if (searchOpen) return;
 
+      if (contextMenuTarget) {
+        e.preventDefault();
+        closeContextMenu();
+        return;
+      }
+
       if (settingsOpen) {
         e.preventDefault();
         setSettingsOpen(false);
@@ -503,7 +612,15 @@ function FamilyTreeCanvas() {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [searchOpen, settingsOpen, panelOpen, settingsSidebarExpanded, closeProfilePanel]);
+  }, [
+    searchOpen,
+    settingsOpen,
+    panelOpen,
+    settingsSidebarExpanded,
+    contextMenuTarget,
+    closeContextMenu,
+    closeProfilePanel,
+  ]);
 
   const controlPanelProps = {
     greyDeceased,
@@ -528,6 +645,7 @@ function FamilyTreeCanvas() {
   };
 
   return (
+    <FamilyTreeActionsContext.Provider value={familyTreeActions}>
     <div className="relative h-full w-full bg-[#fdfbf7]">
       <ReactFlow
         nodes={nodes}
@@ -544,6 +662,7 @@ function FamilyTreeCanvas() {
         elementsSelectable={false}
         selectNodesOnDrag={false}
         onNodeClick={handleNodeClick}
+        onNodeContextMenu={handleNodeContextMenu}
         onNodeMouseEnter={handleNodeMouseEnter}
         onNodeMouseLeave={handleNodeMouseLeave}
         panOnDrag
@@ -553,6 +672,7 @@ function FamilyTreeCanvas() {
         proOptions={{ hideAttribution: true }}
         onPaneClick={handlePaneClick}
         onMoveStart={() => dismissSearchRef.current?.()}
+        onPaneContextMenu={(event) => event.preventDefault()}
         fitView
         fitViewOptions={{ padding: 0.15, minZoom: MIN_ZOOM }}
         className="family-tree-flow"
@@ -600,8 +720,20 @@ function FamilyTreeCanvas() {
         open={panelOpen}
         onClose={closeProfilePanel}
         onSelectPerson={handleSelectPerson}
+        focusPersonId={focusPersonId}
+        onFocusLineage={handleFocusPersonChange}
+      />
+
+      <NodeContextMenu
+        target={contextMenuTarget}
+        onClose={closeContextMenu}
+        onFocusLineage={handleFocusLineageFromContextMenu}
+        onUnfocusLineage={handleUnfocusLineage}
+        focusPersonId={focusPersonId}
+        focusUnionId={focusUnionId}
       />
     </div>
+    </FamilyTreeActionsContext.Provider>
   );
 }
 

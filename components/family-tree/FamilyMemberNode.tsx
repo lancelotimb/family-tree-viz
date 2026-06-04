@@ -1,18 +1,43 @@
 "use client";
 
+import { useCallback } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { useFamilyTreeActions } from "./familyTreeActionsContext";
 import { familyHighlight } from "./familyHighlightColors";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { NODE_HEIGHT, NODE_WIDTH } from "./layoutConstants";
 import type { PersonNodeData } from "./types";
+import { useLongPress } from "./useLongPress";
 
 function formatLifespan(birthYear: number | null, deathYear: number | null) {
   const birth = birthYear ?? "?";
   return deathYear ? `${birth} – ${deathYear}` : `${birth} –`;
 }
 
-export function FamilyMemberNode({ data, selected }: NodeProps) {
+export function FamilyMemberNode({ id, data, selected }: NodeProps) {
   const member = data as PersonNodeData;
+  const { openNodeContextMenu, suppressNextNodeClick } = useFamilyTreeActions();
+
+  const showContextMenu = useCallback(
+    (clientX: number, clientY: number) => {
+      openNodeContextMenu({
+        nodeId: id,
+        kind: "person",
+        label: member.name,
+        x: clientX,
+        y: clientY,
+      });
+    },
+    [id, member.name, openNodeContextMenu],
+  );
+
+  const { longPressHandlers } = useLongPress({
+    onLongPress: (event) => {
+      event.preventDefault();
+      suppressNextNodeClick();
+      showContextMenu(event.clientX, event.clientY);
+    },
+  });
   const isGreyed = member.greyed;
   const isHovered = member.hovered;
   const isHoverRelated = member.hoverRelated;
@@ -57,11 +82,13 @@ export function FamilyMemberNode({ data, selected }: NodeProps) {
 
   return (
     <div
+      {...longPressHandlers}
       style={{
         width: NODE_WIDTH,
         height: NODE_HEIGHT,
         borderColor: cardBorderColor,
         backgroundColor: cardBackground,
+        touchAction: "manipulation",
       }}
       title={`${member.name} (${member.familyName})`}
       className={`flex flex-col items-center rounded-xl border-2 px-4 py-3 shadow-sm transition-all duration-200 ${
