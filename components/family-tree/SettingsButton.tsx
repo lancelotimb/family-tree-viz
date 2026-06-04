@@ -28,7 +28,7 @@ export function SettingsButton({
       title={ariaLabel}
       className={`flex cursor-pointer items-center rounded-xl border border-[#e8dfd0] bg-white/80 text-[#3d3428] shadow-lg backdrop-blur-md transition-colors hover:border-[#d4c4a8] hover:bg-[#faf6ef] ${
         isPanelHeader
-          ? "w-[300px] shrink-0 justify-between gap-2 px-4 py-2"
+          ? "shrink-0 gap-1.5 px-4 py-2"
           : label
             ? `gap-2 px-3 py-2 ${iconPosition === "right" ? "flex-row-reverse" : ""}`
             : "h-10 w-10 justify-center"
