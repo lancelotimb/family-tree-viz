@@ -75,10 +75,13 @@ function separationShift(accum: Contour, incoming: Contour, gap: number): number
  *
  * The family graph is a DAG (a couple box has a parent on each partner's side,
  * children can be shared across unions), so we first reduce it to a spanning
- * forest by giving each box a single "primary" parent — the parent whose ELK
- * center is closest, which keeps the result near ELK's crossing-minimized
- * arrangement. Secondary parent/child links still render as edges; they simply
- * aren't the ones used to drive centering.
+ * forest by giving each box a single "primary" parent. For a couple we prefer
+ * the parent on the side of the partner whose surname the children carry (the
+ * blood line), so e.g. the Imberton main line keeps descending under the
+ * Imberton grandparents and stays beside its siblings instead of being adopted
+ * into the spouse's branch. Otherwise we fall back to the parent whose ELK
+ * center is closest, keeping the result near ELK's arrangement. Secondary links
+ * still render as edges; they just don't drive centering.
  *
  * Married-in spouses from a *loose* union (e.g. a remarriage that wasn't merged
  * into a combined couple box) have no parents of their own, so on their own
@@ -109,12 +112,33 @@ function centerParentsOverChildren(
   // The ELK box a person maps to: their combined couple node when grouped,
   // otherwise their own person node.
   const personToCoupleNode = new Map<string, string>();
+  const coupleByNodeId = new Map<string, CoupleGroup>();
+  const groupedUnionToBox = new Map<string, string>();
   for (const couple of couples) {
     personToCoupleNode.set(couple.leftId, couple.nodeId);
     personToCoupleNode.set(couple.rightId, couple.nodeId);
+    coupleByNodeId.set(couple.nodeId, couple);
+    groupedUnionToBox.set(couple.unionId, couple.nodeId);
   }
   const boxOf = (personId: string) =>
     personToCoupleNode.get(personId) ?? personId;
+
+  // The ELK box that represents a person's parent union (their `famc`), if it is
+  // laid out: the combined node when the parents are grouped, else a positioned
+  // partner of the loose parent union.
+  const parentBoxOfPerson = (personId: string): string | null => {
+    const famc = individuals[personId]?.famc;
+    if (!famc) return null;
+    const grouped = groupedUnionToBox.get(famc);
+    if (grouped) return positions.has(grouped) ? grouped : null;
+    const union = unions[famc];
+    if (!union) return null;
+    for (const partnerId of union.partnerIds) {
+      const box = boxOf(partnerId);
+      if (positions.has(box)) return box;
+    }
+    return null;
+  };
 
   // Build parent adjacency from the (downward) child edges ELK was given.
   const parentsOf = new Map<string, string[]>();
@@ -153,23 +177,68 @@ function centerParentsOverChildren(
     if (anchor) satelliteAnchor.set(id, anchor);
   }
 
-  // Each box keeps one primary parent: the one whose center is horizontally
-  // closest, so the spanning forest hugs ELK's existing layout. Satellites are
+  /**
+   * For a combined couple box with parents on both partners' sides, the parent
+   * box on the side of the partner whose surname the couple's children carry.
+   * Returns null when that can't be determined unambiguously (so the caller
+   * falls back to the closest-center heuristic).
+   */
+  const bloodParentBox = (coupleNode: string, pool: string[]): string | null => {
+    const couple = coupleByNodeId.get(coupleNode);
+    if (!couple) return null;
+    const union = unions[couple.unionId];
+    if (!union) return null;
+
+    const counts = new Map<string, number>();
+    for (const childId of union.childIds) {
+      const fam = individuals[childId]?.familyName;
+      if (fam) counts.set(fam, (counts.get(fam) ?? 0) + 1);
+    }
+    let childFamily: string | null = null;
+    let bestCount = 0;
+    for (const [fam, n] of counts) {
+      if (n > bestCount) {
+        bestCount = n;
+        childFamily = fam;
+      }
+    }
+    if (!childFamily) return null;
+
+    const matching = [couple.leftId, couple.rightId].filter(
+      (p) => individuals[p]?.familyName === childFamily,
+    );
+    if (matching.length !== 1) return null; // ambiguous (same surname, or none)
+
+    const box = parentBoxOfPerson(matching[0]);
+    if (box && !satelliteAnchor.has(box) && pool.includes(box)) return box;
+    return null;
+  };
+
+  // Each box keeps one primary parent. Couples prefer their blood-line side;
+  // everything else takes the horizontally closest parent. Satellites are
   // skipped as parents when an anchored alternative exists.
   const primaryParent = new Map<string, string>();
   for (const [child, parents] of parentsOf) {
     const anchored = parents.filter((p) => !satelliteAnchor.has(p));
     const pool = anchored.length > 0 ? anchored : parents;
-    let best = pool[0];
-    let bestDistance = Infinity;
-    for (const parent of pool) {
-      const distance = Math.abs(currentCenter(parent) - currentCenter(child));
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        best = parent;
-      }
+
+    let chosen: string | null = null;
+    if (pool.length > 1 && coupleByNodeId.has(child)) {
+      chosen = bloodParentBox(child, pool);
     }
-    primaryParent.set(child, best);
+    if (!chosen) {
+      let best = pool[0];
+      let bestDistance = Infinity;
+      for (const parent of pool) {
+        const distance = Math.abs(currentCenter(parent) - currentCenter(child));
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          best = parent;
+        }
+      }
+      chosen = best;
+    }
+    primaryParent.set(child, chosen);
   }
 
   const primaryChildren = new Map<string, string[]>();
