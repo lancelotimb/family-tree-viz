@@ -86,6 +86,16 @@ function neutralEdgeStyle(edge: Edge) {
   return dash ? { ...defaultEdgeStyle, strokeDasharray: dash } : defaultEdgeStyle;
 }
 
+function endpointIsDeceased(nodeId: string): boolean {
+  const person = individuals[nodeId];
+  if (!person) return false;
+  return isDeceased(person.birth.year, person.death?.year ?? null);
+}
+
+function edgeTouchesDeceased(edge: Edge): boolean {
+  return endpointIsDeceased(edge.source) || endpointIsDeceased(edge.target);
+}
+
 function visibleFamilyNamesKey(names: Set<string>): string {
   return [...names].sort().join("\0");
 }
@@ -513,6 +523,13 @@ function FamilyTreeCanvas() {
           ? baseStyle
           : neutralEdgeStyle(baseEdge ?? edge);
         const hoverDimOthers = familyHighlight !== null && !hidden && !pathActive;
+        const greyEdge =
+          greyDeceased &&
+          !hidden &&
+          !pathActive &&
+          !hoverActive &&
+          !hoverDimOthers &&
+          edgeTouchesDeceased(edge);
         return {
           ...edge,
           hidden,
@@ -521,7 +538,9 @@ function FamilyTreeCanvas() {
               ? "family-path-edge"
               : !hidden && hoverActive
                 ? "family-hover-edge"
-                : undefined,
+                : greyEdge
+                  ? "family-grey-edge"
+                  : undefined,
           style: !hidden && pathActive
             ? highlightedEdgeStyle
             : !hidden && hoverActive
