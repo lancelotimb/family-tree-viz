@@ -566,7 +566,7 @@ function FamilyTreeCanvas() {
       ) : null}
 
       <div className="pointer-events-none absolute inset-0 z-10 flex flex-col">
-        <header className="flex items-start gap-2 p-3">
+        <header className="flex items-start justify-between gap-2 p-3">
           <div className="pointer-events-auto hidden shrink-0 md:block">
             <ControlSidebar
               expanded={settingsSidebarExpanded}
@@ -574,7 +574,7 @@ function FamilyTreeCanvas() {
               {...controlPanelProps}
             />
           </div>
-          <div className="pointer-events-auto min-w-0 flex-1">
+          <div className="pointer-events-auto min-w-0 w-full md:w-80 md:shrink-0">
             <SearchBar
               visibleFamilyNames={visibleFamilyNames}
               lineagePersonIds={lineagePersonIds}
