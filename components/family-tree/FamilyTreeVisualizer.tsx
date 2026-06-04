@@ -285,6 +285,11 @@ function FamilyTreeCanvas() {
     [handleFocusPersonChange, handleFocusUnionChange],
   );
 
+  const handleUnfocusLineage = useCallback(() => {
+    setFocusPersonId("");
+    setFocusUnionId("");
+  }, []);
+
   const handleNodeContextMenu: NodeMouseHandler = useCallback((event, node) => {
     event.preventDefault();
     if (node.hidden) return;
@@ -679,6 +684,7 @@ function FamilyTreeCanvas() {
         target={contextMenuTarget}
         onClose={closeContextMenu}
         onFocusLineage={handleFocusLineageFromContextMenu}
+        onUnfocusLineage={handleUnfocusLineage}
         focusPersonId={focusPersonId}
         focusUnionId={focusUnionId}
       />

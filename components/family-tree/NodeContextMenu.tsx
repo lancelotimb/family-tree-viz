@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Users } from "lucide-react";
+import { Users, X } from "lucide-react";
 import type { NodeContextMenuTarget } from "./familyTreeActionsContext";
 
 type NodeContextMenuProps = {
   target: NodeContextMenuTarget | null;
   onClose: () => void;
   onFocusLineage: (target: NodeContextMenuTarget) => void;
+  onUnfocusLineage: () => void;
   focusPersonId: string;
   focusUnionId: string;
 };
@@ -16,6 +17,7 @@ export function NodeContextMenu({
   target,
   onClose,
   onFocusLineage,
+  onUnfocusLineage,
   focusPersonId,
   focusUnionId,
 }: NodeContextMenuProps) {
@@ -89,20 +91,33 @@ export function NodeContextMenu({
       <p className="truncate px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-[#a8957a]">
         {target.label}
       </p>
-      <button
-        type="button"
-        role="menuitem"
-        onClick={() => {
-          onFocusLineage(target);
-          onClose();
-        }}
-        className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-[#faf6ef] ${
-          isActive ? "text-[#4a5c3d]" : "text-[#3d3428]"
-        }`}
-      >
-        <Users className="h-4 w-4 shrink-0 text-[#8b7d6b]" aria-hidden />
-        {isActive ? "Lineage focused" : "Focus lineage"}
-      </button>
+      {isActive ? (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            onUnfocusLineage();
+            onClose();
+          }}
+          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#3d3428] transition-colors hover:bg-[#faf6ef]"
+        >
+          <X className="h-4 w-4 shrink-0 text-[#8b7d6b]" aria-hidden />
+          Unfocus lineage
+        </button>
+      ) : (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            onFocusLineage(target);
+            onClose();
+          }}
+          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#3d3428] transition-colors hover:bg-[#faf6ef]"
+        >
+          <Users className="h-4 w-4 shrink-0 text-[#8b7d6b]" aria-hidden />
+          Focus lineage
+        </button>
+      )}
     </div>
   );
 }
