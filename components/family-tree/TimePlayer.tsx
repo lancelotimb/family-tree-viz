@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
 type TimePlayerProps = {
   minYear: number;
@@ -23,11 +23,14 @@ export function TimePlayer({
 }: TimePlayerProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
-  const [inputValue, setInputValue] = useState(String(year));
 
-  useEffect(() => {
-    setInputValue(String(year));
-  }, [year]);
+  const yearOptions = useMemo(() => {
+    const options: number[] = [];
+    for (let y = minYear; y <= maxYear; y++) {
+      options.push(y);
+    }
+    return options;
+  }, [minYear, maxYear]);
 
   const yearToPercent = useCallback(
     (value: number) => {
@@ -89,44 +92,24 @@ export function TimePlayer({
     updateFromClientX(event.clientX);
   };
 
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(event.target.value);
-  };
-
-  const commitInput = () => {
-    const parsed = Number.parseInt(inputValue, 10);
-    if (Number.isNaN(parsed)) {
-      setInputValue(String(year));
-      return;
-    }
-    onYearChange(clampYear(parsed, minYear, maxYear));
-  };
-
-  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      commitInput();
-      event.currentTarget.blur();
-    }
-  };
-
   const thumbPercent = yearToPercent(year);
 
   return (
     <div className="pointer-events-auto flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-[#e8dfd0] bg-white/80 px-3 py-2 shadow-lg backdrop-blur-md">
       <label className="flex shrink-0 items-center gap-1.5">
         <span className="sr-only">Year</span>
-        <input
-          type="number"
-          min={minYear}
-          max={maxYear}
-          value={inputValue}
-          onChange={handleInputChange}
-          onBlur={commitInput}
-          onKeyDown={handleInputKeyDown}
-          className="w-[4.5rem] rounded-lg border border-[#e8dfd0] bg-[#faf6ef] px-2 py-1 text-center text-sm font-medium text-[#3d3428] tabular-nums outline-none focus:border-[#d4c4a8]"
+        <select
+          value={year}
+          onChange={(event) => onYearChange(Number(event.target.value))}
+          className="cursor-pointer rounded-lg border border-[#e8dfd0] bg-[#faf6ef] px-2 py-1 text-sm font-medium text-[#3d3428] tabular-nums outline-none focus:border-[#d4c4a8]"
           aria-label="Selected year"
-        />
+        >
+          {yearOptions.map((optionYear) => (
+            <option key={optionYear} value={optionYear}>
+              {optionYear}
+            </option>
+          ))}
+        </select>
       </label>
 
       <div className="flex min-w-0 flex-1 items-center gap-2">
