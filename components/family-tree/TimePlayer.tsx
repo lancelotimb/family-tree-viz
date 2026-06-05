@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 
 type TimePlayerProps = {
   minYear: number;
@@ -23,6 +23,7 @@ export function TimePlayer({
 }: TimePlayerProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
+  const activePointerIdRef = useRef<number | null>(null);
 
   const yearOptions = useMemo(() => {
     const options: number[] = [];
@@ -60,37 +61,51 @@ export function TimePlayer({
     [onYearChange, percentToYear],
   );
 
-  const startDrag = useCallback(() => {
-    draggingRef.current = true;
-    onScrubbingChange?.(true);
-  }, [onScrubbingChange]);
-
-  const endDrag = useCallback(() => {
-    if (!draggingRef.current) return;
-    draggingRef.current = false;
-    onScrubbingChange?.(false);
-  }, [onScrubbingChange]);
-
-  useEffect(() => {
-    const onPointerMove = (event: PointerEvent) => {
+  const endDrag = useCallback(
+    (pointerId?: number) => {
       if (!draggingRef.current) return;
+      draggingRef.current = false;
+      activePointerIdRef.current = null;
+      const track = trackRef.current;
+      if (track && pointerId !== undefined && track.hasPointerCapture(pointerId)) {
+        track.releasePointerCapture(pointerId);
+      }
+      onScrubbingChange?.(false);
+    },
+    [onScrubbingChange],
+  );
+
+  const beginScrub = useCallback(
+    (event: React.PointerEvent<HTMLElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const track = trackRef.current;
+      if (!track) return;
+      track.setPointerCapture(event.pointerId);
+      draggingRef.current = true;
+      activePointerIdRef.current = event.pointerId;
+      onScrubbingChange?.(true);
       updateFromClientX(event.clientX);
-    };
-    const onPointerUp = () => endDrag();
+    },
+    [onScrubbingChange, updateFromClientX],
+  );
 
-    window.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", onPointerUp);
-    return () => {
-      window.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("pointerup", onPointerUp);
-    };
-  }, [endDrag, updateFromClientX]);
+  const handlePointerMove = useCallback(
+    (event: React.PointerEvent<HTMLElement>) => {
+      if (!draggingRef.current || activePointerIdRef.current !== event.pointerId) return;
+      event.preventDefault();
+      updateFromClientX(event.clientX);
+    },
+    [updateFromClientX],
+  );
 
-  const handleTrackPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    startDrag();
-    updateFromClientX(event.clientX);
-  };
+  const handlePointerEnd = useCallback(
+    (event: React.PointerEvent<HTMLElement>) => {
+      if (activePointerIdRef.current !== event.pointerId) return;
+      endDrag(event.pointerId);
+    },
+    [endDrag],
+  );
 
   const thumbPercent = yearToPercent(year);
 
@@ -118,30 +133,35 @@ export function TimePlayer({
         </span>
         <div
           ref={trackRef}
-          className="relative h-2 min-w-0 flex-1 cursor-pointer rounded-full bg-[#e8dfd0]"
-          onPointerDown={handleTrackPointerDown}
-          role="slider"
-          aria-label="Timeline"
-          aria-valuemin={minYear}
-          aria-valuemax={maxYear}
-          aria-valuenow={year}
+          className="relative min-h-11 min-w-0 flex-1 touch-none py-4"
+          onPointerDown={beginScrub}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerEnd}
+          onPointerCancel={handlePointerEnd}
         >
           <div
-            className="absolute inset-y-0 left-0 rounded-full bg-[#c4b49a]"
-            style={{ width: `${thumbPercent}%` }}
-          />
+            className="absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 cursor-pointer rounded-full bg-[#e8dfd0]"
+            role="slider"
+            aria-label="Timeline"
+            aria-valuemin={minYear}
+            aria-valuemax={maxYear}
+            aria-valuenow={year}
+          >
+            <div
+              className="absolute inset-y-0 left-0 rounded-full bg-[#c4b49a]"
+              style={{ width: `${thumbPercent}%` }}
+            />
+          </div>
           <button
             type="button"
-            className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-full border-2 border-white bg-[#7a9e6a] shadow active:cursor-grabbing"
+            className="absolute top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 cursor-grab touch-none items-center justify-center active:cursor-grabbing"
             style={{ left: `${thumbPercent}%` }}
-            onPointerDown={(event) => {
-              event.stopPropagation();
-              event.preventDefault();
-              startDrag();
-            }}
+            onPointerDown={beginScrub}
             aria-hidden
             tabIndex={-1}
-          />
+          >
+            <span className="h-4 w-4 rounded-full border-2 border-white bg-[#7a9e6a] shadow" />
+          </button>
         </div>
         <span className="hidden shrink-0 text-xs text-[#8b7d6b] sm:inline">
           {maxYear}
