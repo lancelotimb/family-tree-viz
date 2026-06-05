@@ -84,8 +84,7 @@ export function TimePlayer({
       const track = trackRef.current;
       if (!track) return;
       const rect = track.getBoundingClientRect();
-      const percent = ((clientX - rect.left) / rect.width) * 100;
-      onYearChange(percentToYear(percent));
+      onYearChange(percentToYear(percentFromPointer(clientX, rect)));
     },
     [onYearChange, percentToYear],
   );
@@ -207,7 +206,8 @@ export function TimePlayer({
           onPointerCancel={handlePointerEnd}
         >
           <div
-            className="absolute inset-x-2 top-1/2 h-1 -translate-y-1/2 cursor-pointer rounded-full bg-[#e8dfd0]"
+            className="absolute top-1/2 h-1 -translate-y-1/2 cursor-pointer rounded-full bg-[#e8dfd0]"
+            style={{ left: THUMB_HALF_PX, right: THUMB_HALF_PX }}
             role="slider"
             aria-label="Timeline"
             aria-valuemin={minYear}
@@ -222,12 +222,12 @@ export function TimePlayer({
           <button
             type="button"
             className="absolute top-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 cursor-grab touch-none items-center justify-center active:cursor-grabbing"
-            style={{ left: `${thumbPercent}%` }}
+            style={{ left: thumbOffset(thumbPercent) }}
             onPointerDown={beginScrub}
             aria-hidden
             tabIndex={-1}
           >
-            <span className="h-4 w-4 rounded-full border-2 border-white bg-[#7a9e6a] shadow" />
+            <span className="h-4 w-4 rounded-full border-2 border-white bg-[#2563eb] shadow" />
           </button>
         </div>
         <span className="hidden shrink-0 text-xs text-[#8b7d6b] sm:inline">
