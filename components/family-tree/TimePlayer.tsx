@@ -165,8 +165,8 @@ export function TimePlayer({
   const thumbPercent = yearToPercent(year);
 
   return (
-    <div className="pointer-events-auto flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-[#e8dfd0] bg-white/80 px-3 py-2 shadow-lg backdrop-blur-md">
-      <label className="flex shrink-0 items-center gap-1.5">
+    <div className="pointer-events-auto flex h-10 min-w-0 flex-1 items-center gap-2 overflow-visible rounded-xl border border-[#e8dfd0] bg-white/80 px-2 shadow-lg backdrop-blur-md">
+      <label className="flex h-full shrink-0 items-center">
         <span className="sr-only">Year</span>
         <select
           value={year}
@@ -174,7 +174,7 @@ export function TimePlayer({
             pausePlayback(false);
             onYearChange(Number(event.target.value));
           }}
-          className="cursor-pointer rounded-lg border border-[#e8dfd0] bg-[#faf6ef] px-2 py-1 text-sm font-medium text-[#3d3428] tabular-nums outline-none focus:border-[#d4c4a8]"
+          className="h-7 cursor-pointer rounded-lg border border-[#e8dfd0] bg-[#faf6ef] px-2 text-sm font-medium text-[#3d3428] tabular-nums outline-none focus:border-[#d4c4a8]"
           aria-label="Selected year"
         >
           {yearOptions.map((optionYear) => (
@@ -191,14 +191,14 @@ export function TimePlayer({
         </span>
         <div
           ref={trackRef}
-          className="relative min-h-11 min-w-0 flex-1 touch-none py-4"
+          className="relative h-full min-w-0 flex-1 touch-none"
           onPointerDown={beginScrub}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerEnd}
           onPointerCancel={handlePointerEnd}
         >
           <div
-            className="absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 cursor-pointer rounded-full bg-[#e8dfd0]"
+            className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 cursor-pointer rounded-full bg-[#e8dfd0]"
             role="slider"
             aria-label="Timeline"
             aria-valuemin={minYear}
@@ -212,13 +212,13 @@ export function TimePlayer({
           </div>
           <button
             type="button"
-            className="absolute top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 cursor-grab touch-none items-center justify-center active:cursor-grabbing"
+            className="absolute top-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 cursor-grab touch-none items-center justify-center active:cursor-grabbing"
             style={{ left: `${thumbPercent}%` }}
             onPointerDown={beginScrub}
             aria-hidden
             tabIndex={-1}
           >
-            <span className="h-4 w-4 rounded-full border-2 border-white bg-[#7a9e6a] shadow" />
+            <span className="h-3.5 w-3.5 rounded-full border-2 border-white bg-[#7a9e6a] shadow" />
           </button>
         </div>
         <span className="hidden shrink-0 text-xs text-[#8b7d6b] sm:inline">
@@ -231,7 +231,7 @@ export function TimePlayer({
         onClick={handlePlayPause}
         aria-label={playing ? "Pause playback" : "Play through years"}
         title={playing ? "Pause" : "Play"}
-        className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-[#e8dfd0] bg-[#faf6ef] text-[#3d3428] shadow-sm transition-colors hover:border-[#d4c4a8] hover:bg-white"
+        className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-[#e8dfd0] bg-[#faf6ef] text-[#3d3428] transition-colors hover:border-[#d4c4a8] hover:bg-white"
       >
         {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
       </button>
