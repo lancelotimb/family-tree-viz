@@ -243,7 +243,7 @@ export function TimePlayer({
             aria-hidden
             tabIndex={-1}
           >
-            <span className="h-4 w-4 rounded-full border-2 border-white bg-[#2563eb] shadow" />
+            <span className="h-4 w-4 rounded-full border-2 border-white bg-[#9c7d54] shadow" />
           </button>
         </div>
         <span className="hidden shrink-0 text-xs text-[#8b7d6b] sm:inline">
