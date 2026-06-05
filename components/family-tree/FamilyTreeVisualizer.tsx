@@ -390,22 +390,23 @@ function FamilyTreeCanvas() {
     });
   }, []);
 
-  const isPersonVisible = useCallback(
+  const isPersonStructurallyVisible = useCallback(
     (id: string, familyName: string, visibleFamilies: Set<string>) => {
       if (!visibleFamilies.has(familyName)) return false;
       if (lineagePersonIds && !lineagePersonIds.has(id)) return false;
-      if (timeTravelOpen) {
-        const person = individuals[id];
-        if (
-          person &&
-          !isAliveAtYear(person.birth.year, person.death?.year ?? null, timeTravelYear)
-        ) {
-          return false;
-        }
-      }
       return true;
     },
-    [lineagePersonIds, timeTravelOpen, timeTravelYear],
+    [lineagePersonIds],
+  );
+
+  const isPersonHiddenByYear = useCallback(
+    (id: string) => {
+      if (!timeTravelOpen) return false;
+      const person = individuals[id];
+      if (!person) return false;
+      return !isAliveAtYear(person.birth.year, person.death?.year ?? null, timeTravelYear);
+    },
+    [timeTravelOpen, timeTravelYear],
   );
 
   const clearHiddenPeople = useCallback(
@@ -413,7 +414,7 @@ function FamilyTreeCanvas() {
       const isVisible = (id: string) => {
         const person = individuals[id];
         if (!person) return false;
-        return isPersonVisible(id, person.familyName, nextVisibleFamilyNames);
+        return isPersonStructurallyVisible(id, person.familyName, nextVisibleFamilyNames);
       };
 
       if (selectedId && !isVisible(selectedId)) {
@@ -435,7 +436,7 @@ function FamilyTreeCanvas() {
         if (!stillVisible) setFocusUnionId("");
       }
     },
-    [selectedId, pathFromId, pathToId, focusPersonId, focusUnionId, isPersonVisible],
+    [selectedId, pathFromId, pathToId, focusPersonId, focusUnionId, isPersonStructurallyVisible],
   );
 
   const handleFamilyVisibilityChange = useCallback(
@@ -481,11 +482,6 @@ function FamilyTreeCanvas() {
   }, []);
 
   useEffect(() => {
-    if (!timeTravelOpen) return;
-    clearHiddenPeople(visibleFamilyNames);
-  }, [timeTravelOpen, timeTravelYear, visibleFamilyNames, clearHiddenPeople]);
-
-  useEffect(() => {
     const isEdgeVisibleByLineage = (edge: Edge) => {
       if (!lineagePersonIds) return true;
       if (individuals[edge.source] && !lineagePersonIds.has(edge.source)) return false;
@@ -493,17 +489,10 @@ function FamilyTreeCanvas() {
       return true;
     };
 
-    const isPersonHiddenByYear = (id: string) => {
-      if (!timeTravelOpen) return false;
-      const person = individuals[id];
-      if (!person) return false;
-      return !isAliveAtYear(person.birth.year, person.death?.year ?? null, timeTravelYear);
-    };
-
-    const isEdgeEndpointVisible = (id: string) => {
+    const isEdgeEndpointStructurallyVisible = (id: string) => {
       const person = individuals[id];
       if (!person) return true;
-      return isPersonVisible(id, person.familyName, visibleFamilyNames);
+      return isPersonStructurallyVisible(id, person.familyName, visibleFamilyNames);
     };
 
     const visibleUnionNodeIds = new Set<string>();
@@ -511,10 +500,30 @@ function FamilyTreeCanvas() {
       const familyName = edgeFamilyName(edge);
       if (!familyName || !visibleFamilyNames.has(familyName)) continue;
       if (!isEdgeVisibleByLineage(edge)) continue;
-      if (!isEdgeEndpointVisible(edge.source) || !isEdgeEndpointVisible(edge.target)) continue;
+      if (
+        !isEdgeEndpointStructurallyVisible(edge.source) ||
+        !isEdgeEndpointStructurallyVisible(edge.target)
+      ) {
+        continue;
+      }
       visibleUnionNodeIds.add(edge.source);
       visibleUnionNodeIds.add(edge.target);
     }
+
+    const isUnionHiddenByYear = (unionId: string) => {
+      if (!timeTravelOpen) return false;
+      const union = unions[unionId];
+      if (!union) return false;
+      return !union.partnerIds.some(
+        (partnerId) =>
+          !isPersonHiddenByYear(partnerId) &&
+          isPersonStructurallyVisible(
+            partnerId,
+            individuals[partnerId]?.familyName ?? "",
+            visibleFamilyNames,
+          ),
+      );
+    };
 
     setNodes((current) =>
       current.map((node) => {
@@ -523,7 +532,9 @@ function FamilyTreeCanvas() {
         const focusHighlighted = focusHighlightNodeIds?.has(node.id) ?? false;
         if (data.kind === "person") {
           const deceased = isDeceased(data.birthYear, data.deathYear, referenceYear);
-          const hidden = !isPersonVisible(node.id, data.familyName, visibleFamilyNames);
+          const hidden =
+            !isPersonStructurallyVisible(node.id, data.familyName, visibleFamilyNames) ||
+            isPersonHiddenByYear(node.id);
           const inHoverFamily = familyHighlight?.nodeIds.has(node.id) ?? false;
           const isHovered = hoveredId === node.id;
           return {
@@ -545,7 +556,7 @@ function FamilyTreeCanvas() {
           !visibleUnionNodeIds.has(node.id) && !visibleFamilyNames.has(data.familyName);
         const hiddenByLineage =
           lineagePersonIds !== null && !unionInLineage(node.id, lineagePersonIds);
-        const hidden = hiddenByFamily || hiddenByLineage;
+        const hidden = hiddenByFamily || hiddenByLineage || isUnionHiddenByYear(node.id);
         const inHoverFamily = familyHighlight?.nodeIds.has(node.id) ?? false;
         return {
           ...node,
@@ -616,9 +627,8 @@ function FamilyTreeCanvas() {
     visibleFamilyNames,
     lineagePersonIds,
     focusHighlightNodeIds,
-    isPersonVisible,
-    timeTravelOpen,
-    timeTravelYear,
+    isPersonStructurallyVisible,
+    isPersonHiddenByYear,
     referenceYear,
     baseEdges,
     setNodes,
