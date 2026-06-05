@@ -4,6 +4,22 @@ import { Pause, Play, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const PLAYBACK_DURATION_MS = 5000;
+const THUMB_SIZE_PX = 16;
+const THUMB_HALF_PX = THUMB_SIZE_PX / 2;
+
+function clampPercent(value: number) {
+  return Math.min(100, Math.max(0, value));
+}
+
+function percentFromPointer(clientX: number, rect: DOMRect) {
+  const usableWidth = Math.max(1, rect.width - THUMB_SIZE_PX);
+  const offsetX = clientX - rect.left - THUMB_HALF_PX;
+  return clampPercent((offsetX / usableWidth) * 100);
+}
+
+function thumbOffset(percent: number) {
+  return `calc(${THUMB_HALF_PX}px + (100% - ${THUMB_SIZE_PX}px) * ${percent / 100})`;
+}
 
 type TimePlayerProps = {
   minYear: number;
