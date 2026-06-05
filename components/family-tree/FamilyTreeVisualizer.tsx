@@ -827,16 +827,20 @@ function FamilyTreeCanvas() {
             />
           </div>
         </header>
-        <div className="mt-auto flex items-end gap-3 pb-3 pl-3 pr-3">
+        <div className="relative mt-auto flex items-end gap-3 pb-3 pl-3 pr-3">
           {timeTravelOpen ? (
             <TimePlayer
               minYear={timeRange.minYear}
               maxYear={timeRange.maxYear}
               year={timeTravelYear}
               onYearChange={setTimeTravelYear}
+              onClose={handleTimeTravelClose}
+              className="w-full max-md:flex-none md:min-w-0 md:flex-1"
             />
           ) : null}
-          <div className="ml-auto shrink-0">
+          <div
+            className={`shrink-0 ${timeTravelOpen ? "max-md:absolute max-md:bottom-[3.25rem] max-md:right-3 md:ml-auto" : "ml-auto"}`}
+          >
             <ZoomControls
               onSettingsClick={() => setSettingsOpen(true)}
               timeTravelOpen={timeTravelOpen}

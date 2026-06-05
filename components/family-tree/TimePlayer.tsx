@@ -1,6 +1,6 @@
 "use client";
 
-import { Pause, Play } from "lucide-react";
+import { Pause, Play, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const PLAYBACK_DURATION_MS = 5000;
@@ -10,8 +10,13 @@ type TimePlayerProps = {
   maxYear: number;
   year: number;
   onYearChange: (year: number) => void;
+  onClose?: () => void;
   onScrubbingChange?: (scrubbing: boolean) => void;
+  className?: string;
 };
+
+const iconButtonClassName =
+  "flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-[#e8dfd0] bg-[#faf6ef] text-[#3d3428] transition-colors hover:border-[#d4c4a8] hover:bg-white";
 
 function clampYear(year: number, minYear: number, maxYear: number) {
   return Math.min(maxYear, Math.max(minYear, year));
@@ -22,7 +27,9 @@ export function TimePlayer({
   maxYear,
   year,
   onYearChange,
+  onClose,
   onScrubbingChange,
+  className = "",
 }: TimePlayerProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
@@ -165,7 +172,9 @@ export function TimePlayer({
   const thumbPercent = yearToPercent(year);
 
   return (
-    <div className="pointer-events-auto flex h-10 min-w-0 flex-1 items-center gap-2 overflow-visible rounded-xl border border-[#e8dfd0] bg-white/80 px-2 shadow-lg backdrop-blur-md">
+    <div
+      className={`pointer-events-auto flex h-10 min-w-0 items-center gap-2 overflow-visible rounded-xl border border-[#e8dfd0] bg-white/80 px-2 shadow-lg backdrop-blur-md ${className}`}
+    >
       <label className="flex h-full shrink-0 items-center">
         <span className="sr-only">Year</span>
         <select
@@ -231,10 +240,22 @@ export function TimePlayer({
         onClick={handlePlayPause}
         aria-label={playing ? "Pause playback" : "Play through years"}
         title={playing ? "Pause" : "Play"}
-        className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-[#e8dfd0] bg-[#faf6ef] text-[#3d3428] transition-colors hover:border-[#d4c4a8] hover:bg-white"
+        className={iconButtonClassName}
       >
         {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
       </button>
+
+      {onClose ? (
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close time travel"
+          title="Close"
+          className={`${iconButtonClassName} md:hidden`}
+        >
+          <X className="h-4 w-4" />
+        </button>
+      ) : null}
     </div>
   );
 }

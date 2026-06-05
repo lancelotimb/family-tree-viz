@@ -59,6 +59,7 @@ export function ZoomControls({
           label="Close time travel"
           icon={<X className="h-4 w-4" />}
           onClick={onTimeTravelClose ?? (() => {})}
+          className="hidden md:flex"
         />
       ) : onTimeTravelOpen ? (
         <ZoomButton
