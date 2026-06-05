@@ -143,7 +143,6 @@ function FamilyTreeCanvas() {
   const [layoutRequestNonce, setLayoutRequestNonce] = useState(0);
   const [timeTravelOpen, setTimeTravelOpen] = useState(false);
   const [timeTravelYear, setTimeTravelYear] = useState(currentCalendarYear);
-  const [layoutTimeYear, setLayoutTimeYear] = useState(currentCalendarYear);
   const suppressNextNodeClickRef = useRef(false);
   const instanceRef = useRef<ReactFlowInstance<Node<FamilyNodeData>, Edge> | null>(
     null,
@@ -177,38 +176,19 @@ function FamilyTreeCanvas() {
 
   const referenceYear = timeTravelOpen ? timeTravelYear : currentCalendarYear;
 
-  useEffect(() => {
-    if (!timeTravelOpen) return;
-    const timer = window.setTimeout(() => setLayoutTimeYear(timeTravelYear), 300);
-    return () => window.clearTimeout(timer);
-  }, [timeTravelYear, timeTravelOpen]);
-
   /** When set, ELK lays out only these people (branch and/or lineage filter). */
   const layoutPersonIds = useMemo(() => {
-    const needsFilteredLayout =
-      !allBranchesVisible || lineagePersonIds !== null || timeTravelOpen;
+    const needsFilteredLayout = !allBranchesVisible || lineagePersonIds !== null;
     if (!needsFilteredLayout) return null;
 
     const ids = new Set<string>();
     for (const person of Object.values(individuals)) {
       if (!visibleFamilyNames.has(person.familyName)) continue;
       if (lineagePersonIds && !lineagePersonIds.has(person.id)) continue;
-      if (
-        timeTravelOpen &&
-        !isAliveAtYear(person.birth.year, person.death?.year ?? null, layoutTimeYear)
-      ) {
-        continue;
-      }
       ids.add(person.id);
     }
     return ids;
-  }, [
-    allBranchesVisible,
-    visibleFamilyNames,
-    lineagePersonIds,
-    timeTravelOpen,
-    layoutTimeYear,
-  ]);
+  }, [allBranchesVisible, visibleFamilyNames, lineagePersonIds]);
 
   /** Stable key so layout re-runs when focus/visibility changes, not only Set identity. */
   const layoutRequestKey = useMemo(
@@ -219,7 +199,6 @@ function FamilyTreeCanvas() {
         focusUnionId,
         visibleFamilyNamesKey(visibleFamilyNames),
         layoutPersonIdsKey(layoutPersonIds),
-        timeTravelOpen ? String(layoutTimeYear) : "present",
       ].join("|"),
     [
       layoutRequestNonce,
@@ -227,8 +206,6 @@ function FamilyTreeCanvas() {
       focusUnionId,
       visibleFamilyNames,
       layoutPersonIds,
-      timeTravelOpen,
-      layoutTimeYear,
     ],
   );
 
@@ -496,16 +473,12 @@ function FamilyTreeCanvas() {
   const handleTimeTravelOpen = useCallback(() => {
     setTimeTravelOpen(true);
     setTimeTravelYear(currentCalendarYear);
-    setLayoutTimeYear(currentCalendarYear);
-    bumpLayoutRequest();
-  }, [bumpLayoutRequest]);
+  }, []);
 
   const handleTimeTravelClose = useCallback(() => {
     setTimeTravelOpen(false);
     setTimeTravelYear(currentCalendarYear);
-    setLayoutTimeYear(currentCalendarYear);
-    bumpLayoutRequest();
-  }, [bumpLayoutRequest]);
+  }, []);
 
   useEffect(() => {
     if (!timeTravelOpen) return;
