@@ -200,14 +200,14 @@ export function TimePlayer({
         </span>
         <div
           ref={trackRef}
-          className="relative h-full min-w-0 flex-1 touch-none"
+          className="relative h-full min-w-0 flex-1 touch-none px-2"
           onPointerDown={beginScrub}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerEnd}
           onPointerCancel={handlePointerEnd}
         >
           <div
-            className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 cursor-pointer rounded-full bg-[#e8dfd0]"
+            className="absolute inset-x-2 top-1/2 h-1 -translate-y-1/2 cursor-pointer rounded-full bg-[#e8dfd0]"
             role="slider"
             aria-label="Timeline"
             aria-valuemin={minYear}
@@ -227,7 +227,7 @@ export function TimePlayer({
             aria-hidden
             tabIndex={-1}
           >
-            <span className="h-3.5 w-3.5 rounded-full border-2 border-white bg-[#7a9e6a] shadow" />
+            <span className="h-4 w-4 rounded-full border-2 border-white bg-[#7a9e6a] shadow" />
           </button>
         </div>
         <span className="hidden shrink-0 text-xs text-[#8b7d6b] sm:inline">
