@@ -559,6 +559,16 @@ function centerParentsOverChildren(
 function alignSingleChildParents(positions: Map<string, LayoutPosition>): void {
   const gap = H_GAP;
 
+  // Whether a person's own parent union (their `famc`) is part of this layout,
+  // i.e. they head a branch of ancestors rather than being married in.
+  const hasLaidOutAncestors = (personId: string): boolean => {
+    const famc = individuals[personId]?.famc;
+    if (!famc) return false;
+    if (positions.has(famc)) return true;
+    const union = unions[famc];
+    return Boolean(union?.partnerIds.some((p) => positions.has(p)));
+  };
+
   const onlyChildUnions = Object.values(unions)
     .map((u) => ({
       u,
@@ -584,6 +594,25 @@ function alignSingleChildParents(positions: Map<string, LayoutPosition>): void {
     if (entangled) continue;
 
     const child = kids[0];
+
+    // Skip when the child sits beside a spouse who heads their own laid-out
+    // branch of ancestors. Centering these parents over the child alone (rather
+    // than over the couple) would shove this whole ancestral chain sideways past
+    // the spouse's branch, inverting their left/right order and crossing the two
+    // branches' upward edges. The branch arrangement chosen by
+    // `centerParentsOverChildren` already keeps each partner's ancestors on the
+    // partner's own side, so we leave it untouched here.
+    const childMarriesIntoAnotherBranch = (
+      individuals[child]?.fams ?? []
+    ).some((famId) => {
+      const union = unions[famId];
+      if (!union || !positions.has(famId)) return false;
+      return union.partnerIds.some(
+        (p) => p !== child && positions.has(p) && hasLaidOutAncestors(p),
+      );
+    });
+    if (childMarriesIntoAnotherBranch) continue;
+
     const dot = positions.get(u.id);
     const targetX = positions.get(child)!.x + NODE_WIDTH / 2;
     const parentCenter = dot
