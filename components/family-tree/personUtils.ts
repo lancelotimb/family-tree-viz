@@ -13,3 +13,14 @@ export function isDeceased(
   if (birthYear === null) return true;
   return referenceYear - birthYear > DECEASED_AGE_THRESHOLD_YEARS;
 }
+
+/** Whether someone was already deceased before the given year (for time travel). */
+export function isDeceasedAsOfYear(
+  birthYear: number | null,
+  deathYear: number | null,
+  year: number,
+): boolean {
+  if (deathYear !== null) return deathYear < year;
+  if (birthYear === null) return true;
+  return year - birthYear > DECEASED_AGE_THRESHOLD_YEARS;
+}

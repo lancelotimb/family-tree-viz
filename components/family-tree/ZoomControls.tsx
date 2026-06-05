@@ -1,14 +1,22 @@
 "use client";
 
 import { useReactFlow } from "@xyflow/react";
-import { Maximize2, Settings, ZoomIn, ZoomOut } from "lucide-react";
+import { Calendar, Maximize2, Settings, X, ZoomIn, ZoomOut } from "lucide-react";
 import { MAX_ZOOM, MIN_ZOOM, ZOOM_STEP } from "./layoutConstants";
 
 type ZoomControlsProps = {
   onSettingsClick?: () => void;
+  timeTravelOpen?: boolean;
+  onTimeTravelOpen?: () => void;
+  onTimeTravelClose?: () => void;
 };
 
-export function ZoomControls({ onSettingsClick }: ZoomControlsProps) {
+export function ZoomControls({
+  onSettingsClick,
+  timeTravelOpen = false,
+  onTimeTravelOpen,
+  onTimeTravelClose,
+}: ZoomControlsProps) {
   const { getZoom, zoomTo, fitView } = useReactFlow();
 
   const zoomIn = () => {
@@ -46,6 +54,20 @@ export function ZoomControls({ onSettingsClick }: ZoomControlsProps) {
         icon={<Maximize2 className="h-4 w-4" />}
         onClick={() => fitView({ duration: 500, padding: 0.15, minZoom: MIN_ZOOM })}
       />
+      {timeTravelOpen ? (
+        <ZoomButton
+          label="Close time travel"
+          icon={<X className="h-4 w-4" />}
+          onClick={onTimeTravelClose ?? (() => {})}
+          className="hidden md:flex"
+        />
+      ) : onTimeTravelOpen ? (
+        <ZoomButton
+          label="Time travel"
+          icon={<Calendar className="h-4 w-4" />}
+          onClick={onTimeTravelOpen}
+        />
+      ) : null}
     </div>
   );
 }
