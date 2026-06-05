@@ -5,6 +5,7 @@ import { useReactFlow } from "@xyflow/react";
 import { Search } from "lucide-react";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { searchIndex } from "./familyGraph";
+import { isAliveAtYear } from "./timeUtils";
 import {
   NODE_HEIGHT,
   NODE_WIDTH,
@@ -17,6 +18,7 @@ type SearchBarProps = {
   onDismissRef?: React.MutableRefObject<(() => void) | null>;
   visibleFamilyNames?: Set<string>;
   lineagePersonIds?: Set<string> | null;
+  aliveAtYear?: number | null;
 };
 
 function formatLifespan(birthYear: number | null, deathYear: number | null) {
@@ -29,6 +31,7 @@ export function SearchBar({
   onDismissRef,
   visibleFamilyNames,
   lineagePersonIds,
+  aliveAtYear = null,
 }: SearchBarProps) {
   const { getNode, setCenter } = useReactFlow();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -42,13 +45,15 @@ export function SearchBar({
     const visiblePeople = searchIndex.filter(
       (item) =>
         (!visibleFamilyNames || visibleFamilyNames.has(item.familyName)) &&
-        (!lineagePersonIds || lineagePersonIds.has(item.id)),
+        (!lineagePersonIds || lineagePersonIds.has(item.id)) &&
+        (aliveAtYear === null ||
+          isAliveAtYear(item.birthYear, item.deathYear, aliveAtYear)),
     );
     if (!q) return visiblePeople.slice(0, 6);
     return visiblePeople
       .filter((item) => item.name.toLowerCase().includes(q))
       .slice(0, 8);
-  }, [query, visibleFamilyNames, lineagePersonIds]);
+  }, [query, visibleFamilyNames, lineagePersonIds, aliveAtYear]);
 
   const setDropdownOpen = useCallback(
     (next: boolean) => {

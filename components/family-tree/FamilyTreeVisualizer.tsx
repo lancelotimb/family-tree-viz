@@ -26,6 +26,7 @@ import {
   PERSON_FOCUS_ZOOM,
 } from "./layoutConstants";
 import { ZoomControls } from "./ZoomControls";
+import { TimePlayer } from "./TimePlayer";
 import { ProfilePanel } from "./ProfilePanel";
 import {
   FamilyTreeActionsContext,
@@ -52,7 +53,10 @@ import {
 } from "./familyGraph";
 import { computeLayout, type LayoutPosition } from "./elkLayout";
 import { isDeceased } from "./personUtils";
+import { getFamilyTimeRange, isAliveAtYear } from "./timeUtils";
 import type { FamilyNodeData } from "./types";
+
+const currentCalendarYear = new Date().getFullYear();
 
 const nodeTypes = { familyMember: FamilyMemberNode, union: MarriageNode };
 const allFamilyNames = familyBranches.map((branch) => branch.familyName);
@@ -86,14 +90,17 @@ function neutralEdgeStyle(edge: Edge) {
   return dash ? { ...defaultEdgeStyle, strokeDasharray: dash } : defaultEdgeStyle;
 }
 
-function endpointIsDeceased(nodeId: string): boolean {
+function endpointIsDeceased(nodeId: string, referenceYear = currentCalendarYear): boolean {
   const person = individuals[nodeId];
   if (!person) return false;
-  return isDeceased(person.birth.year, person.death?.year ?? null);
+  return isDeceased(person.birth.year, person.death?.year ?? null, referenceYear);
 }
 
-function edgeTouchesDeceased(edge: Edge): boolean {
-  return endpointIsDeceased(edge.source) || endpointIsDeceased(edge.target);
+function edgeTouchesDeceased(edge: Edge, referenceYear = currentCalendarYear): boolean {
+  return (
+    endpointIsDeceased(edge.source, referenceYear) ||
+    endpointIsDeceased(edge.target, referenceYear)
+  );
 }
 
 function visibleFamilyNamesKey(names: Set<string>): string {
@@ -134,6 +141,9 @@ function FamilyTreeCanvas() {
   const [contextMenuTarget, setContextMenuTarget] =
     useState<NodeContextMenuTarget | null>(null);
   const [layoutRequestNonce, setLayoutRequestNonce] = useState(0);
+  const [timeTravelOpen, setTimeTravelOpen] = useState(false);
+  const [timeTravelYear, setTimeTravelYear] = useState(currentCalendarYear);
+  const [layoutTimeYear, setLayoutTimeYear] = useState(currentCalendarYear);
   const suppressNextNodeClickRef = useRef(false);
   const instanceRef = useRef<ReactFlowInstance<Node<FamilyNodeData>, Edge> | null>(
     null,
@@ -163,19 +173,42 @@ function FamilyTreeCanvas() {
     [visibleFamilyNames],
   );
 
+  const timeRange = useMemo(() => getFamilyTimeRange(individuals), []);
+
+  const referenceYear = timeTravelOpen ? timeTravelYear : currentCalendarYear;
+
+  useEffect(() => {
+    if (!timeTravelOpen) return;
+    const timer = window.setTimeout(() => setLayoutTimeYear(timeTravelYear), 300);
+    return () => window.clearTimeout(timer);
+  }, [timeTravelYear, timeTravelOpen]);
+
   /** When set, ELK lays out only these people (branch and/or lineage filter). */
   const layoutPersonIds = useMemo(() => {
-    const needsFilteredLayout = !allBranchesVisible || lineagePersonIds !== null;
+    const needsFilteredLayout =
+      !allBranchesVisible || lineagePersonIds !== null || timeTravelOpen;
     if (!needsFilteredLayout) return null;
 
     const ids = new Set<string>();
     for (const person of Object.values(individuals)) {
       if (!visibleFamilyNames.has(person.familyName)) continue;
       if (lineagePersonIds && !lineagePersonIds.has(person.id)) continue;
+      if (
+        timeTravelOpen &&
+        !isAliveAtYear(person.birth.year, person.death?.year ?? null, layoutTimeYear)
+      ) {
+        continue;
+      }
       ids.add(person.id);
     }
     return ids;
-  }, [allBranchesVisible, visibleFamilyNames, lineagePersonIds]);
+  }, [
+    allBranchesVisible,
+    visibleFamilyNames,
+    lineagePersonIds,
+    timeTravelOpen,
+    layoutTimeYear,
+  ]);
 
   /** Stable key so layout re-runs when focus/visibility changes, not only Set identity. */
   const layoutRequestKey = useMemo(
@@ -186,6 +219,7 @@ function FamilyTreeCanvas() {
         focusUnionId,
         visibleFamilyNamesKey(visibleFamilyNames),
         layoutPersonIdsKey(layoutPersonIds),
+        timeTravelOpen ? String(layoutTimeYear) : "present",
       ].join("|"),
     [
       layoutRequestNonce,
@@ -193,6 +227,8 @@ function FamilyTreeCanvas() {
       focusUnionId,
       visibleFamilyNames,
       layoutPersonIds,
+      timeTravelOpen,
+      layoutTimeYear,
     ],
   );
 
@@ -381,9 +417,18 @@ function FamilyTreeCanvas() {
     (id: string, familyName: string, visibleFamilies: Set<string>) => {
       if (!visibleFamilies.has(familyName)) return false;
       if (lineagePersonIds && !lineagePersonIds.has(id)) return false;
+      if (timeTravelOpen) {
+        const person = individuals[id];
+        if (
+          person &&
+          !isAliveAtYear(person.birth.year, person.death?.year ?? null, timeTravelYear)
+        ) {
+          return false;
+        }
+      }
       return true;
     },
-    [lineagePersonIds],
+    [lineagePersonIds, timeTravelOpen, timeTravelYear],
   );
 
   const clearHiddenPeople = useCallback(
@@ -448,6 +493,25 @@ function FamilyTreeCanvas() {
     clearHiddenPeople(next);
   }, [clearHiddenPeople]);
 
+  const handleTimeTravelOpen = useCallback(() => {
+    setTimeTravelOpen(true);
+    setTimeTravelYear(currentCalendarYear);
+    setLayoutTimeYear(currentCalendarYear);
+    bumpLayoutRequest();
+  }, [bumpLayoutRequest]);
+
+  const handleTimeTravelClose = useCallback(() => {
+    setTimeTravelOpen(false);
+    setTimeTravelYear(currentCalendarYear);
+    setLayoutTimeYear(currentCalendarYear);
+    bumpLayoutRequest();
+  }, [bumpLayoutRequest]);
+
+  useEffect(() => {
+    if (!timeTravelOpen) return;
+    clearHiddenPeople(visibleFamilyNames);
+  }, [timeTravelOpen, timeTravelYear, visibleFamilyNames, clearHiddenPeople]);
+
   useEffect(() => {
     const isEdgeVisibleByLineage = (edge: Edge) => {
       if (!lineagePersonIds) return true;
@@ -456,11 +520,25 @@ function FamilyTreeCanvas() {
       return true;
     };
 
+    const isPersonHiddenByYear = (id: string) => {
+      if (!timeTravelOpen) return false;
+      const person = individuals[id];
+      if (!person) return false;
+      return !isAliveAtYear(person.birth.year, person.death?.year ?? null, timeTravelYear);
+    };
+
+    const isEdgeEndpointVisible = (id: string) => {
+      const person = individuals[id];
+      if (!person) return true;
+      return isPersonVisible(id, person.familyName, visibleFamilyNames);
+    };
+
     const visibleUnionNodeIds = new Set<string>();
     for (const edge of baseEdges) {
       const familyName = edgeFamilyName(edge);
       if (!familyName || !visibleFamilyNames.has(familyName)) continue;
       if (!isEdgeVisibleByLineage(edge)) continue;
+      if (!isEdgeEndpointVisible(edge.source) || !isEdgeEndpointVisible(edge.target)) continue;
       visibleUnionNodeIds.add(edge.source);
       visibleUnionNodeIds.add(edge.target);
     }
@@ -471,7 +549,7 @@ function FamilyTreeCanvas() {
         const pathHighlighted = pathNodeIds?.has(node.id) ?? false;
         const focusHighlighted = focusHighlightNodeIds?.has(node.id) ?? false;
         if (data.kind === "person") {
-          const deceased = isDeceased(data.birthYear, data.deathYear);
+          const deceased = isDeceased(data.birthYear, data.deathYear, referenceYear);
           const hidden = !isPersonVisible(node.id, data.familyName, visibleFamilyNames);
           const inHoverFamily = familyHighlight?.nodeIds.has(node.id) ?? false;
           const isHovered = hoveredId === node.id;
@@ -516,7 +594,9 @@ function FamilyTreeCanvas() {
         const familyName = edgeFamilyName(edge);
         const hiddenByFamily = !familyName || !visibleFamilyNames.has(familyName);
         const hiddenByLineage = !isEdgeVisibleByLineage(edge);
-        const hidden = hiddenByFamily || hiddenByLineage;
+        const hiddenByYear =
+          isPersonHiddenByYear(edge.source) || isPersonHiddenByYear(edge.target);
+        const hidden = hiddenByFamily || hiddenByLineage || hiddenByYear;
         const baseEdge = baseEdges.find((e) => e.id === edge.id);
         const baseStyle = baseEdge?.style ?? defaultEdgeStyle;
         const visibleStyle = colorByFamily
@@ -529,7 +609,7 @@ function FamilyTreeCanvas() {
           !pathActive &&
           !hoverActive &&
           !hoverDimOthers &&
-          edgeTouchesDeceased(edge);
+          edgeTouchesDeceased(edge, referenceYear);
         return {
           ...edge,
           hidden,
@@ -564,6 +644,9 @@ function FamilyTreeCanvas() {
     lineagePersonIds,
     focusHighlightNodeIds,
     isPersonVisible,
+    timeTravelOpen,
+    timeTravelYear,
+    referenceYear,
     baseEdges,
     setNodes,
     setEdges,
@@ -684,6 +767,7 @@ function FamilyTreeCanvas() {
     focusUnionId,
     onFocusUnionChange: handleFocusUnionChange,
     lineagePersonIds,
+    aliveAtYear: timeTravelOpen ? timeTravelYear : null,
   };
 
   return (
@@ -741,13 +825,29 @@ function FamilyTreeCanvas() {
             <SearchBar
               visibleFamilyNames={visibleFamilyNames}
               lineagePersonIds={lineagePersonIds}
+              aliveAtYear={timeTravelOpen ? timeTravelYear : null}
               onOpenChange={setSearchOpen}
               onDismissRef={dismissSearchRef}
             />
           </div>
         </header>
-        <div className="mt-auto flex justify-end pb-3 pr-3">
-          <ZoomControls onSettingsClick={() => setSettingsOpen(true)} />
+        <div className="mt-auto flex items-end gap-3 pb-3 pl-3 pr-3">
+          {timeTravelOpen ? (
+            <TimePlayer
+              minYear={timeRange.minYear}
+              maxYear={timeRange.maxYear}
+              year={timeTravelYear}
+              onYearChange={setTimeTravelYear}
+            />
+          ) : null}
+          <div className="ml-auto shrink-0">
+            <ZoomControls
+              onSettingsClick={() => setSettingsOpen(true)}
+              timeTravelOpen={timeTravelOpen}
+              onTimeTravelOpen={handleTimeTravelOpen}
+              onTimeTravelClose={handleTimeTravelClose}
+            />
+          </div>
         </div>
       </div>
 

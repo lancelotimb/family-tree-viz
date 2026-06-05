@@ -37,6 +37,7 @@ export type ControlPanelProps = {
   focusUnionId: string;
   onFocusUnionChange: (id: string) => void;
   lineagePersonIds: Set<string> | null;
+  aliveAtYear?: number | null;
 };
 
 export function ControlSidebarContent({
@@ -61,6 +62,7 @@ export function ControlSidebarContent({
   focusUnionId,
   onFocusUnionChange,
   lineagePersonIds,
+  aliveAtYear = null,
 }: ControlPanelProps) {
   return (
     <div className="flex flex-col gap-5">
@@ -117,6 +119,7 @@ export function ControlSidebarContent({
             label="Person"
             value={focusPersonId}
             onChange={onFocusPersonChange}
+            aliveAtYear={aliveAtYear}
             placeholder="Search a person…"
           />
           <UnionSearchInput
@@ -171,6 +174,7 @@ export function ControlSidebarContent({
             excludeId={pathToId}
             visibleFamilyNames={visibleFamilyNames}
             lineagePersonIds={lineagePersonIds}
+            aliveAtYear={aliveAtYear}
           />
           <PersonSearchInput
             label="To"
@@ -179,6 +183,7 @@ export function ControlSidebarContent({
             excludeId={pathFromId}
             visibleFamilyNames={visibleFamilyNames}
             lineagePersonIds={lineagePersonIds}
+            aliveAtYear={aliveAtYear}
           />
         </div>
         {pathStatus === "no-path" && (

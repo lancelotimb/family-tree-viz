@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { Search, X } from "lucide-react";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { searchIndex } from "./familyGraph";
+import { isAliveAtYear } from "./timeUtils";
 
 type PersonSearchInputProps = {
   label: string;
@@ -12,6 +13,7 @@ type PersonSearchInputProps = {
   excludeId?: string;
   visibleFamilyNames?: Set<string>;
   lineagePersonIds?: Set<string> | null;
+  aliveAtYear?: number | null;
   placeholder?: string;
 };
 
@@ -27,6 +29,7 @@ export function PersonSearchInput({
   excludeId,
   visibleFamilyNames,
   lineagePersonIds,
+  aliveAtYear = null,
   placeholder = "Search ancestors…",
 }: PersonSearchInputProps) {
   const listId = useId();
@@ -47,13 +50,15 @@ export function PersonSearchInput({
       (person) =>
         person.id !== excludeId &&
         (!visibleFamilyNames || visibleFamilyNames.has(person.familyName)) &&
-        (!lineagePersonIds || lineagePersonIds.has(person.id)),
+        (!lineagePersonIds || lineagePersonIds.has(person.id)) &&
+        (aliveAtYear === null ||
+          isAliveAtYear(person.birthYear, person.deathYear, aliveAtYear)),
     );
     if (!q) return visiblePeople.slice(0, 6);
     return visiblePeople
       .filter((person) => person.name.toLowerCase().includes(q))
       .slice(0, 8);
-  }, [query, excludeId, visibleFamilyNames, lineagePersonIds]);
+  }, [query, excludeId, visibleFamilyNames, lineagePersonIds, aliveAtYear]);
 
   const selectPerson = useCallback(
     (id: string) => {
