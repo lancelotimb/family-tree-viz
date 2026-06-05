@@ -1,13 +1,9 @@
 import type { Individual } from "./types";
 
-export function isAliveAtYear(
-  birthYear: number | null,
-  deathYear: number | null,
-  year: number,
-): boolean {
-  if (birthYear !== null && birthYear > year) return false;
-  if (deathYear !== null && deathYear < year) return false;
-  return true;
+/** True when the person has been born on or before the given year. */
+export function isBornByYear(birthYear: number | null, year: number): boolean {
+  if (birthYear === null) return true;
+  return birthYear <= year;
 }
 
 export function getFamilyTimeRange(

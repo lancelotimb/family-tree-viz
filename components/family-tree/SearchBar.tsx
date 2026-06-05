@@ -5,7 +5,7 @@ import { useReactFlow } from "@xyflow/react";
 import { Search } from "lucide-react";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { searchIndex } from "./familyGraph";
-import { isAliveAtYear } from "./timeUtils";
+import { isBornByYear } from "./timeUtils";
 import {
   NODE_HEIGHT,
   NODE_WIDTH,
@@ -46,8 +46,7 @@ export function SearchBar({
       (item) =>
         (!visibleFamilyNames || visibleFamilyNames.has(item.familyName)) &&
         (!lineagePersonIds || lineagePersonIds.has(item.id)) &&
-        (aliveAtYear === null ||
-          isAliveAtYear(item.birthYear, item.deathYear, aliveAtYear)),
+        (aliveAtYear === null || isBornByYear(item.birthYear, aliveAtYear)),
     );
     if (!q) return visiblePeople.slice(0, 6);
     return visiblePeople

@@ -52,8 +52,8 @@ import {
   unions,
 } from "./familyGraph";
 import { computeLayout, type LayoutPosition } from "./elkLayout";
-import { isDeceased } from "./personUtils";
-import { getFamilyTimeRange, isAliveAtYear } from "./timeUtils";
+import { isDeceased, isDeceasedAsOfYear } from "./personUtils";
+import { getFamilyTimeRange, isBornByYear } from "./timeUtils";
 import type { FamilyNodeData } from "./types";
 
 const currentCalendarYear = new Date().getFullYear();
@@ -90,16 +90,28 @@ function neutralEdgeStyle(edge: Edge) {
   return dash ? { ...defaultEdgeStyle, strokeDasharray: dash } : defaultEdgeStyle;
 }
 
-function endpointIsDeceased(nodeId: string, referenceYear = currentCalendarYear): boolean {
+function endpointIsDeceased(
+  nodeId: string,
+  timeTravelOpen: boolean,
+  timeTravelYear: number,
+): boolean {
   const person = individuals[nodeId];
   if (!person) return false;
-  return isDeceased(person.birth.year, person.death?.year ?? null, referenceYear);
+  const birthYear = person.birth.year;
+  const deathYear = person.death?.year ?? null;
+  return timeTravelOpen
+    ? isDeceasedAsOfYear(birthYear, deathYear, timeTravelYear)
+    : isDeceased(birthYear, deathYear);
 }
 
-function edgeTouchesDeceased(edge: Edge, referenceYear = currentCalendarYear): boolean {
+function edgeTouchesDeceased(
+  edge: Edge,
+  timeTravelOpen: boolean,
+  timeTravelYear: number,
+): boolean {
   return (
-    endpointIsDeceased(edge.source, referenceYear) ||
-    endpointIsDeceased(edge.target, referenceYear)
+    endpointIsDeceased(edge.source, timeTravelOpen, timeTravelYear) ||
+    endpointIsDeceased(edge.target, timeTravelOpen, timeTravelYear)
   );
 }
 
@@ -173,8 +185,6 @@ function FamilyTreeCanvas() {
   );
 
   const timeRange = useMemo(() => getFamilyTimeRange(individuals), []);
-
-  const referenceYear = timeTravelOpen ? timeTravelYear : currentCalendarYear;
 
   /** When set, ELK lays out only these people (branch and/or lineage filter). */
   const layoutPersonIds = useMemo(() => {
@@ -404,7 +414,7 @@ function FamilyTreeCanvas() {
       if (!timeTravelOpen) return false;
       const person = individuals[id];
       if (!person) return false;
-      return !isAliveAtYear(person.birth.year, person.death?.year ?? null, timeTravelYear);
+      return !isBornByYear(person.birth.year, timeTravelYear);
     },
     [timeTravelOpen, timeTravelYear],
   );
@@ -531,7 +541,9 @@ function FamilyTreeCanvas() {
         const pathHighlighted = pathNodeIds?.has(node.id) ?? false;
         const focusHighlighted = focusHighlightNodeIds?.has(node.id) ?? false;
         if (data.kind === "person") {
-          const deceased = isDeceased(data.birthYear, data.deathYear, referenceYear);
+          const deceased = timeTravelOpen
+            ? isDeceasedAsOfYear(data.birthYear, data.deathYear, timeTravelYear)
+            : isDeceased(data.birthYear, data.deathYear);
           const hidden =
             !isPersonStructurallyVisible(node.id, data.familyName, visibleFamilyNames) ||
             isPersonHiddenByYear(node.id);
@@ -593,7 +605,7 @@ function FamilyTreeCanvas() {
           !pathActive &&
           !hoverActive &&
           !hoverDimOthers &&
-          edgeTouchesDeceased(edge, referenceYear);
+          edgeTouchesDeceased(edge, timeTravelOpen, timeTravelYear);
         return {
           ...edge,
           hidden,
@@ -629,7 +641,8 @@ function FamilyTreeCanvas() {
     focusHighlightNodeIds,
     isPersonStructurallyVisible,
     isPersonHiddenByYear,
-    referenceYear,
+    timeTravelOpen,
+    timeTravelYear,
     baseEdges,
     setNodes,
     setEdges,

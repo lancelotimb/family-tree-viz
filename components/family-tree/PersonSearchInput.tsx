@@ -4,7 +4,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { Search, X } from "lucide-react";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { searchIndex } from "./familyGraph";
-import { isAliveAtYear } from "./timeUtils";
+import { isBornByYear } from "./timeUtils";
 
 type PersonSearchInputProps = {
   label: string;
@@ -51,8 +51,7 @@ export function PersonSearchInput({
         person.id !== excludeId &&
         (!visibleFamilyNames || visibleFamilyNames.has(person.familyName)) &&
         (!lineagePersonIds || lineagePersonIds.has(person.id)) &&
-        (aliveAtYear === null ||
-          isAliveAtYear(person.birthYear, person.deathYear, aliveAtYear)),
+        (aliveAtYear === null || isBornByYear(person.birthYear, aliveAtYear)),
     );
     if (!q) return visiblePeople.slice(0, 6);
     return visiblePeople
