@@ -1,6 +1,9 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
+import { Pause, Play } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+const PLAYBACK_DURATION_MS = 5000;
 
 type TimePlayerProps = {
   minYear: number;
@@ -24,6 +27,11 @@ export function TimePlayer({
   const trackRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
   const activePointerIdRef = useRef<number | null>(null);
+  const yearRef = useRef(year);
+  const pausedMidPlaybackRef = useRef(false);
+  const [playing, setPlaying] = useState(false);
+
+  yearRef.current = year;
 
   const yearOptions = useMemo(() => {
     const options: number[] = [];
@@ -32,6 +40,20 @@ export function TimePlayer({
     }
     return options;
   }, [minYear, maxYear]);
+
+  const yearStepMs = useMemo(() => {
+    const yearCount = Math.max(1, maxYear - minYear + 1);
+    return PLAYBACK_DURATION_MS / yearCount;
+  }, [minYear, maxYear]);
+
+  const pausePlayback = useCallback((rememberPosition = false) => {
+    if (rememberPosition && playing) {
+      pausedMidPlaybackRef.current = true;
+    } else {
+      pausedMidPlaybackRef.current = false;
+    }
+    setPlaying(false);
+  }, [playing]);
 
   const yearToPercent = useCallback(
     (value: number) => {
@@ -79,6 +101,7 @@ export function TimePlayer({
     (event: React.PointerEvent<HTMLElement>) => {
       event.preventDefault();
       event.stopPropagation();
+      pausePlayback(false);
       const track = trackRef.current;
       if (!track) return;
       track.setPointerCapture(event.pointerId);
@@ -87,7 +110,7 @@ export function TimePlayer({
       onScrubbingChange?.(true);
       updateFromClientX(event.clientX);
     },
-    [onScrubbingChange, updateFromClientX],
+    [onScrubbingChange, pausePlayback, updateFromClientX],
   );
 
   const handlePointerMove = useCallback(
@@ -107,6 +130,38 @@ export function TimePlayer({
     [endDrag],
   );
 
+  const handlePlayPause = useCallback(() => {
+    if (playing) {
+      pausePlayback(true);
+      return;
+    }
+    if (!pausedMidPlaybackRef.current || yearRef.current >= maxYear) {
+      onYearChange(minYear);
+    }
+    pausedMidPlaybackRef.current = false;
+    setPlaying(true);
+  }, [maxYear, minYear, onYearChange, pausePlayback, playing]);
+
+  useEffect(() => {
+    if (!playing) return;
+
+    const intervalId = window.setInterval(() => {
+      const current = yearRef.current;
+      if (current >= maxYear) {
+        pausedMidPlaybackRef.current = false;
+        setPlaying(false);
+        return;
+      }
+      onYearChange(current + 1);
+    }, yearStepMs);
+
+    return () => window.clearInterval(intervalId);
+  }, [playing, maxYear, onYearChange, yearStepMs]);
+
+  useEffect(() => {
+    return () => setPlaying(false);
+  }, []);
+
   const thumbPercent = yearToPercent(year);
 
   return (
@@ -115,7 +170,10 @@ export function TimePlayer({
         <span className="sr-only">Year</span>
         <select
           value={year}
-          onChange={(event) => onYearChange(Number(event.target.value))}
+          onChange={(event) => {
+            pausePlayback(false);
+            onYearChange(Number(event.target.value));
+          }}
           className="cursor-pointer rounded-lg border border-[#e8dfd0] bg-[#faf6ef] px-2 py-1 text-sm font-medium text-[#3d3428] tabular-nums outline-none focus:border-[#d4c4a8]"
           aria-label="Selected year"
         >
@@ -167,6 +225,16 @@ export function TimePlayer({
           {maxYear}
         </span>
       </div>
+
+      <button
+        type="button"
+        onClick={handlePlayPause}
+        aria-label={playing ? "Pause playback" : "Play through years"}
+        title={playing ? "Pause" : "Play"}
+        className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-[#e8dfd0] bg-[#faf6ef] text-[#3d3428] shadow-sm transition-colors hover:border-[#d4c4a8] hover:bg-white"
+      >
+        {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+      </button>
     </div>
   );
 }
