@@ -1,7 +1,7 @@
 "use client";
 
 import { useReactFlow } from "@xyflow/react";
-import { Maximize2, Play, Settings, X, ZoomIn, ZoomOut } from "lucide-react";
+import { Calendar, Maximize2, Settings, X, ZoomIn, ZoomOut } from "lucide-react";
 import { MAX_ZOOM, MIN_ZOOM, ZOOM_STEP } from "./layoutConstants";
 
 type ZoomControlsProps = {
@@ -31,19 +31,6 @@ export function ZoomControls({
 
   return (
     <div className="pointer-events-auto flex flex-col gap-2">
-      {timeTravelOpen ? (
-        <ZoomButton
-          label="Close time travel"
-          icon={<X className="h-4 w-4" />}
-          onClick={onTimeTravelClose ?? (() => {})}
-        />
-      ) : onTimeTravelOpen ? (
-        <ZoomButton
-          label="Time travel"
-          icon={<Play className="h-4 w-4" />}
-          onClick={onTimeTravelOpen}
-        />
-      ) : null}
       {onSettingsClick && (
         <ZoomButton
           label="Settings"
@@ -67,6 +54,19 @@ export function ZoomControls({
         icon={<Maximize2 className="h-4 w-4" />}
         onClick={() => fitView({ duration: 500, padding: 0.15, minZoom: MIN_ZOOM })}
       />
+      {timeTravelOpen ? (
+        <ZoomButton
+          label="Close time travel"
+          icon={<X className="h-4 w-4" />}
+          onClick={onTimeTravelClose ?? (() => {})}
+        />
+      ) : onTimeTravelOpen ? (
+        <ZoomButton
+          label="Time travel"
+          icon={<Calendar className="h-4 w-4" />}
+          onClick={onTimeTravelOpen}
+        />
+      ) : null}
     </div>
   );
 }
