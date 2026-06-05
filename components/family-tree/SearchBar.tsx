@@ -6,11 +6,11 @@ import { Search } from "lucide-react";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { searchIndex } from "./familyGraph";
 import {
-  NODE_HEIGHT,
-  NODE_WIDTH,
+  getLayoutMetrics,
   PERSON_FOCUS_DURATION_MS,
   PERSON_FOCUS_ZOOM,
 } from "./layoutConstants";
+import type { FamilyNodeData } from "./types";
 
 type SearchBarProps = {
   onOpenChange?: (open: boolean) => void;
@@ -67,8 +67,12 @@ export function SearchBar({
     (id: string) => {
       const node = getNode(id);
       if (!node || node.hidden) return;
-      const width = node.width ?? node.measured?.width ?? NODE_WIDTH;
-      const height = node.height ?? node.measured?.height ?? NODE_HEIGHT;
+      const nodeData = node.data as FamilyNodeData;
+      const metrics = getLayoutMetrics(
+        nodeData.kind === "person" ? (nodeData.showNamesOnly ?? false) : false,
+      );
+      const width = node.width ?? node.measured?.width ?? metrics.nodeWidth;
+      const height = node.height ?? node.measured?.height ?? metrics.nodeHeight;
       const centerX = node.position.x + width / 2;
       const centerY = node.position.y + height / 2;
       void setCenter(centerX, centerY, {

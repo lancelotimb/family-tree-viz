@@ -6,6 +6,7 @@ import {
   GitBranch,
   GitFork,
   Palette,
+  Type,
   UserX,
   Users,
   X,
@@ -22,6 +23,8 @@ export type ControlPanelProps = {
   onColorByFamilyChange: (enabled: boolean) => void;
   centerParents: boolean;
   onCenterParentsChange: (enabled: boolean) => void;
+  showNamesOnly: boolean;
+  onShowNamesOnlyChange: (enabled: boolean) => void;
   familyBranches: FamilyBranch[];
   visibleFamilyNames: Set<string>;
   onFamilyVisibilityChange: (familyName: string, visible: boolean) => void;
@@ -46,6 +49,8 @@ export function ControlSidebarContent({
   onColorByFamilyChange,
   centerParents,
   onCenterParentsChange,
+  showNamesOnly,
+  onShowNamesOnlyChange,
   familyBranches,
   visibleFamilyNames,
   onFamilyVisibilityChange,
@@ -89,6 +94,14 @@ export function ControlSidebarContent({
             icon={<AlignCenterHorizontal className="h-4 w-4" />}
             checked={centerParents}
             onChange={onCenterParentsChange}
+          />
+        </div>
+        <div className="mt-2">
+          <ToggleRow
+            label="Show names only"
+            icon={<Type className="h-4 w-4" />}
+            checked={showNamesOnly}
+            onChange={onShowNamesOnlyChange}
           />
         </div>
       </div>

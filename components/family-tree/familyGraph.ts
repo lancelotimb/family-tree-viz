@@ -1,7 +1,7 @@
 import type { Edge, Node } from "@xyflow/react";
 import { colorForFamilyName, type FamilyBranch } from "./branchPalette";
 import { FAMILY_GEDCOM, parseGedcom } from "./gedcom";
-import { COUPLE_WIDTH, NODE_HEIGHT, NODE_WIDTH } from "./layoutConstants";
+import { getLayoutMetrics } from "./layoutConstants";
 import type {
   FamilyGraph,
   FamilyNodeData,
@@ -258,6 +258,8 @@ export type ElkGraphOptions = {
    * widen the tree but makes the parent/child relationship read more clearly.
    */
   centerParentsOverChildren?: boolean;
+  /** When true, person nodes use compact single-line name cards. */
+  showNamesOnly?: boolean;
 };
 
 /**
@@ -274,6 +276,7 @@ export function buildElkGraph(options: ElkGraphOptions = {}): {
   edges: ElkEdgeInput[];
   couples: CoupleGroup[];
 } {
+  const metrics = getLayoutMetrics(options.showNamesOnly ?? false);
   const personFilter = options.personIds;
   const includesPerson = (id: string) => !personFilter || personFilter.has(id);
   const includesUnion = (union: Union) =>
@@ -317,15 +320,15 @@ export function buildElkGraph(options: ElkGraphOptions = {}): {
       // generation row.
       nodes.push({
         id: nodeId,
-        width: COUPLE_WIDTH,
-        height: NODE_HEIGHT,
+        width: metrics.coupleWidth,
+        height: metrics.nodeHeight,
         partition: partitionOfUnion(unions[groupUnion]),
       });
     } else {
       nodes.push({
         id: nodeId,
-        width: NODE_WIDTH,
-        height: NODE_HEIGHT,
+        width: metrics.nodeWidth,
+        height: metrics.nodeHeight,
         partition: partitionOfPerson(id),
       });
     }
