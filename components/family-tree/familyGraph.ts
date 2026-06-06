@@ -1,5 +1,9 @@
 import type { Edge, Node } from "@xyflow/react";
-import { colorForFamilyName, type FamilyBranch } from "./branchPalette";
+import {
+  assignDistinctFamilyColors,
+  colorForFamilyName,
+  type FamilyBranch,
+} from "./branchPalette";
 import { FAMILY_GEDCOM, parseGedcom } from "./gedcom";
 import { getLayoutMetrics } from "./layoutConstants";
 import type {
@@ -160,16 +164,24 @@ export const searchIndex = Object.values(individuals)
   }))
   .sort((a, b) => a.name.localeCompare(b.name));
 
-export const familyBranches: FamilyBranch[] = Array.from(
+const familyCountEntries = Array.from(
   Object.values(individuals).reduce((counts, individual) => {
     counts.set(individual.familyName, (counts.get(individual.familyName) ?? 0) + 1);
     return counts;
   }, new Map<string, number>()),
-)
-  .map(([familyName, count]) => ({
+).map(([familyName, count]) => ({ familyName, count }));
+
+export const familyColorMap = assignDistinctFamilyColors(familyCountEntries);
+
+export function getFamilyColor(familyName: string) {
+  return familyColorMap.get(familyName) ?? colorForFamilyName(familyName);
+}
+
+export const familyBranches: FamilyBranch[] = familyCountEntries
+  .map(({ familyName, count }) => ({
     familyName,
     count,
-    color: colorForFamilyName(familyName),
+    color: getFamilyColor(familyName),
   }))
   .sort((a, b) => b.count - a.count || a.familyName.localeCompare(b.familyName));
 
@@ -458,7 +470,7 @@ export function buildElkGraph(options: ElkGraphOptions = {}): {
 type Positioned = { id: string; x: number; y: number };
 
 function personData(individual: Individual): PersonNodeData {
-  const branchColor = colorForFamilyName(individual.familyName);
+  const branchColor = getFamilyColor(individual.familyName);
   return {
     kind: "person",
     name: individual.name,
@@ -487,7 +499,7 @@ function unionData(union: Union): UnionNodeData {
   return {
     kind: "union",
     familyName,
-    branchColor: colorForFamilyName(familyName),
+    branchColor: getFamilyColor(familyName),
     marriageYear: union.marriage?.year ?? null,
     divorced: union.divorce !== null,
     singleParent: union.partnerIds.length < 2,
@@ -528,7 +540,7 @@ export function buildFlowNodes(
 
 function edgeStyleForFamily(familyName: string) {
   return {
-    stroke: colorForFamilyName(familyName).stroke,
+    stroke: getFamilyColor(familyName).stroke,
     strokeWidth: 1.7,
   };
 }
