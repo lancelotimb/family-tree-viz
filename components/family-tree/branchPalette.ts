@@ -158,12 +158,85 @@ export const branchPalette: BranchColor[] = [
   },
 ];
 
+/** Hue angle (0–360) of a hex stroke color, for spreading assignments on the wheel. */
+function strokeHue(hex: string): number {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const delta = max - min;
+  if (delta === 0) return 0;
+  let hue: number;
+  if (max === r) hue = ((g - b) / delta) % 6;
+  else if (max === g) hue = (b - r) / delta + 2;
+  else hue = (r - g) / delta + 4;
+  hue *= 60;
+  return hue < 0 ? hue + 360 : hue;
+}
+
+function hueDistance(a: number, b: number): number {
+  const diff = Math.abs(a - b);
+  return Math.min(diff, 360 - diff);
+}
+
+const paletteHues = branchPalette.map((color) => strokeHue(color.stroke));
+
 function hashFamilyName(familyName: string): number {
   let hash = 0;
   for (let i = 0; i < familyName.length; i++) {
     hash = (hash * 31 + familyName.charCodeAt(i)) >>> 0;
   }
   return hash;
+}
+
+/**
+ * Assign palette colors so the largest families get maximally distinct hues.
+ * Top branches each receive a unique color; smaller branches may reuse colors
+ * but avoid those reserved for major branches when possible.
+ */
+export function assignDistinctFamilyColors(
+  families: { familyName: string; count: number }[],
+): Map<string, BranchColor> {
+  const sorted = [...families].sort(
+    (a, b) => b.count - a.count || a.familyName.localeCompare(b.familyName),
+  );
+  const result = new Map<string, BranchColor>();
+  const majorIndices = new Set<number>();
+  const assignedHues: number[] = [];
+
+  for (let rank = 0; rank < sorted.length; rank++) {
+    const { familyName } = sorted[rank];
+    const isMajor = rank < branchPalette.length;
+
+    let bestIndex = 0;
+    let bestScore = -Infinity;
+
+    for (let i = 0; i < branchPalette.length; i++) {
+      const minDist =
+        assignedHues.length === 0
+          ? 180
+          : Math.min(...assignedHues.map((h) => hueDistance(paletteHues[i], h)));
+
+      let score = minDist;
+      if (isMajor) {
+        if (majorIndices.has(i)) score -= 1000;
+      } else if (majorIndices.has(i)) {
+        score -= 80;
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestIndex = i;
+      }
+    }
+
+    result.set(familyName, branchPalette[bestIndex]);
+    if (isMajor) majorIndices.add(bestIndex);
+    assignedHues.push(paletteHues[bestIndex]);
+  }
+
+  return result;
 }
 
 export function colorForFamilyName(familyName: string): BranchColor {
