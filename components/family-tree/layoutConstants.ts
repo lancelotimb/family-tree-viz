@@ -25,7 +25,7 @@ export const COUPLE_WIDTH = NODE_WIDTH * 2 + COUPLE_INNER_GAP;
 export const LAYER_GAP = 152;
 
 /** Compact person card used when "Show names only" is enabled. */
-export const COMPACT_NODE_WIDTH = 148;
+export const COMPACT_NODE_WIDTH = 180;
 export const COMPACT_NODE_HEIGHT = 32;
 export const COMPACT_COUPLE_INNER_GAP = 24;
 export const COMPACT_LAYER_GAP = 116;
