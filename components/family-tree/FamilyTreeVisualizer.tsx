@@ -144,13 +144,16 @@ function FamilyTreeCanvas() {
 
   const applyLayout = useCallback(
     (positions: Map<string, LayoutPosition>, personIds?: Set<string>) => {
-      const layoutOptions = personIds ? { personIds } : undefined;
+      const layoutOptions = {
+        ...(personIds ? { personIds } : {}),
+        showNamesOnly,
+      };
       setNodes(buildFlowNodes(positions));
       const built = buildFlowEdges(positions, layoutOptions);
       setBaseEdges(built);
       setEdges(built);
     },
-    [setNodes, setEdges],
+    [setNodes, setEdges, showNamesOnly],
   );
 
   const lineagePersonIds = useMemo(() => {

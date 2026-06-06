@@ -544,6 +544,9 @@ export function buildFlowEdges(
 ): Edge[] {
   void _positions;
   const personFilter = options.personIds;
+  const showNamesOnly = options.showNamesOnly ?? false;
+  const edgeType = showNamesOnly ? "step" : "smoothstep";
+  const pathOptions = showNamesOnly ? { offset: 8 } : { borderRadius: 12 };
   const includesPerson = (id: string) => !personFilter || personFilter.has(id);
   const edges: Edge[] = [];
 
@@ -560,8 +563,8 @@ export function buildFlowEdges(
         sourceHandle: "parent-out",
         target: unionId,
         targetHandle: "union-top",
-        type: "smoothstep",
-        pathOptions: { borderRadius: 12 },
+        type: edgeType,
+        pathOptions,
         style: union.divorce
           ? { ...edgeStyleForFamily(familyName), strokeDasharray: "5 4" }
           : edgeStyleForFamily(familyName),
@@ -578,8 +581,8 @@ export function buildFlowEdges(
         sourceHandle: "union-bottom",
         target: personNodeId(childId),
         targetHandle: "child",
-        type: "smoothstep",
-        pathOptions: { borderRadius: 12 },
+        type: edgeType,
+        pathOptions,
         style: edgeStyleForFamily(familyName),
         data: { kind: "child", familyName },
       } as Edge);

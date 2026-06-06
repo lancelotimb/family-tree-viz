@@ -28,7 +28,7 @@ export const LAYER_GAP = 152;
 export const COMPACT_NODE_WIDTH = 148;
 export const COMPACT_NODE_HEIGHT = 32;
 export const COMPACT_COUPLE_INNER_GAP = 24;
-export const COMPACT_LAYER_GAP = 100;
+export const COMPACT_LAYER_GAP = 116;
 
 export type LayoutMetrics = {
   nodeWidth: number;
