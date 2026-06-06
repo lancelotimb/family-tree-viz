@@ -825,9 +825,9 @@ function FamilyTreeCanvas() {
         </div>
       ) : null}
 
-      <div className="pointer-events-none absolute inset-0 z-10 flex flex-col">
-        <header className="flex items-start justify-between gap-2 overflow-visible p-3">
-          <div className="pointer-events-auto hidden shrink-0 md:block">
+      <div className="pointer-events-none absolute inset-0 z-10">
+        <header className="relative flex items-start justify-end gap-2 overflow-visible p-3">
+          <div className="pointer-events-auto absolute left-3 top-3 z-20 hidden md:block">
             <ControlSidebar
               expanded={settingsSidebarExpanded}
               onExpandedChange={setSettingsSidebarExpanded}
@@ -844,7 +844,7 @@ function FamilyTreeCanvas() {
             />
           </div>
         </header>
-        <div className="mt-auto flex items-end gap-3 pb-3 pl-3 pr-3 max-md:flex-col-reverse max-md:items-end max-md:gap-2">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end gap-3 p-3 max-md:flex-col-reverse max-md:items-end max-md:gap-2">
           {timeTravelOpen ? (
             <TimePlayer
               minYear={timeRange.minYear}
