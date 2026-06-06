@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
@@ -24,7 +25,7 @@ import {
   PERSON_FOCUS_DURATION_MS,
   PERSON_FOCUS_ZOOM,
 } from "./layoutConstants";
-import { ZoomControls } from "./ZoomControls";
+import { ZoomControls, type ViewMode } from "./ZoomControls";
 import { TimePlayer } from "./TimePlayer";
 import { ProfilePanel } from "./ProfilePanel";
 import {
@@ -56,6 +57,24 @@ import { getFamilyTimeRange, isBornByYear } from "./timeUtils";
 import type { FamilyNodeData } from "./types";
 
 const currentCalendarYear = new Date().getFullYear();
+
+/**
+ * The 3D view depends on three.js / WebGL, which only run in the browser, so it
+ * is loaded lazily and client-only (no SSR) and kept out of the initial bundle.
+ */
+const FamilyTree3D = dynamic(
+  () => import("./FamilyTree3D").then((mod) => mod.FamilyTree3D),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+        <p className="rounded-full bg-white/80 px-4 py-2 text-sm text-[#8b7d6b] shadow backdrop-blur-md">
+          Loading 3D view…
+        </p>
+      </div>
+    ),
+  },
+);
 
 const nodeTypes = { familyMember: FamilyMemberNode, union: MarriageNode };
 const allFamilyNames = familyBranches.map((branch) => branch.familyName);
@@ -156,6 +175,8 @@ function FamilyTreeCanvas() {
   const [layoutRequestNonce, setLayoutRequestNonce] = useState(0);
   const [timeTravelOpen, setTimeTravelOpen] = useState(false);
   const [timeTravelYear, setTimeTravelYear] = useState(currentCalendarYear);
+  const [viewMode, setViewMode] = useState<ViewMode>("2d");
+  const resetView3DRef = useRef<(() => void) | null>(null);
   const suppressNextNodeClickRef = useRef(false);
   const instanceRef = useRef<ReactFlowInstance<Node<FamilyNodeData>, Edge> | null>(
     null,
@@ -786,38 +807,49 @@ function FamilyTreeCanvas() {
   return (
     <FamilyTreeActionsContext.Provider value={familyTreeActions}>
     <div className="relative h-full w-full bg-[#fdfbf7]">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onInit={(instance) => {
-          instanceRef.current = instance;
-        }}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        nodeTypes={nodeTypes}
-        defaultEdgeOptions={{ style: defaultEdgeStyle }}
-        nodesDraggable={false}
-        nodesConnectable={false}
-        elementsSelectable={false}
-        selectNodesOnDrag={false}
-        onNodeClick={handleNodeClick}
-        onNodeContextMenu={handleNodeContextMenu}
-        onNodeMouseEnter={handleNodeMouseEnter}
-        onNodeMouseLeave={handleNodeMouseLeave}
-        panOnDrag
-        zoomOnScroll
-        minZoom={MIN_ZOOM}
-        maxZoom={MAX_ZOOM}
-        proOptions={{ hideAttribution: true }}
-        onPaneClick={handlePaneClick}
-        onMoveStart={() => dismissSearchRef.current?.()}
-        onPaneContextMenu={(event) => event.preventDefault()}
-        fitView
-        fitViewOptions={{ padding: 0.15, minZoom: MIN_ZOOM }}
-        className="family-tree-flow"
-      />
+      {viewMode === "3d" ? (
+        <FamilyTree3D
+          selectedId={selectedId}
+          onSelectPerson={handleSelectPerson}
+          onClearSelection={closeProfilePanel}
+          colorByFamily={colorByFamily}
+          greyDeceased={greyDeceased}
+          resetViewRef={resetView3DRef}
+        />
+      ) : (
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onInit={(instance) => {
+            instanceRef.current = instance;
+          }}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          nodeTypes={nodeTypes}
+          defaultEdgeOptions={{ style: defaultEdgeStyle }}
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable={false}
+          selectNodesOnDrag={false}
+          onNodeClick={handleNodeClick}
+          onNodeContextMenu={handleNodeContextMenu}
+          onNodeMouseEnter={handleNodeMouseEnter}
+          onNodeMouseLeave={handleNodeMouseLeave}
+          panOnDrag
+          zoomOnScroll
+          minZoom={MIN_ZOOM}
+          maxZoom={MAX_ZOOM}
+          proOptions={{ hideAttribution: true }}
+          onPaneClick={handlePaneClick}
+          onMoveStart={() => dismissSearchRef.current?.()}
+          onPaneContextMenu={(event) => event.preventDefault()}
+          fitView
+          fitViewOptions={{ padding: 0.15, minZoom: MIN_ZOOM }}
+          className="family-tree-flow"
+        />
+      )}
 
-      {!ready || layouting ? (
+      {viewMode === "2d" && (!ready || layouting) ? (
         <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
           <p className="rounded-full bg-white/80 px-4 py-2 text-sm text-[#8b7d6b] shadow backdrop-blur-md">
             Arranging the family tree…
@@ -845,7 +877,7 @@ function FamilyTreeCanvas() {
           </div>
         </header>
         <div className="mt-auto flex items-end gap-3 pb-3 pl-3 pr-3 max-md:flex-col-reverse max-md:items-end max-md:gap-2">
-          {timeTravelOpen ? (
+          {timeTravelOpen && viewMode === "2d" ? (
             <TimePlayer
               minYear={timeRange.minYear}
               maxYear={timeRange.maxYear}
@@ -861,6 +893,9 @@ function FamilyTreeCanvas() {
               timeTravelOpen={timeTravelOpen}
               onTimeTravelOpen={handleTimeTravelOpen}
               onTimeTravelClose={handleTimeTravelClose}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              onResetView={() => resetView3DRef.current?.()}
             />
           </div>
         </div>
