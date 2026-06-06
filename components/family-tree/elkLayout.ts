@@ -548,17 +548,54 @@ function centerParentsOverChildren(
 }
 
 /**
- * For every union with exactly one laid-out child, slide the parents (their
- * partner cards and marriage dot) horizontally so the dot sits directly above
- * that child's own card — not above the midpoint of the child and their spouse.
- * Processed deepest-child-first so a chain of single children lines up, and only
- * applied when the parents stay clear of other cards on their row.
+ * For every union with exactly one laid-out child, slide the parents so their
+ * marriage dot sits directly above that child's own card — not above the
+ * midpoint of the child and their spouse. `centerParentsOverChildren` lays each
+ * couple out over the *midpoint* of its (combined) child box, so when a line of
+ * descent stays on one partner's side (e.g. the husband's), the parents drift a
+ * little further to the spouse's side at every generation. This pass pulls them
+ * back over the child.
+ *
+ * Crucially we move the union together with its *entire* ancestral block — the
+ * parents, their parents, and so on — as one rigid unit, so the whole tower of
+ * ancestors re-centers over the focal descendant instead of the parents being
+ * sheared away from their own ancestors. Moving a rigid block keeps every
+ * branch's internal arrangement (and the side each partner's ancestors sit on)
+ * intact.
+ *
+ * A move is only applied to the extent it keeps the block clear of every other
+ * box on *all* the generation rows it spans (a Reingold–Tilford style
+ * multi-layer clearance check). Because a block can never overlap a box outside
+ * it, it can never be slid *past* another branch either — so this can only
+ * tighten the existing (crossing-free) arrangement, never invert two branches.
+ * That is why deeply-fanned maternal branches, which have no room to sit over
+ * their lone child, simply stay where they are.
+ *
+ * Processed deepest-child-first so a chain of single children settles bottom-up.
  */
 function alignSingleChildParents(
   positions: Map<string, LayoutPosition>,
   metrics: LayoutMetrics,
 ): void {
   const gap = H_GAP;
+  const layerOf = (id: string) => Math.round(positions.get(id)?.y ?? 0);
+
+  // The block to move with a union: the union's dot, its partner cards, and all
+  // of their ancestors (recursively), so the whole tower travels as one unit.
+  const ancestralBlock = (unionId: string): Set<string> => {
+    const block = new Set<string>();
+    if (positions.has(unionId)) block.add(unionId);
+    const visit = (personId: string) => {
+      if (block.has(personId) || !positions.has(personId)) return;
+      block.add(personId);
+      const famc = individuals[personId]?.famc;
+      if (!famc) return;
+      if (positions.has(famc)) block.add(famc);
+      for (const p of unions[famc]?.partnerIds ?? []) visit(p);
+    };
+    for (const p of unions[unionId]?.partnerIds ?? []) visit(p);
+    return block;
+  };
 
   const onlyChildUnions = Object.values(unions)
     .map((u) => ({
@@ -593,33 +630,76 @@ function alignSingleChildParents(
     const desired = targetX - parentCenter;
     if (Math.abs(desired) < 1) continue;
 
-    // Footprint of the parent cards and the other cards sharing their row.
-    const y = Math.round(positions.get(partners[0])!.y);
-    const lefts = partners.map((p) => positions.get(p)!.x);
-    const lo = Math.min(...lefts);
-    const hi = Math.max(...lefts) + metrics.nodeWidth;
-    const partnerSet = new Set(partners);
-    const others: Interval[] = [];
-    for (const [id, p] of positions) {
-      if (!individuals[id] || partnerSet.has(id)) continue;
-      if (Math.round(p.y) !== y) continue;
-      others.push([p.x, p.x + metrics.nodeWidth]);
-    }
-    others.sort((a, b) => a[0] - b[0]);
+    const block = ancestralBlock(u.id);
 
-    const placedLeft = nearestFreeX(lo + desired, hi - lo, others, gap);
-    if (placedLeft === null) continue;
-    const applied = placedLeft - lo;
+    // Per-row footprint of the block's *cards* (dots sit in the inter-row band
+    // and never collide horizontally with cards).
+    const foot = new Map<number, { lo: number; hi: number }>();
+    for (const id of block) {
+      if (!individuals[id]) continue;
+      const p = positions.get(id)!;
+      const L = layerOf(id);
+      const lo = p.x;
+      const hi = p.x + metrics.nodeWidth;
+      const f = foot.get(L);
+      if (!f) foot.set(L, { lo, hi });
+      else {
+        f.lo = Math.min(f.lo, lo);
+        f.hi = Math.max(f.hi, hi);
+      }
+    }
+    if (foot.size === 0) continue;
+
+    // Feasible horizontal shifts: a delta that keeps every row's footprint
+    // inside a gap (with `gap` clearance) between the other cards on that row.
+    let feasible: Interval[] | null = null;
+    for (const [L, f] of foot) {
+      const others: Interval[] = [];
+      for (const [id, p] of positions) {
+        if (!individuals[id] || block.has(id)) continue;
+        if (layerOf(id) !== L) continue;
+        others.push([p.x, p.x + metrics.nodeWidth]);
+      }
+      others.sort((a, b) => a[0] - b[0]);
+
+      const w = f.hi - f.lo;
+      const allowed: Interval[] = [];
+      let prevHi = -Infinity;
+      for (let i = 0; i <= others.length; i++) {
+        const curLo = i < others.length ? others[i][0] : Infinity;
+        const gapLo = prevHi === -Infinity ? -Infinity : prevHi + gap;
+        const gapHi = curLo === Infinity ? Infinity : curLo - gap;
+        if (gapHi - gapLo >= w) {
+          const dLo = gapLo === -Infinity ? -Infinity : gapLo - f.lo;
+          const dHi = gapHi === Infinity ? Infinity : gapHi - f.hi;
+          allowed.push([dLo, dHi]);
+        }
+        if (i < others.length) prevHi = Math.max(prevHi, others[i][1]);
+      }
+      feasible = feasible === null ? allowed : intersectIntervals(feasible, allowed);
+      if (feasible.length === 0) break;
+    }
+    if (!feasible || feasible.length === 0) continue;
+
+    // Clamp the desired shift into the feasible set, nearest to `desired`.
+    let bestDelta: number | null = null;
+    let bestDist = Infinity;
+    for (const [lo, hi] of feasible) {
+      const cand = Math.max(lo, Math.min(hi, desired));
+      if (!Number.isFinite(cand)) continue;
+      const dist = Math.abs(cand - desired);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestDelta = cand;
+      }
+    }
+    if (bestDelta === null || bestDelta === 0) continue;
     // Only move if it brings the parents closer to sitting over the child.
-    if (
-      Math.abs(parentCenter + applied - targetX) >=
-      Math.abs(parentCenter - targetX)
-    ) {
+    if (Math.abs(parentCenter + bestDelta - targetX) >= Math.abs(desired)) {
       continue;
     }
 
-    for (const p of partners) positions.get(p)!.x += applied;
-    if (dot) dot.x += applied;
+    for (const id of block) positions.get(id)!.x += bestDelta;
   }
 }
 
