@@ -9,12 +9,9 @@ import {
   type ElkNodeInput,
 } from "./familyGraph";
 import {
-  COUPLE_INNER_GAP,
-  COUPLE_WIDTH,
+  getLayoutMetrics,
   H_GAP,
-  LAYER_GAP,
-  NODE_HEIGHT,
-  NODE_WIDTH,
+  type LayoutMetrics,
   UNION_SIZE,
 } from "./layoutConstants";
 
@@ -158,6 +155,7 @@ function centerParentsOverChildren(
   nodes: ElkNodeInput[],
   edges: ElkEdgeInput[],
   couples: CoupleGroup[],
+  metrics: LayoutMetrics,
 ): void {
   const gap = H_GAP;
   const widthOf = new Map<string, number>();
@@ -168,7 +166,7 @@ function centerParentsOverChildren(
   }
 
   const currentX = (id: string) => positions.get(id)?.x ?? 0;
-  const width = (id: string) => widthOf.get(id) ?? NODE_WIDTH;
+  const width = (id: string) => widthOf.get(id) ?? metrics.nodeWidth;
   const currentCenter = (id: string) => currentX(id) + width(id) / 2;
 
   // The ELK box a person maps to: their combined couple node when grouped,
@@ -522,7 +520,7 @@ function centerParentsOverChildren(
   function reCenterParents(): void {
     // Tolerate the small natural offset between a couple's dot and its
     // children's midpoint; only correct genuinely stranded parents.
-    const THRESHOLD = COUPLE_WIDTH; // ~ a couple's width
+    const THRESHOLD = metrics.coupleWidth; // ~ a couple's width
 
     const parents = [...primaryChildren.keys()]
       .filter((p) => (primaryChildren.get(p)?.length ?? 0) > 0)
@@ -575,7 +573,10 @@ function centerParentsOverChildren(
  *
  * Processed deepest-child-first so a chain of single children settles bottom-up.
  */
-function alignSingleChildParents(positions: Map<string, LayoutPosition>): void {
+function alignSingleChildParents(
+  positions: Map<string, LayoutPosition>,
+  metrics: LayoutMetrics,
+): void {
   const gap = H_GAP;
   const layerOf = (id: string) => Math.round(positions.get(id)?.y ?? 0);
 
@@ -622,10 +623,10 @@ function alignSingleChildParents(positions: Map<string, LayoutPosition>): void {
 
     const child = kids[0];
     const dot = positions.get(u.id);
-    const targetX = positions.get(child)!.x + NODE_WIDTH / 2;
+    const targetX = positions.get(child)!.x + metrics.nodeWidth / 2;
     const parentCenter = dot
       ? dot.x + UNION_SIZE / 2
-      : average(partners.map((p) => positions.get(p)!.x + NODE_WIDTH / 2));
+      : average(partners.map((p) => positions.get(p)!.x + metrics.nodeWidth / 2));
     const desired = targetX - parentCenter;
     if (Math.abs(desired) < 1) continue;
 
@@ -639,7 +640,7 @@ function alignSingleChildParents(positions: Map<string, LayoutPosition>): void {
       const p = positions.get(id)!;
       const L = layerOf(id);
       const lo = p.x;
-      const hi = p.x + NODE_WIDTH;
+      const hi = p.x + metrics.nodeWidth;
       const f = foot.get(L);
       if (!f) foot.set(L, { lo, hi });
       else {
@@ -657,7 +658,7 @@ function alignSingleChildParents(positions: Map<string, LayoutPosition>): void {
       for (const [id, p] of positions) {
         if (!individuals[id] || block.has(id)) continue;
         if (layerOf(id) !== L) continue;
-        others.push([p.x, p.x + NODE_WIDTH]);
+        others.push([p.x, p.x + metrics.nodeWidth]);
       }
       others.sort((a, b) => a[0] - b[0]);
 
@@ -712,13 +713,17 @@ function alignSingleChildParents(positions: Map<string, LayoutPosition>): void {
 export async function computeLayout(
   options: ElkGraphOptions = {},
 ): Promise<Map<string, LayoutPosition>> {
+  const metrics = getLayoutMetrics(options.showNamesOnly ?? false);
   const { nodes, edges, couples } = buildElkGraph(options);
   const focusedLayout = Boolean(options.personIds);
   const layerSpacing = focusedLayout
-    ? Math.max(Math.round(LAYER_GAP * 0.72), NODE_HEIGHT + UNION_SIZE + 20)
-    : LAYER_GAP;
+    ? Math.max(
+        Math.round(metrics.layerGap * 0.72),
+        metrics.nodeHeight + UNION_SIZE + 20,
+      )
+    : metrics.layerGap;
   const nodeSpacing = focusedLayout ? 38 : 55;
-  const unionDrop = NODE_HEIGHT + (layerSpacing - UNION_SIZE) / 2;
+  const unionDrop = metrics.nodeHeight + (layerSpacing - UNION_SIZE) / 2;
   // Unions rendered as a single combined node; used below to skip them in the
   // loose-anchor pass (their dot is positioned during couple expansion).
   const groupedUnions = new Set(couples.map((c) => c.unionId));
@@ -776,7 +781,7 @@ export async function computeLayout(
   // the center of its children. Runs while couples are still single boxes, so a
   // couple's center is exactly the midpoint that later carries the marriage dot.
   if (options.centerParentsOverChildren) {
-    centerParentsOverChildren(positions, nodes, edges, couples);
+    centerParentsOverChildren(positions, nodes, edges, couples, metrics);
   }
 
   // Snapshot the combined couple centers before mutating, so they stay usable
@@ -784,7 +789,7 @@ export async function computeLayout(
   const coupleCenterX = new Map<string, number>();
   for (const couple of couples) {
     const pos = positions.get(couple.nodeId);
-    if (pos) coupleCenterX.set(couple.unionId, pos.x + COUPLE_WIDTH / 2);
+    if (pos) coupleCenterX.set(couple.unionId, pos.x + metrics.coupleWidth / 2);
   }
 
   /**
@@ -811,7 +816,7 @@ export async function computeLayout(
     if (!combined) continue;
 
     const center =
-      coupleCenterX.get(couple.unionId) ?? combined.x + COUPLE_WIDTH / 2;
+      coupleCenterX.get(couple.unionId) ?? combined.x + metrics.coupleWidth / 2;
     const leftAnchor = parentAnchorX(couple.leftId);
     const rightAnchor = parentAnchorX(couple.rightId);
 
@@ -834,7 +839,7 @@ export async function computeLayout(
     const rightPartner = swap ? couple.leftId : couple.rightId;
     // The combined node spans both cards; the right card starts one card width
     // plus the inner gap to the right of the node's left edge.
-    const rightX = combined.x + NODE_WIDTH + COUPLE_INNER_GAP;
+    const rightX = combined.x + metrics.nodeWidth + metrics.coupleInnerGap;
 
     positions.set(leftPartner, {
       id: leftPartner,
@@ -850,7 +855,11 @@ export async function computeLayout(
     // midpoint of the pair) and drop it into the band just below the cards.
     positions.set(couple.unionId, {
       id: couple.unionId,
-      x: combined.x + NODE_WIDTH + COUPLE_INNER_GAP / 2 - UNION_SIZE / 2,
+      x:
+        combined.x +
+        metrics.nodeWidth +
+        metrics.coupleInnerGap / 2 -
+        UNION_SIZE / 2,
       y: combined.y + unionDrop,
     });
     // Drop the placeholder combined node now that the real cards exist.
@@ -869,7 +878,7 @@ export async function computeLayout(
     if (partnerPositions.length === 0) continue;
 
     const centerX = average(
-      partnerPositions.map((pos) => pos.x + NODE_WIDTH / 2),
+      partnerPositions.map((pos) => pos.x + metrics.nodeWidth / 2),
     );
     const topY = Math.min(...partnerPositions.map((pos) => pos.y));
     positions.set(union.id, {
@@ -883,7 +892,7 @@ export async function computeLayout(
   // their marriage dot sits directly over that child's card (rather than over
   // the midpoint of the child and their spouse). Runs on the expanded cards.
   if (options.centerParentsOverChildren) {
-    alignSingleChildParents(positions);
+    alignSingleChildParents(positions, metrics);
   }
 
   return positions;
