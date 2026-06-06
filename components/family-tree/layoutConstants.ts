@@ -24,6 +24,40 @@ export const COUPLE_WIDTH = NODE_WIDTH * 2 + COUPLE_INNER_GAP;
  */
 export const LAYER_GAP = 152;
 
+/** Compact person card used when "Show names only" is enabled. */
+export const COMPACT_NODE_WIDTH = 180;
+export const COMPACT_NODE_HEIGHT = 32;
+export const COMPACT_COUPLE_INNER_GAP = 24;
+export const COMPACT_LAYER_GAP = 116;
+
+export type LayoutMetrics = {
+  nodeWidth: number;
+  nodeHeight: number;
+  coupleInnerGap: number;
+  coupleWidth: number;
+  layerGap: number;
+};
+
+export function getLayoutMetrics(showNamesOnly: boolean): LayoutMetrics {
+  if (showNamesOnly) {
+    const coupleWidth = COMPACT_NODE_WIDTH * 2 + COMPACT_COUPLE_INNER_GAP;
+    return {
+      nodeWidth: COMPACT_NODE_WIDTH,
+      nodeHeight: COMPACT_NODE_HEIGHT,
+      coupleInnerGap: COMPACT_COUPLE_INNER_GAP,
+      coupleWidth,
+      layerGap: COMPACT_LAYER_GAP,
+    };
+  }
+  return {
+    nodeWidth: NODE_WIDTH,
+    nodeHeight: NODE_HEIGHT,
+    coupleInnerGap: COUPLE_INNER_GAP,
+    coupleWidth: COUPLE_WIDTH,
+    layerGap: LAYER_GAP,
+  };
+}
+
 /**
  * How far the marriage anchor dot drops below the top of a grouped couple. Puts
  * the dot in the band between the partners and their children, centered in the

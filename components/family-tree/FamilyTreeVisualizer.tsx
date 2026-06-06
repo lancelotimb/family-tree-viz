@@ -18,10 +18,9 @@ import { SearchBar } from "./SearchBar";
 import { ControlDrawer } from "./ControlDrawer";
 import { ControlSidebar } from "./ControlSidebar";
 import {
+  getLayoutMetrics,
   MAX_ZOOM,
   MIN_ZOOM,
-  NODE_HEIGHT,
-  NODE_WIDTH,
   PERSON_FOCUS_DURATION_MS,
   PERSON_FOCUS_ZOOM,
 } from "./layoutConstants";
@@ -132,6 +131,7 @@ function FamilyTreeCanvas() {
   const [layouting, setLayouting] = useState(true);
   const fullLayoutRef = useRef<{
     centerParents: boolean;
+    showNamesOnly: boolean;
     positions: Map<string, LayoutPosition>;
   } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -139,6 +139,7 @@ function FamilyTreeCanvas() {
   const [greyDeceased, setGreyDeceased] = useState(false);
   const [colorByFamily, setColorByFamily] = useState(true);
   const [centerParents, setCenterParents] = useState(false);
+  const [showNamesOnly, setShowNamesOnly] = useState(false);
   const [visibleFamilyNames, setVisibleFamilyNames] = useState<Set<string>>(
     () => new Set(allFamilyNames),
   );
@@ -164,13 +165,16 @@ function FamilyTreeCanvas() {
 
   const applyLayout = useCallback(
     (positions: Map<string, LayoutPosition>, personIds?: Set<string>) => {
-      const layoutOptions = personIds ? { personIds } : undefined;
+      const layoutOptions = {
+        ...(personIds ? { personIds } : {}),
+        showNamesOnly,
+      };
       setNodes(buildFlowNodes(positions));
       const built = buildFlowEdges(positions, layoutOptions);
       setBaseEdges(built);
       setEdges(built);
     },
-    [setNodes, setEdges],
+    [setNodes, setEdges, showNamesOnly],
   );
 
   const lineagePersonIds = useMemo(() => {
@@ -231,14 +235,18 @@ function FamilyTreeCanvas() {
       try {
         if (layoutPersonIds === null) {
           const cached =
-            fullLayoutRef.current?.centerParents === centerParents
+            fullLayoutRef.current?.centerParents === centerParents &&
+            fullLayoutRef.current?.showNamesOnly === showNamesOnly
               ? fullLayoutRef.current.positions
               : null;
           const positions =
             cached ??
-            (await computeLayout({ centerParentsOverChildren: centerParents }));
+            (await computeLayout({
+              centerParentsOverChildren: centerParents,
+              showNamesOnly,
+            }));
           if (cancelled) return;
-          fullLayoutRef.current = { centerParents, positions };
+          fullLayoutRef.current = { centerParents, showNamesOnly, positions };
           applyLayout(positions);
         } else if (layoutPersonIds.size === 0) {
           if (cancelled) return;
@@ -247,6 +255,7 @@ function FamilyTreeCanvas() {
           const positions = await computeLayout({
             personIds: layoutPersonIds,
             centerParentsOverChildren: centerParents,
+            showNamesOnly,
           });
           if (cancelled) return;
           applyLayout(positions, layoutPersonIds);
@@ -261,7 +270,7 @@ function FamilyTreeCanvas() {
     return () => {
       cancelled = true;
     };
-  }, [layoutRequestKey, layoutPersonIds, applyLayout, centerParents]);
+  }, [layoutRequestKey, layoutPersonIds, applyLayout, centerParents, showNamesOnly]);
 
   useEffect(() => {
     if (!ready || layouting) return;
@@ -561,6 +570,7 @@ function FamilyTreeCanvas() {
               hovered: !hidden && isHovered,
               hoverRelated: !hidden && inHoverFamily && !isHovered,
               colorByFamily,
+              showNamesOnly,
             },
           };
         }
@@ -632,6 +642,7 @@ function FamilyTreeCanvas() {
     selectedId,
     greyDeceased,
     colorByFamily,
+    showNamesOnly,
     pathNodeIds,
     pathEdgeIdSet,
     familyHighlight,
@@ -689,8 +700,12 @@ function FamilyTreeCanvas() {
       setPanelOpen(true);
       const node = getNode(id);
       if (node && !node.hidden) {
-        const width = node.width ?? node.measured?.width ?? NODE_WIDTH;
-        const height = node.height ?? node.measured?.height ?? NODE_HEIGHT;
+        const nodeData = node.data as FamilyNodeData;
+        const metrics = getLayoutMetrics(
+          nodeData.kind === "person" ? (nodeData.showNamesOnly ?? false) : false,
+        );
+        const width = node.width ?? node.measured?.width ?? metrics.nodeWidth;
+        const height = node.height ?? node.measured?.height ?? metrics.nodeHeight;
         const centerX = node.position.x + width / 2;
         const centerY = node.position.y + height / 2;
         void setCenter(centerX, centerY, {
@@ -748,6 +763,8 @@ function FamilyTreeCanvas() {
     onColorByFamilyChange: setColorByFamily,
     centerParents,
     onCenterParentsChange: setCenterParents,
+    showNamesOnly,
+    onShowNamesOnlyChange: setShowNamesOnly,
     familyBranches,
     visibleFamilyNames,
     onFamilyVisibilityChange: handleFamilyVisibilityChange,

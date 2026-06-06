@@ -69,6 +69,7 @@ export type PersonNodeData = {
   hovered?: boolean;
   hoverRelated?: boolean;
   colorByFamily?: boolean;
+  showNamesOnly?: boolean;
 };
 
 export type UnionNodeData = {
