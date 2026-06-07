@@ -16,6 +16,7 @@ import type { FamilyNodeData } from "./types";
 type SearchBarProps = {
   onOpenChange?: (open: boolean) => void;
   onDismissRef?: React.MutableRefObject<(() => void) | null>;
+  onSelectPerson?: (id: string) => boolean | void;
   visibleFamilyNames?: Set<string>;
   lineagePersonIds?: Set<string> | null;
   aliveAtYear?: number | null;
@@ -29,6 +30,7 @@ function formatLifespan(birthYear: number | null, deathYear: number | null) {
 export function SearchBar({
   onOpenChange,
   onDismissRef,
+  onSelectPerson,
   visibleFamilyNames,
   lineagePersonIds,
   aliveAtYear = null,
@@ -69,6 +71,15 @@ export function SearchBar({
 
   const focusNode = useCallback(
     (id: string) => {
+      if (onSelectPerson) {
+        const handled = onSelectPerson(id);
+        if (handled !== false) {
+          setDropdownOpen(false);
+          setQuery("");
+          inputRef.current?.blur();
+          return;
+        }
+      }
       const node = getNode(id);
       if (!node || node.hidden) return;
       const nodeData = node.data as FamilyNodeData;
@@ -86,7 +97,7 @@ export function SearchBar({
       setDropdownOpen(false);
       setQuery("");
     },
-    [getNode, setCenter, setDropdownOpen],
+    [getNode, onSelectPerson, setCenter, setDropdownOpen],
   );
 
   useEffect(() => {

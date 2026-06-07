@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
@@ -24,7 +25,7 @@ import {
   PERSON_FOCUS_DURATION_MS,
   PERSON_FOCUS_ZOOM,
 } from "./layoutConstants";
-import { ZoomControls } from "./ZoomControls";
+import { ZoomControls, type ViewMode } from "./ZoomControls";
 import { TimePlayer } from "./TimePlayer";
 import { ProfilePanel } from "./ProfilePanel";
 import {
@@ -53,9 +54,28 @@ import {
 import { computeLayout, type LayoutPosition } from "./elkLayout";
 import { isDeceased, isDeceasedAsOfYear } from "./personUtils";
 import { getFamilyTimeRange, isBornByYear } from "./timeUtils";
+import type { FamilyTree3DControls } from "./FamilyTree3D";
 import type { FamilyNodeData } from "./types";
 
 const currentCalendarYear = new Date().getFullYear();
+
+/**
+ * The 3D view depends on three.js / WebGL, which only run in the browser, so it
+ * is loaded lazily and client-only (no SSR) and kept out of the initial bundle.
+ */
+const FamilyTree3D = dynamic(
+  () => import("./FamilyTree3D").then((mod) => mod.FamilyTree3D),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+        <p className="rounded-full bg-white/80 px-4 py-2 text-sm text-[#8b7d6b] shadow backdrop-blur-md">
+          Loading 3D view…
+        </p>
+      </div>
+    ),
+  },
+);
 
 const nodeTypes = { familyMember: FamilyMemberNode, union: MarriageNode };
 const allFamilyNames = familyBranches.map((branch) => branch.familyName);
@@ -139,7 +159,8 @@ function FamilyTreeCanvas() {
   const [greyDeceased, setGreyDeceased] = useState(false);
   const [colorByFamily, setColorByFamily] = useState(true);
   const [centerParents, setCenterParents] = useState(false);
-  const [showNamesOnly, setShowNamesOnly] = useState(false);
+  const [showNamesOnly2D, setShowNamesOnly2D] = useState(false);
+  const [showNamesOnly3D, setShowNamesOnly3D] = useState(true);
   const [visibleFamilyNames, setVisibleFamilyNames] = useState<Set<string>>(
     () => new Set(allFamilyNames),
   );
@@ -156,25 +177,29 @@ function FamilyTreeCanvas() {
   const [layoutRequestNonce, setLayoutRequestNonce] = useState(0);
   const [timeTravelOpen, setTimeTravelOpen] = useState(false);
   const [timeTravelYear, setTimeTravelYear] = useState(currentCalendarYear);
+  const [viewMode, setViewMode] = useState<ViewMode>("2d");
+  const controls3DRef = useRef<FamilyTree3DControls | null>(null);
   const suppressNextNodeClickRef = useRef(false);
   const instanceRef = useRef<ReactFlowInstance<Node<FamilyNodeData>, Edge> | null>(
     null,
   );
   const dismissSearchRef = useRef<(() => void) | null>(null);
   const { fitView, getNode, setCenter } = useReactFlow();
+  const activeShowNamesOnly = viewMode === "3d" ? showNamesOnly3D : showNamesOnly2D;
+  const setActiveShowNamesOnly = viewMode === "3d" ? setShowNamesOnly3D : setShowNamesOnly2D;
 
   const applyLayout = useCallback(
     (positions: Map<string, LayoutPosition>, personIds?: Set<string>) => {
       const layoutOptions = {
         ...(personIds ? { personIds } : {}),
-        showNamesOnly,
+        showNamesOnly: showNamesOnly2D,
       };
       setNodes(buildFlowNodes(positions));
       const built = buildFlowEdges(positions, layoutOptions);
       setBaseEdges(built);
       setEdges(built);
     },
-    [setNodes, setEdges, showNamesOnly],
+    [setNodes, setEdges, showNamesOnly2D],
   );
 
   const lineagePersonIds = useMemo(() => {
@@ -236,17 +261,17 @@ function FamilyTreeCanvas() {
         if (layoutPersonIds === null) {
           const cached =
             fullLayoutRef.current?.centerParents === centerParents &&
-            fullLayoutRef.current?.showNamesOnly === showNamesOnly
+            fullLayoutRef.current?.showNamesOnly === showNamesOnly2D
               ? fullLayoutRef.current.positions
               : null;
           const positions =
             cached ??
             (await computeLayout({
               centerParentsOverChildren: centerParents,
-              showNamesOnly,
+              showNamesOnly: showNamesOnly2D,
             }));
           if (cancelled) return;
-          fullLayoutRef.current = { centerParents, showNamesOnly, positions };
+          fullLayoutRef.current = { centerParents, showNamesOnly: showNamesOnly2D, positions };
           applyLayout(positions);
         } else if (layoutPersonIds.size === 0) {
           if (cancelled) return;
@@ -255,7 +280,7 @@ function FamilyTreeCanvas() {
           const positions = await computeLayout({
             personIds: layoutPersonIds,
             centerParentsOverChildren: centerParents,
-            showNamesOnly,
+            showNamesOnly: showNamesOnly2D,
           });
           if (cancelled) return;
           applyLayout(positions, layoutPersonIds);
@@ -270,7 +295,7 @@ function FamilyTreeCanvas() {
     return () => {
       cancelled = true;
     };
-  }, [layoutRequestKey, layoutPersonIds, applyLayout, centerParents, showNamesOnly]);
+  }, [layoutRequestKey, layoutPersonIds, applyLayout, centerParents, showNamesOnly2D]);
 
   useEffect(() => {
     if (!ready || layouting) return;
@@ -570,7 +595,7 @@ function FamilyTreeCanvas() {
               hovered: !hidden && isHovered,
               hoverRelated: !hidden && inHoverFamily && !isHovered,
               colorByFamily,
-              showNamesOnly,
+              showNamesOnly: showNamesOnly2D,
             },
           };
         }
@@ -642,7 +667,7 @@ function FamilyTreeCanvas() {
     selectedId,
     greyDeceased,
     colorByFamily,
-    showNamesOnly,
+    showNamesOnly2D,
     pathNodeIds,
     pathEdgeIdSet,
     familyHighlight,
@@ -717,6 +742,15 @@ function FamilyTreeCanvas() {
     [getNode, setCenter],
   );
 
+  const handleSearchSelectPerson = useCallback(
+    (id: string) => {
+      if (viewMode !== "3d") return false;
+      controls3DRef.current?.focusPerson(id);
+      return true;
+    },
+    [viewMode],
+  );
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
@@ -763,8 +797,9 @@ function FamilyTreeCanvas() {
     onColorByFamilyChange: setColorByFamily,
     centerParents,
     onCenterParentsChange: setCenterParents,
-    showNamesOnly,
-    onShowNamesOnlyChange: setShowNamesOnly,
+    centerParentsDisabled: viewMode === "3d",
+    showNamesOnly: activeShowNamesOnly,
+    onShowNamesOnlyChange: setActiveShowNamesOnly,
     familyBranches,
     visibleFamilyNames,
     onFamilyVisibilityChange: handleFamilyVisibilityChange,
@@ -786,38 +821,57 @@ function FamilyTreeCanvas() {
   return (
     <FamilyTreeActionsContext.Provider value={familyTreeActions}>
     <div className="relative h-full w-full bg-[#fdfbf7]">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onInit={(instance) => {
-          instanceRef.current = instance;
-        }}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        nodeTypes={nodeTypes}
-        defaultEdgeOptions={{ style: defaultEdgeStyle }}
-        nodesDraggable={false}
-        nodesConnectable={false}
-        elementsSelectable={false}
-        selectNodesOnDrag={false}
-        onNodeClick={handleNodeClick}
-        onNodeContextMenu={handleNodeContextMenu}
-        onNodeMouseEnter={handleNodeMouseEnter}
-        onNodeMouseLeave={handleNodeMouseLeave}
-        panOnDrag
-        zoomOnScroll
-        minZoom={MIN_ZOOM}
-        maxZoom={MAX_ZOOM}
-        proOptions={{ hideAttribution: true }}
-        onPaneClick={handlePaneClick}
-        onMoveStart={() => dismissSearchRef.current?.()}
-        onPaneContextMenu={(event) => event.preventDefault()}
-        fitView
-        fitViewOptions={{ padding: 0.15, minZoom: MIN_ZOOM }}
-        className="family-tree-flow"
-      />
+      {viewMode === "3d" ? (
+        <FamilyTree3D
+          selectedId={selectedId}
+          onSelectPerson={handleSelectPerson}
+          onClearSelection={handlePaneClick}
+          colorByFamily={colorByFamily}
+          greyDeceased={greyDeceased}
+          showNamesOnly={activeShowNamesOnly}
+          visibleFamilyNames={visibleFamilyNames}
+          lineagePersonIds={lineagePersonIds}
+          focusHighlightNodeIds={focusHighlightNodeIds}
+          pathNodeIds={pathNodeIds}
+          pathEdgeIds={pathEdgeIdSet}
+          aliveAtYear={timeTravelOpen ? timeTravelYear : null}
+          onOpenNodeContextMenu={setContextMenuTarget}
+          controlsRef={controls3DRef}
+        />
+      ) : (
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onInit={(instance) => {
+            instanceRef.current = instance;
+          }}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          nodeTypes={nodeTypes}
+          defaultEdgeOptions={{ style: defaultEdgeStyle }}
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable={false}
+          selectNodesOnDrag={false}
+          onNodeClick={handleNodeClick}
+          onNodeContextMenu={handleNodeContextMenu}
+          onNodeMouseEnter={handleNodeMouseEnter}
+          onNodeMouseLeave={handleNodeMouseLeave}
+          panOnDrag
+          zoomOnScroll
+          minZoom={MIN_ZOOM}
+          maxZoom={MAX_ZOOM}
+          proOptions={{ hideAttribution: true }}
+          onPaneClick={handlePaneClick}
+          onMoveStart={() => dismissSearchRef.current?.()}
+          onPaneContextMenu={(event) => event.preventDefault()}
+          fitView
+          fitViewOptions={{ padding: 0.15, minZoom: MIN_ZOOM }}
+          className="family-tree-flow"
+        />
+      )}
 
-      {!ready || layouting ? (
+      {viewMode === "2d" && (!ready || layouting) ? (
         <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
           <p className="rounded-full bg-white/80 px-4 py-2 text-sm text-[#8b7d6b] shadow backdrop-blur-md">
             Arranging the family tree…
@@ -839,12 +893,17 @@ function FamilyTreeCanvas() {
               visibleFamilyNames={visibleFamilyNames}
               lineagePersonIds={lineagePersonIds}
               aliveAtYear={timeTravelOpen ? timeTravelYear : null}
+              onSelectPerson={handleSearchSelectPerson}
               onOpenChange={setSearchOpen}
               onDismissRef={dismissSearchRef}
             />
           </div>
         </header>
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end gap-3 p-3 max-md:flex-col-reverse max-md:items-end max-md:gap-2">
+        <div
+          className={`pointer-events-none absolute inset-x-0 bottom-0 flex items-end gap-3 p-3 max-md:flex-col-reverse max-md:items-end max-md:gap-2 ${
+            settingsOpen ? "max-md:hidden" : ""
+          }`}
+        >
           {timeTravelOpen ? (
             <TimePlayer
               minYear={timeRange.minYear}
@@ -861,6 +920,11 @@ function FamilyTreeCanvas() {
               timeTravelOpen={timeTravelOpen}
               onTimeTravelOpen={handleTimeTravelOpen}
               onTimeTravelClose={handleTimeTravelClose}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              onZoomIn3D={() => controls3DRef.current?.zoomIn()}
+              onZoomOut3D={() => controls3DRef.current?.zoomOut()}
+              onResetView={() => controls3DRef.current?.resetView()}
             />
           </div>
         </div>

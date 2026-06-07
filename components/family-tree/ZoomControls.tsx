@@ -1,14 +1,29 @@
 "use client";
 
 import { useReactFlow } from "@xyflow/react";
-import { Calendar, Maximize2, Settings, X, ZoomIn, ZoomOut } from "lucide-react";
+import {
+  Calendar,
+  Maximize2,
+  Settings,
+  X,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-react";
 import { MAX_ZOOM, MIN_ZOOM, ZOOM_STEP } from "./layoutConstants";
+
+export type ViewMode = "2d" | "3d";
 
 type ZoomControlsProps = {
   onSettingsClick?: () => void;
   timeTravelOpen?: boolean;
   onTimeTravelOpen?: () => void;
   onTimeTravelClose?: () => void;
+  viewMode?: ViewMode;
+  onViewModeChange?: (mode: ViewMode) => void;
+  onZoomIn3D?: () => void;
+  onZoomOut3D?: () => void;
+  /** Reset the 3D camera to its default framing. */
+  onResetView?: () => void;
 };
 
 export function ZoomControls({
@@ -16,6 +31,11 @@ export function ZoomControls({
   timeTravelOpen = false,
   onTimeTravelOpen,
   onTimeTravelClose,
+  viewMode = "2d",
+  onViewModeChange,
+  onZoomIn3D,
+  onZoomOut3D,
+  onResetView,
 }: ZoomControlsProps) {
   const { getZoom, zoomTo, fitView } = useReactFlow();
 
@@ -29,6 +49,8 @@ export function ZoomControls({
     zoomTo(next, { duration: 300 });
   };
 
+  const is3D = viewMode === "3d";
+
   return (
     <div className="pointer-events-auto flex flex-col gap-2">
       {onSettingsClick && (
@@ -39,36 +61,109 @@ export function ZoomControls({
           className="hidden max-md:flex"
         />
       )}
-      <ZoomButton
-        label="Zoom in"
-        icon={<ZoomIn className="h-4 w-4" />}
-        onClick={zoomIn}
-      />
-      <ZoomButton
-        label="Zoom out"
-        icon={<ZoomOut className="h-4 w-4" />}
-        onClick={zoomOut}
-      />
-      <ZoomButton
-        label="Fit view"
-        icon={<Maximize2 className="h-4 w-4" />}
-        onClick={() => fitView({ duration: 500, padding: 0.15, minZoom: MIN_ZOOM })}
-      />
-      {timeTravelOpen ? (
-        <ZoomButton
-          label="Close time travel"
-          icon={<X className="h-4 w-4" />}
-          onClick={onTimeTravelClose ?? (() => {})}
-          className="hidden md:flex"
+
+      {onViewModeChange && (
+        <ModeToggle
+          mode={viewMode}
+          onClick={() => onViewModeChange(is3D ? "2d" : "3d")}
         />
-      ) : onTimeTravelOpen ? (
-        <ZoomButton
-          label="Time travel"
-          icon={<Calendar className="h-4 w-4" />}
-          onClick={onTimeTravelOpen}
-        />
-      ) : null}
+      )}
+
+      {is3D ? (
+        <>
+          <ZoomButton
+            label="Zoom in"
+            icon={<ZoomIn className="h-4 w-4" />}
+            onClick={() => onZoomIn3D?.()}
+          />
+          <ZoomButton
+            label="Zoom out"
+            icon={<ZoomOut className="h-4 w-4" />}
+            onClick={() => onZoomOut3D?.()}
+          />
+          <ZoomButton
+            label="Reset view"
+            icon={<Maximize2 className="h-4 w-4" />}
+            onClick={() => onResetView?.()}
+          />
+          {timeTravelOpen ? (
+            <ZoomButton
+              label="Close time travel"
+              icon={<X className="h-4 w-4" />}
+              onClick={onTimeTravelClose ?? (() => {})}
+              className="hidden md:flex"
+            />
+          ) : onTimeTravelOpen ? (
+            <ZoomButton
+              label="Time travel"
+              icon={<Calendar className="h-4 w-4" />}
+              onClick={onTimeTravelOpen}
+            />
+          ) : null}
+        </>
+      ) : (
+        <>
+          <ZoomButton
+            label="Zoom in"
+            icon={<ZoomIn className="h-4 w-4" />}
+            onClick={zoomIn}
+          />
+          <ZoomButton
+            label="Zoom out"
+            icon={<ZoomOut className="h-4 w-4" />}
+            onClick={zoomOut}
+          />
+          <ZoomButton
+            label="Fit view"
+            icon={<Maximize2 className="h-4 w-4" />}
+            onClick={() =>
+              fitView({ duration: 500, padding: 0.15, minZoom: MIN_ZOOM })
+            }
+          />
+          {timeTravelOpen ? (
+            <ZoomButton
+              label="Close time travel"
+              icon={<X className="h-4 w-4" />}
+              onClick={onTimeTravelClose ?? (() => {})}
+              className="hidden md:flex"
+            />
+          ) : onTimeTravelOpen ? (
+            <ZoomButton
+              label="Time travel"
+              icon={<Calendar className="h-4 w-4" />}
+              onClick={onTimeTravelOpen}
+            />
+          ) : null}
+        </>
+      )}
     </div>
+  );
+}
+
+/**
+ * The 2D / 3D switcher. Shows the text label of the mode it will switch to.
+ */
+function ModeToggle({
+  mode,
+  onClick,
+}: {
+  mode: ViewMode;
+  onClick: () => void;
+}) {
+  const is3D = mode === "3d";
+  const target = is3D ? "2D" : "3D";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={`Switch to ${target} view`}
+      title={`Switch to ${target} view`}
+      className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-[#e8dfd0] bg-white/80 text-[#3d3428] shadow-lg backdrop-blur-md transition-colors hover:border-[#d4c4a8] hover:bg-[#faf6ef]"
+    >
+      <span className="text-sm font-bold leading-none tracking-wide">
+        {target}
+      </span>
+    </button>
   );
 }
 
