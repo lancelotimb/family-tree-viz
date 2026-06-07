@@ -23,6 +23,8 @@ export type ControlPanelProps = {
   onColorByFamilyChange: (enabled: boolean) => void;
   centerParents: boolean;
   onCenterParentsChange: (enabled: boolean) => void;
+  /** When true the option is muted (e.g. it does not apply to the 3D view). */
+  centerParentsDisabled?: boolean;
   showNamesOnly: boolean;
   onShowNamesOnlyChange: (enabled: boolean) => void;
   familyBranches: FamilyBranch[];
@@ -50,6 +52,7 @@ export function ControlSidebarContent({
   onColorByFamilyChange,
   centerParents,
   onCenterParentsChange,
+  centerParentsDisabled = false,
   showNamesOnly,
   onShowNamesOnlyChange,
   familyBranches,
@@ -94,8 +97,10 @@ export function ControlSidebarContent({
           <ToggleRow
             label="Center parents over children"
             icon={<AlignCenterHorizontal className="h-4 w-4" />}
-            checked={centerParents}
+            checked={centerParents && !centerParentsDisabled}
             onChange={onCenterParentsChange}
+            disabled={centerParentsDisabled}
+            hint={centerParentsDisabled ? "Not used in the 3D view" : undefined}
           />
         </div>
         <div className="mt-2">
@@ -339,23 +344,42 @@ function ToggleRow({
   icon,
   checked,
   onChange,
+  disabled = false,
+  hint,
 }: {
   label: string;
   icon: React.ReactNode;
   checked: boolean;
   onChange: (checked: boolean) => void;
+  disabled?: boolean;
+  hint?: string;
 }) {
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-2 rounded-lg border border-[#e8dfd0] bg-[#fffef9] px-3 py-2 transition-colors hover:border-[#d4c4a8] hover:bg-[#faf6ef]">
-      <span className="flex items-center gap-2 text-sm text-[#3d3428]">
-        {icon}
-        {label}
+    <label
+      title={hint}
+      className={`flex items-center justify-between gap-2 rounded-lg border border-[#e8dfd0] bg-[#fffef9] px-3 py-2 transition-colors ${
+        disabled
+          ? "cursor-not-allowed opacity-50"
+          : "cursor-pointer hover:border-[#d4c4a8] hover:bg-[#faf6ef]"
+      }`}
+    >
+      <span className="flex min-w-0 flex-col">
+        <span className="flex items-center gap-2 text-sm text-[#3d3428]">
+          {icon}
+          {label}
+        </span>
+        {disabled && hint ? (
+          <span className="mt-0.5 pl-6 text-[10px] text-[#a8957a]">{hint}</span>
+        ) : null}
       </span>
       <input
         type="checkbox"
         checked={checked}
+        disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}
-        className="h-4 w-4 cursor-pointer rounded border-[#d4c4a8] accent-[#b8956a]"
+        className={`h-4 w-4 rounded border-[#d4c4a8] accent-[#b8956a] ${
+          disabled ? "cursor-not-allowed" : "cursor-pointer"
+        }`}
         aria-label={label}
       />
     </label>
