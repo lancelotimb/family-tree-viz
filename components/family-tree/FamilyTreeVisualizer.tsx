@@ -784,6 +784,7 @@ function FamilyTreeCanvas() {
     onColorByFamilyChange: setColorByFamily,
     centerParents,
     onCenterParentsChange: setCenterParents,
+    centerParentsDisabled: viewMode === "3d",
     showNamesOnly,
     onShowNamesOnlyChange: setShowNamesOnly,
     familyBranches,
@@ -814,6 +815,7 @@ function FamilyTreeCanvas() {
           onClearSelection={closeProfilePanel}
           colorByFamily={colorByFamily}
           greyDeceased={greyDeceased}
+          showNamesOnly={showNamesOnly}
           resetViewRef={resetView3DRef}
         />
       ) : (
