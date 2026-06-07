@@ -820,6 +820,9 @@ function FamilyTreeCanvas() {
           colorByFamily={colorByFamily}
           greyDeceased={greyDeceased}
           showNamesOnly={activeShowNamesOnly}
+          visibleFamilyNames={visibleFamilyNames}
+          pathNodeIds={pathNodeIds}
+          pathEdgeIds={pathEdgeIdSet}
           controlsRef={controls3DRef}
         />
       ) : (

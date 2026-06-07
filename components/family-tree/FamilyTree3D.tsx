@@ -8,6 +8,7 @@ import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import {
   computeLayout3D,
   type GenerationPlane,
+  type Layout3DLink,
   type Layout3DResult,
 } from "./layout3d";
 import { getFamilyColor, getFamilyHighlight, individuals, unions } from "./familyGraph";
@@ -18,6 +19,7 @@ const NEUTRAL_STROKE = "#c4b49a";
 const NEUTRAL_BORDER = "#d8cab0";
 const NEUTRAL_BG = "#fffef9";
 const GREY_STROKE = "#b3a791";
+const PATH_STROKE = "#48a066";
 const CAMERA_FOV = 45;
 const SCENE_BG = "#f4efe5";
 // Keep the DOM person cards strictly below the overlay UI (parameters sidebar,
@@ -37,6 +39,9 @@ type FamilyTree3DProps = {
   colorByFamily: boolean;
   greyDeceased: boolean;
   showNamesOnly: boolean;
+  visibleFamilyNames: Set<string>;
+  pathNodeIds: Set<string> | null;
+  pathEdgeIds: Set<string> | null;
   /** Parent assigns camera controls here for the bottom-right button group. */
   controlsRef?: React.MutableRefObject<FamilyTree3DControls | null>;
 };
@@ -172,6 +177,7 @@ function PersonCard({
   selected,
   dimmed,
   emphasized,
+  pathHighlighted,
   showNamesOnly,
   onSelect,
   onHover,
@@ -183,6 +189,7 @@ function PersonCard({
   selected: boolean;
   dimmed: boolean;
   emphasized: boolean;
+  pathHighlighted: boolean;
   showNamesOnly: boolean;
   onSelect: (id: string) => void;
   onHover: (id: string | null) => void;
@@ -207,6 +214,8 @@ function PersonCard({
   const scale = selected ? 1.1 : emphasized ? 1.04 : 1;
   const ring = selected
     ? `0 0 0 2px ${branch.stroke}, 0 6px 18px rgba(120, 80, 40, 0.35)`
+    : pathHighlighted
+      ? "0 0 0 2px rgba(72,160,102,0.65), 0 6px 16px rgba(40,120,70,0.24)"
     : emphasized
       ? "0 0 0 2px rgba(90,148,208,0.55), 0 6px 16px rgba(45,95,160,0.25)"
       : "0 3px 10px rgba(60, 52, 40, 0.18)";
@@ -382,6 +391,9 @@ function SceneContent({
   colorByFamily,
   greyDeceased,
   showNamesOnly,
+  visibleFamilyNames,
+  pathNodeIds,
+  pathEdgeIds,
   viewControlsRef,
 }: {
   layout: Layout3DResult;
@@ -390,6 +402,9 @@ function SceneContent({
   colorByFamily: boolean;
   greyDeceased: boolean;
   showNamesOnly: boolean;
+  visibleFamilyNames: Set<string>;
+  pathNodeIds: Set<string> | null;
+  pathEdgeIds: Set<string> | null;
   viewControlsRef?: React.MutableRefObject<FamilyTree3DControls | null>;
 }) {
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
@@ -405,6 +420,34 @@ function SceneContent({
     return map;
   }, [layout]);
 
+  const isPersonVisibleByBranch = useCallback(
+    (id: string) => {
+      const person = individuals[id];
+      return !person || visibleFamilyNames.has(person.familyName);
+    },
+    [visibleFamilyNames],
+  );
+
+  const visibleLinks = useMemo(
+    () =>
+      layout.links.filter(
+        (link) =>
+          visibleFamilyNames.has(link.familyName) &&
+          isPersonVisibleByBranch(link.sourceId) &&
+          isPersonVisibleByBranch(link.targetId),
+      ),
+    [isPersonVisibleByBranch, layout.links, visibleFamilyNames],
+  );
+
+  const visibleUnionIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const link of visibleLinks) {
+      if (unions[link.sourceId]) ids.add(link.sourceId);
+      if (unions[link.targetId]) ids.add(link.targetId);
+    }
+    return ids;
+  }, [visibleLinks]);
+
   /** True when the link connects to a deceased person (for "Grey out deceased"). */
   const linkTouchesDeceased = (sourceId: string, targetId: string) => {
     for (const id of [sourceId, targetId]) {
@@ -418,11 +461,14 @@ function SceneContent({
 
   // Highlight the family of whichever node is hovered, or the selected person
   // when nothing is hovered — same idea as the 2D hover behaviour.
-  const highlight = useMemo(() => {
+  const familyHighlight = useMemo(() => {
     const focusId = hoveredId ?? selectedId;
     if (!focusId || !individuals[focusId]) return null;
     return getFamilyHighlight(focusId);
   }, [hoveredId, selectedId]);
+
+  const linkIsPathHighlighted = (link: Layout3DLink) =>
+    pathEdgeIds?.has(link.edgeId) ?? false;
 
   return (
     <>
@@ -434,22 +480,29 @@ function SceneContent({
         <GenerationDisc key={plane.generation} plane={plane} />
       ))}
 
-      {layout.links.map((link) => {
+      {visibleLinks.map((link) => {
         const from = positions.get(link.sourceId);
         const to = positions.get(link.targetId);
         if (!from || !to) return null;
-        const active = Boolean(
-          highlight?.nodeIds.has(link.sourceId) &&
-            highlight?.nodeIds.has(link.targetId),
+        const pathActive = linkIsPathHighlighted(link);
+        const familyActive = Boolean(
+          familyHighlight?.nodeIds.has(link.sourceId) &&
+            familyHighlight?.nodeIds.has(link.targetId),
         );
-        const dimmed = highlight !== null && !active;
+        const active = pathActive || familyActive;
+        const dimmed =
+          (pathEdgeIds !== null && !pathActive) ||
+          (familyHighlight !== null && !familyActive && !pathActive);
         const greyed =
           greyDeceased &&
-          !active &&
+          !pathActive &&
+          !familyActive &&
           !dimmed &&
           linkTouchesDeceased(link.sourceId, link.targetId);
-        const color = active
-          ? "#4a8ac8"
+        const color = pathActive
+          ? PATH_STROKE
+          : familyActive
+            ? "#4a8ac8"
           : greyed
             ? GREY_STROKE
             : colorByFamily
@@ -457,10 +510,10 @@ function SceneContent({
               : NEUTRAL_STROKE;
         return (
           <Line
-            key={`${link.sourceId}-${link.targetId}-${link.kind}`}
+            key={link.edgeId}
             points={[from, to]}
             color={color}
-            lineWidth={active ? 2.6 : 1.2}
+            lineWidth={pathActive ? 3 : familyActive ? 2.6 : 1.2}
             transparent
             opacity={dimmed ? 0.12 : active ? 0.95 : greyed ? 0.22 : 0.5}
             dashed={false}
@@ -470,18 +523,23 @@ function SceneContent({
 
       {layout.nodes.map((node) => {
         if (node.kind !== "union") return null;
+        if (!visibleUnionIds.has(node.id)) return null;
         const union = unions[node.id];
         const familyName =
           union?.childIds.map((id) => individuals[id]?.familyName).find(Boolean) ??
           "UNKNOWN";
-        const active = highlight?.nodeIds.has(node.id) ?? false;
-        const dimmed = highlight !== null && !active;
+        const pathActive = pathNodeIds?.has(node.id) ?? false;
+        const familyActive = familyHighlight?.nodeIds.has(node.id) ?? false;
+        const active = pathActive || familyActive;
+        const dimmed =
+          (pathNodeIds !== null && !pathActive) ||
+          (familyHighlight !== null && !familyActive && !pathActive);
         const color = colorByFamily ? getFamilyColor(familyName).stroke : NEUTRAL_STROKE;
         return (
           <mesh key={node.id} position={[node.x, node.y, node.z]}>
             <sphereGeometry args={[active ? 3 : 2.2, 16, 16]} />
             <meshStandardMaterial
-              color={active ? "#4a8ac8" : color}
+              color={pathActive ? PATH_STROKE : familyActive ? "#4a8ac8" : color}
               transparent
               opacity={dimmed ? 0.2 : 0.9}
             />
@@ -494,8 +552,13 @@ function SceneContent({
             if (node.kind !== "person") return null;
             const person = individuals[node.id];
             if (!person) return null;
-            const active = highlight?.nodeIds.has(node.id) ?? false;
-            const dimmed = highlight !== null && !active;
+            if (!visibleFamilyNames.has(person.familyName)) return null;
+            const pathActive = pathNodeIds?.has(node.id) ?? false;
+            const familyActive = familyHighlight?.nodeIds.has(node.id) ?? false;
+            const active = pathActive || familyActive;
+            const dimmed =
+              (pathNodeIds !== null && !pathActive) ||
+              (familyHighlight !== null && !familyActive && !pathActive);
             return (
               <PersonCard
                 key={node.id}
@@ -508,6 +571,7 @@ function SceneContent({
                 selected={selectedId === node.id}
                 dimmed={dimmed}
                 emphasized={active && selectedId !== node.id}
+                pathHighlighted={pathActive}
                 showNamesOnly={showNamesOnly}
                 onSelect={onSelectPerson}
                 onHover={setHoveredId}
@@ -546,6 +610,9 @@ export function FamilyTree3D({
   colorByFamily,
   greyDeceased,
   showNamesOnly,
+  visibleFamilyNames,
+  pathNodeIds,
+  pathEdgeIds,
   controlsRef,
 }: FamilyTree3DProps) {
   const layout = useMemo(() => computeLayout3D(), []);
@@ -570,6 +637,9 @@ export function FamilyTree3D({
           colorByFamily={colorByFamily}
           greyDeceased={greyDeceased}
           showNamesOnly={showNamesOnly}
+          visibleFamilyNames={visibleFamilyNames}
+          pathNodeIds={pathNodeIds}
+          pathEdgeIds={pathEdgeIds}
           viewControlsRef={controlsRef}
         />
       </Canvas>

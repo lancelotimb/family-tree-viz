@@ -44,6 +44,8 @@ export type Layout3DNode = {
 export type Link3DKind = "marriage" | "child";
 
 export type Layout3DLink = {
+  /** Matches the React Flow edge id, so shared features can highlight paths. */
+  edgeId: string;
   sourceId: string;
   targetId: string;
   kind: Link3DKind;
@@ -104,6 +106,7 @@ type SimNode = SimulationNode & {
 };
 
 type SimLink = SimulationLink<SimNode> & {
+  edgeId: string;
   kind: Link3DKind;
   familyName: string;
 };
@@ -183,14 +186,28 @@ export function computeLayout3D(options: Layout3DOptions = {}): Layout3DResult {
   // --- Links ----------------------------------------------------------------
   const links: SimLink[] = [];
   for (const union of includedUnions) {
-    const familyName = unionFamilyName(union.id);
+    const fallbackFamilyName = unionFamilyName(union.id);
     for (const partnerId of union.partnerIds) {
       if (!nodeById.has(partnerId) || !nodeById.has(union.id)) continue;
-      links.push({ source: partnerId, target: union.id, kind: "marriage", familyName });
+      const familyName = individuals[partnerId]?.familyName ?? fallbackFamilyName;
+      links.push({
+        edgeId: `marriage-${union.id}-${partnerId}`,
+        source: partnerId,
+        target: union.id,
+        kind: "marriage",
+        familyName,
+      });
     }
     for (const childId of union.childIds) {
       if (!nodeById.has(childId) || !nodeById.has(union.id)) continue;
-      links.push({ source: union.id, target: childId, kind: "child", familyName });
+      const familyName = individuals[childId]?.familyName ?? fallbackFamilyName;
+      links.push({
+        edgeId: `child-${union.id}-${childId}`,
+        source: union.id,
+        target: childId,
+        kind: "child",
+        familyName,
+      });
     }
   }
 
@@ -249,6 +266,7 @@ export function computeLayout3D(options: Layout3DOptions = {}): Layout3DResult {
   }));
 
   const resultLinks: Layout3DLink[] = links.map((link) => ({
+    edgeId: link.edgeId,
     sourceId: typeof link.source === "object" ? link.source.id : String(link.source),
     targetId: typeof link.target === "object" ? link.target.id : String(link.target),
     kind: link.kind,
