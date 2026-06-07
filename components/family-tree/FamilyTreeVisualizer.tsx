@@ -816,13 +816,16 @@ function FamilyTreeCanvas() {
         <FamilyTree3D
           selectedId={selectedId}
           onSelectPerson={handleSelectPerson}
-          onClearSelection={closeProfilePanel}
+          onClearSelection={handlePaneClick}
           colorByFamily={colorByFamily}
           greyDeceased={greyDeceased}
           showNamesOnly={activeShowNamesOnly}
           visibleFamilyNames={visibleFamilyNames}
+          lineagePersonIds={lineagePersonIds}
+          focusHighlightNodeIds={focusHighlightNodeIds}
           pathNodeIds={pathNodeIds}
           pathEdgeIds={pathEdgeIdSet}
+          onOpenNodeContextMenu={setContextMenuTarget}
           controlsRef={controls3DRef}
         />
       ) : (

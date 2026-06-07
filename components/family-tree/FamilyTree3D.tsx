@@ -11,7 +11,14 @@ import {
   type Layout3DLink,
   type Layout3DResult,
 } from "./layout3d";
-import { getFamilyColor, getFamilyHighlight, individuals, unions } from "./familyGraph";
+import {
+  getFamilyColor,
+  getFamilyHighlight,
+  individuals,
+  unionSearchIndex,
+  unions,
+} from "./familyGraph";
+import type { NodeContextMenuTarget } from "./familyTreeActionsContext";
 import { isDeceased } from "./personUtils";
 import { ProfileAvatar } from "./ProfileAvatar";
 
@@ -20,6 +27,7 @@ const NEUTRAL_BORDER = "#d8cab0";
 const NEUTRAL_BG = "#fffef9";
 const GREY_STROKE = "#b3a791";
 const PATH_STROKE = "#48a066";
+const FOCUS_STROKE = "#c85f5f";
 const CAMERA_FOV = 45;
 const SCENE_BG = "#f4efe5";
 // Keep the DOM person cards strictly below the overlay UI (parameters sidebar,
@@ -40,8 +48,11 @@ type FamilyTree3DProps = {
   greyDeceased: boolean;
   showNamesOnly: boolean;
   visibleFamilyNames: Set<string>;
+  lineagePersonIds: Set<string> | null;
+  focusHighlightNodeIds: Set<string> | null;
   pathNodeIds: Set<string> | null;
   pathEdgeIds: Set<string> | null;
+  onOpenNodeContextMenu: (target: NodeContextMenuTarget) => void;
   /** Parent assigns camera controls here for the bottom-right button group. */
   controlsRef?: React.MutableRefObject<FamilyTree3DControls | null>;
 };
@@ -178,9 +189,11 @@ function PersonCard({
   dimmed,
   emphasized,
   pathHighlighted,
+  focusHighlighted,
   showNamesOnly,
   onSelect,
   onHover,
+  onOpenContextMenu,
 }: {
   id: string;
   position: Vec3;
@@ -190,9 +203,11 @@ function PersonCard({
   dimmed: boolean;
   emphasized: boolean;
   pathHighlighted: boolean;
+  focusHighlighted: boolean;
   showNamesOnly: boolean;
   onSelect: (id: string) => void;
   onHover: (id: string | null) => void;
+  onOpenContextMenu: (target: NodeContextMenuTarget) => void;
 }) {
   const person = individuals[id];
   if (!person) return null;
@@ -216,6 +231,8 @@ function PersonCard({
     ? `0 0 0 2px ${branch.stroke}, 0 6px 18px rgba(120, 80, 40, 0.35)`
     : pathHighlighted
       ? "0 0 0 2px rgba(72,160,102,0.65), 0 6px 16px rgba(40,120,70,0.24)"
+    : focusHighlighted
+      ? "0 0 0 2px rgba(200,95,95,0.65), 0 6px 16px rgba(130,45,45,0.24)"
     : emphasized
       ? "0 0 0 2px rgba(90,148,208,0.55), 0 6px 16px rgba(45,95,160,0.25)"
       : "0 3px 10px rgba(60, 52, 40, 0.18)";
@@ -236,6 +253,17 @@ function PersonCard({
     },
     onPointerEnter: () => onHover(id),
     onPointerLeave: () => onHover(null),
+    onContextMenu: (event: React.MouseEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      onOpenContextMenu({
+        nodeId: id,
+        kind: "person" as const,
+        label: person.name,
+        x: event.clientX,
+        y: event.clientY,
+      });
+    },
     title: `${person.name} (${person.familyName}) · ${lifespan}`,
   };
 
@@ -392,8 +420,10 @@ function SceneContent({
   greyDeceased,
   showNamesOnly,
   visibleFamilyNames,
+  focusHighlightNodeIds,
   pathNodeIds,
   pathEdgeIds,
+  onOpenNodeContextMenu,
   viewControlsRef,
 }: {
   layout: Layout3DResult;
@@ -403,8 +433,10 @@ function SceneContent({
   greyDeceased: boolean;
   showNamesOnly: boolean;
   visibleFamilyNames: Set<string>;
+  focusHighlightNodeIds: Set<string> | null;
   pathNodeIds: Set<string> | null;
   pathEdgeIds: Set<string> | null;
+  onOpenNodeContextMenu: (target: NodeContextMenuTarget) => void;
   viewControlsRef?: React.MutableRefObject<FamilyTree3DControls | null>;
 }) {
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
@@ -470,6 +502,21 @@ function SceneContent({
   const linkIsPathHighlighted = (link: Layout3DLink) =>
     pathEdgeIds?.has(link.edgeId) ?? false;
 
+  const openUnionContextMenu = (
+    nodeId: string,
+    event: { stopPropagation: () => void; nativeEvent: MouseEvent },
+  ) => {
+    event.stopPropagation();
+    event.nativeEvent.preventDefault();
+    onOpenNodeContextMenu({
+      nodeId,
+      kind: "union",
+      label: unionSearchIndex.find((union) => union.id === nodeId)?.label ?? "Union",
+      x: event.nativeEvent.clientX,
+      y: event.nativeEvent.clientY,
+    });
+  };
+
   return (
     <>
       <color attach="background" args={[SCENE_BG]} />
@@ -529,17 +576,30 @@ function SceneContent({
           union?.childIds.map((id) => individuals[id]?.familyName).find(Boolean) ??
           "UNKNOWN";
         const pathActive = pathNodeIds?.has(node.id) ?? false;
+        const focusActive = focusHighlightNodeIds?.has(node.id) ?? false;
         const familyActive = familyHighlight?.nodeIds.has(node.id) ?? false;
-        const active = pathActive || familyActive;
+        const active = pathActive || focusActive || familyActive;
         const dimmed =
           (pathNodeIds !== null && !pathActive) ||
-          (familyHighlight !== null && !familyActive && !pathActive);
+          (familyHighlight !== null && !familyActive && !pathActive && !focusActive);
         const color = colorByFamily ? getFamilyColor(familyName).stroke : NEUTRAL_STROKE;
         return (
-          <mesh key={node.id} position={[node.x, node.y, node.z]}>
+          <mesh
+            key={node.id}
+            position={[node.x, node.y, node.z]}
+            onContextMenu={(event) => openUnionContextMenu(node.id, event)}
+          >
             <sphereGeometry args={[active ? 3 : 2.2, 16, 16]} />
             <meshStandardMaterial
-              color={pathActive ? PATH_STROKE : familyActive ? "#4a8ac8" : color}
+              color={
+                pathActive
+                  ? PATH_STROKE
+                  : focusActive
+                    ? FOCUS_STROKE
+                    : familyActive
+                      ? "#4a8ac8"
+                      : color
+              }
               transparent
               opacity={dimmed ? 0.2 : 0.9}
             />
@@ -554,11 +614,12 @@ function SceneContent({
             if (!person) return null;
             if (!visibleFamilyNames.has(person.familyName)) return null;
             const pathActive = pathNodeIds?.has(node.id) ?? false;
+            const focusActive = focusHighlightNodeIds?.has(node.id) ?? false;
             const familyActive = familyHighlight?.nodeIds.has(node.id) ?? false;
-            const active = pathActive || familyActive;
+            const active = pathActive || focusActive || familyActive;
             const dimmed =
               (pathNodeIds !== null && !pathActive) ||
-              (familyHighlight !== null && !familyActive && !pathActive);
+              (familyHighlight !== null && !familyActive && !pathActive && !focusActive);
             return (
               <PersonCard
                 key={node.id}
@@ -572,9 +633,11 @@ function SceneContent({
                 dimmed={dimmed}
                 emphasized={active && selectedId !== node.id}
                 pathHighlighted={pathActive}
+                focusHighlighted={focusActive}
                 showNamesOnly={showNamesOnly}
                 onSelect={onSelectPerson}
                 onHover={setHoveredId}
+                onOpenContextMenu={onOpenNodeContextMenu}
               />
             );
           })
@@ -611,11 +674,20 @@ export function FamilyTree3D({
   greyDeceased,
   showNamesOnly,
   visibleFamilyNames,
+  lineagePersonIds,
+  focusHighlightNodeIds,
   pathNodeIds,
   pathEdgeIds,
+  onOpenNodeContextMenu,
   controlsRef,
 }: FamilyTree3DProps) {
-  const layout = useMemo(() => computeLayout3D(), []);
+  const layout = useMemo(
+    () =>
+      computeLayout3D({
+        ...(lineagePersonIds ? { personIds: lineagePersonIds } : {}),
+      }),
+    [lineagePersonIds],
+  );
   const initialCamera = useMemo(
     () => ({ position: cameraPositionFor(layout.bounds), fov: CAMERA_FOV }),
     [layout.bounds],
@@ -638,8 +710,10 @@ export function FamilyTree3D({
           greyDeceased={greyDeceased}
           showNamesOnly={showNamesOnly}
           visibleFamilyNames={visibleFamilyNames}
+          focusHighlightNodeIds={focusHighlightNodeIds}
           pathNodeIds={pathNodeIds}
           pathEdgeIds={pathEdgeIds}
+          onOpenNodeContextMenu={onOpenNodeContextMenu}
           viewControlsRef={controlsRef}
         />
       </Canvas>
