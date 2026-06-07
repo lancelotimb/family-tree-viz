@@ -86,6 +86,20 @@ export function ZoomControls({
             icon={<Maximize2 className="h-4 w-4" />}
             onClick={() => onResetView?.()}
           />
+          {timeTravelOpen ? (
+            <ZoomButton
+              label="Close time travel"
+              icon={<X className="h-4 w-4" />}
+              onClick={onTimeTravelClose ?? (() => {})}
+              className="hidden md:flex"
+            />
+          ) : onTimeTravelOpen ? (
+            <ZoomButton
+              label="Time travel"
+              icon={<Calendar className="h-4 w-4" />}
+              onClick={onTimeTravelOpen}
+            />
+          ) : null}
         </>
       ) : (
         <>

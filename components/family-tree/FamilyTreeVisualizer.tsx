@@ -742,6 +742,15 @@ function FamilyTreeCanvas() {
     [getNode, setCenter],
   );
 
+  const handleSearchSelectPerson = useCallback(
+    (id: string) => {
+      if (viewMode !== "3d") return false;
+      controls3DRef.current?.focusPerson(id);
+      return true;
+    },
+    [viewMode],
+  );
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
@@ -825,6 +834,7 @@ function FamilyTreeCanvas() {
           focusHighlightNodeIds={focusHighlightNodeIds}
           pathNodeIds={pathNodeIds}
           pathEdgeIds={pathEdgeIdSet}
+          aliveAtYear={timeTravelOpen ? timeTravelYear : null}
           onOpenNodeContextMenu={setContextMenuTarget}
           controlsRef={controls3DRef}
         />
@@ -883,6 +893,7 @@ function FamilyTreeCanvas() {
               visibleFamilyNames={visibleFamilyNames}
               lineagePersonIds={lineagePersonIds}
               aliveAtYear={timeTravelOpen ? timeTravelYear : null}
+              onSelectPerson={handleSearchSelectPerson}
               onOpenChange={setSearchOpen}
               onDismissRef={dismissSearchRef}
             />
@@ -893,7 +904,7 @@ function FamilyTreeCanvas() {
             settingsOpen ? "max-md:hidden" : ""
           }`}
         >
-          {timeTravelOpen && viewMode === "2d" ? (
+          {timeTravelOpen ? (
             <TimePlayer
               minYear={timeRange.minYear}
               maxYear={timeRange.maxYear}

@@ -20,8 +20,9 @@ import {
 } from "./familyGraph";
 import type { NodeContextMenuTarget } from "./familyTreeActionsContext";
 import { familyHighlight as highlightColors } from "./familyHighlightColors";
-import { isDeceased } from "./personUtils";
+import { isDeceased, isDeceasedAsOfYear } from "./personUtils";
 import { ProfileAvatar } from "./ProfileAvatar";
+import { isBornByYear } from "./timeUtils";
 
 const NEUTRAL_STROKE = "#c4b49a";
 const NEUTRAL_BORDER = "#d8cab0";
@@ -37,6 +38,7 @@ const CARD_Z_RANGE: [number, number] = [9, 0];
 
 export type FamilyTree3DControls = {
   resetView: () => void;
+  focusPerson: (id: string) => boolean;
   zoomIn: () => void;
   zoomOut: () => void;
 };
@@ -53,6 +55,7 @@ type FamilyTree3DProps = {
   focusHighlightNodeIds: Set<string> | null;
   pathNodeIds: Set<string> | null;
   pathEdgeIds: Set<string> | null;
+  aliveAtYear: number | null;
   onOpenNodeContextMenu: (target: NodeContextMenuTarget) => void;
   /** Parent assigns camera controls here for the bottom-right button group. */
   controlsRef?: React.MutableRefObject<FamilyTree3DControls | null>;
@@ -73,6 +76,7 @@ function cameraPositionFor(bounds: Layout3DResult["bounds"]): Vec3 {
 /** Frames the tree on mount and exposes a reset callback to the parent. */
 function CameraRig({
   bounds,
+  positions,
   orbitControlsRef,
   viewControlsRef,
   minDistance,
@@ -80,6 +84,7 @@ function CameraRig({
   onReady,
 }: {
   bounds: Layout3DResult["bounds"];
+  positions: Map<string, Vec3>;
   orbitControlsRef: React.MutableRefObject<OrbitControlsImpl | null>;
   viewControlsRef?: React.MutableRefObject<FamilyTree3DControls | null>;
   minDistance: number;
@@ -122,11 +127,34 @@ function CameraRig({
       invalidate();
     };
 
+    const focusPerson = (id: string) => {
+      const position = positions.get(id);
+      if (!position) return false;
+
+      const controls = orbitControlsRef.current;
+      const currentTarget = controls?.target ?? target;
+      const nextTarget = new THREE.Vector3(...position);
+      const direction = camera.position.clone().sub(currentTarget);
+      if (direction.lengthSq() === 0) direction.set(0.45, 0.5, 1);
+      direction.normalize();
+      const nextDistance = THREE.MathUtils.clamp(85, minDistance, maxDistance);
+      camera.position.copy(nextTarget).add(direction.multiplyScalar(nextDistance));
+      camera.updateProjectionMatrix();
+      camera.lookAt(nextTarget);
+      if (controls) {
+        controls.target.copy(nextTarget);
+        controls.update();
+      }
+      invalidate();
+      return true;
+    };
+
     apply();
     onReady();
     if (viewControlsRef) {
       viewControlsRef.current = {
         resetView: apply,
+        focusPerson,
         zoomIn: () => zoomBy(0.72),
         zoomOut: () => zoomBy(1 / 0.72),
       };
@@ -142,6 +170,7 @@ function CameraRig({
     minDistance,
     onReady,
     orbitControlsRef,
+    positions,
     viewControlsRef,
   ]);
 
@@ -450,6 +479,7 @@ function SceneContent({
   focusHighlightNodeIds,
   pathNodeIds,
   pathEdgeIds,
+  aliveAtYear,
   onOpenNodeContextMenu,
   viewControlsRef,
 }: {
@@ -463,6 +493,7 @@ function SceneContent({
   focusHighlightNodeIds: Set<string> | null;
   pathNodeIds: Set<string> | null;
   pathEdgeIds: Set<string> | null;
+  aliveAtYear: number | null;
   onOpenNodeContextMenu: (target: NodeContextMenuTarget) => void;
   viewControlsRef?: React.MutableRefObject<FamilyTree3DControls | null>;
 }) {
@@ -489,15 +520,26 @@ function SceneContent({
     [visibleFamilyNames],
   );
 
+  const isPersonVisibleByYear = useCallback(
+    (id: string) => {
+      if (aliveAtYear === null) return true;
+      const person = individuals[id];
+      return !person || isBornByYear(person.birth.year, aliveAtYear);
+    },
+    [aliveAtYear],
+  );
+
   const visibleLinks = useMemo(
     () =>
       layout.links.filter(
         (link) =>
           visibleFamilyNames.has(link.familyName) &&
           isPersonVisibleByBranch(link.sourceId) &&
-          isPersonVisibleByBranch(link.targetId),
+          isPersonVisibleByBranch(link.targetId) &&
+          isPersonVisibleByYear(link.sourceId) &&
+          isPersonVisibleByYear(link.targetId),
       ),
-    [isPersonVisibleByBranch, layout.links, visibleFamilyNames],
+    [isPersonVisibleByBranch, isPersonVisibleByYear, layout.links, visibleFamilyNames],
   );
 
   const visibleUnionIds = useMemo(() => {
@@ -513,7 +555,12 @@ function SceneContent({
   const linkTouchesDeceased = (sourceId: string, targetId: string) => {
     for (const id of [sourceId, targetId]) {
       const person = individuals[id];
-      if (person && isDeceased(person.birth.year, person.death?.year ?? null)) {
+      if (
+        person &&
+        (aliveAtYear === null
+          ? isDeceased(person.birth.year, person.death?.year ?? null)
+          : isDeceasedAsOfYear(person.birth.year, person.death?.year ?? null, aliveAtYear))
+      ) {
         return true;
       }
     }
@@ -650,6 +697,7 @@ function SceneContent({
             const person = individuals[node.id];
             if (!person) return null;
             if (!visibleFamilyNames.has(person.familyName)) return null;
+            if (!isPersonVisibleByYear(node.id)) return null;
             const pathActive = pathNodeIds?.has(node.id) ?? false;
             const focusActive = focusHighlightNodeIds?.has(node.id) ?? false;
             const familyActive = familyNodeHighlight?.nodeIds.has(node.id) ?? false;
@@ -670,7 +718,14 @@ function SceneContent({
                 position={[node.x, node.y, node.z]}
                 colorByFamily={colorByFamily}
                 greyed={
-                  greyDeceased && isDeceased(person.birth.year, person.death?.year ?? null)
+                  greyDeceased &&
+                  (aliveAtYear === null
+                    ? isDeceased(person.birth.year, person.death?.year ?? null)
+                    : isDeceasedAsOfYear(
+                        person.birth.year,
+                        person.death?.year ?? null,
+                        aliveAtYear,
+                      ))
                 }
                 selected={selectedId === node.id}
                 dimmed={dimmed}
@@ -689,6 +744,7 @@ function SceneContent({
 
       <CameraRig
         bounds={layout.bounds}
+        positions={positions}
         orbitControlsRef={controlsRef}
         viewControlsRef={viewControlsRef}
         minDistance={minDistance}
@@ -722,6 +778,7 @@ export function FamilyTree3D({
   focusHighlightNodeIds,
   pathNodeIds,
   pathEdgeIds,
+  aliveAtYear,
   onOpenNodeContextMenu,
   controlsRef,
 }: FamilyTree3DProps) {
@@ -757,6 +814,7 @@ export function FamilyTree3D({
           focusHighlightNodeIds={focusHighlightNodeIds}
           pathNodeIds={pathNodeIds}
           pathEdgeIds={pathEdgeIds}
+          aliveAtYear={aliveAtYear}
           onOpenNodeContextMenu={onOpenNodeContextMenu}
           viewControlsRef={controlsRef}
         />
