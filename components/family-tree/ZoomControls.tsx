@@ -2,11 +2,9 @@
 
 import { useReactFlow } from "@xyflow/react";
 import {
-  Box,
   Calendar,
   Maximize2,
   Settings,
-  Square,
   X,
   ZoomIn,
   ZoomOut,
@@ -22,6 +20,8 @@ type ZoomControlsProps = {
   onTimeTravelClose?: () => void;
   viewMode?: ViewMode;
   onViewModeChange?: (mode: ViewMode) => void;
+  onZoomIn3D?: () => void;
+  onZoomOut3D?: () => void;
   /** Reset the 3D camera to its default framing. */
   onResetView?: () => void;
 };
@@ -33,6 +33,8 @@ export function ZoomControls({
   onTimeTravelClose,
   viewMode = "2d",
   onViewModeChange,
+  onZoomIn3D,
+  onZoomOut3D,
   onResetView,
 }: ZoomControlsProps) {
   const { getZoom, zoomTo, fitView } = useReactFlow();
@@ -68,11 +70,23 @@ export function ZoomControls({
       )}
 
       {is3D ? (
-        <ZoomButton
-          label="Reset view"
-          icon={<Maximize2 className="h-4 w-4" />}
-          onClick={() => onResetView?.()}
-        />
+        <>
+          <ZoomButton
+            label="Zoom in"
+            icon={<ZoomIn className="h-4 w-4" />}
+            onClick={() => onZoomIn3D?.()}
+          />
+          <ZoomButton
+            label="Zoom out"
+            icon={<ZoomOut className="h-4 w-4" />}
+            onClick={() => onZoomOut3D?.()}
+          />
+          <ZoomButton
+            label="Reset view"
+            icon={<Maximize2 className="h-4 w-4" />}
+            onClick={() => onResetView?.()}
+          />
+        </>
       ) : (
         <>
           <ZoomButton
@@ -113,8 +127,7 @@ export function ZoomControls({
 }
 
 /**
- * The 2D / 3D switcher. Shows the *current* mode's icon and the label of the
- * mode it will switch to, so the action is unambiguous.
+ * The 2D / 3D switcher. Shows the text label of the mode it will switch to.
  */
 function ModeToggle({
   mode,
@@ -131,10 +144,9 @@ function ModeToggle({
       onClick={onClick}
       aria-label={`Switch to ${target} view`}
       title={`Switch to ${target} view`}
-      className="flex h-10 w-10 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-xl border border-[#e8dfd0] bg-white/80 text-[#3d3428] shadow-lg backdrop-blur-md transition-colors hover:border-[#d4c4a8] hover:bg-[#faf6ef]"
+      className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-[#e8dfd0] bg-white/80 text-[#3d3428] shadow-lg backdrop-blur-md transition-colors hover:border-[#d4c4a8] hover:bg-[#faf6ef]"
     >
-      {is3D ? <Box className="h-4 w-4" /> : <Square className="h-4 w-4" />}
-      <span className="text-[9px] font-semibold leading-none tracking-wide">
+      <span className="text-sm font-bold leading-none tracking-wide">
         {target}
       </span>
     </button>

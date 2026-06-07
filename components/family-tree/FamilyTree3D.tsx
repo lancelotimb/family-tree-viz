@@ -24,6 +24,12 @@ const SCENE_BG = "#f4efe5";
 // search, controls) which sits at Tailwind `z-10`, so they never paint over it.
 const CARD_Z_RANGE: [number, number] = [9, 0];
 
+export type FamilyTree3DControls = {
+  resetView: () => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
+};
+
 type FamilyTree3DProps = {
   selectedId: string | null;
   onSelectPerson: (id: string) => void;
@@ -31,8 +37,8 @@ type FamilyTree3DProps = {
   colorByFamily: boolean;
   greyDeceased: boolean;
   showNamesOnly: boolean;
-  /** Parent assigns a "reset camera to the default framing" callback here. */
-  resetViewRef?: React.MutableRefObject<(() => void) | null>;
+  /** Parent assigns camera controls here for the bottom-right button group. */
+  controlsRef?: React.MutableRefObject<FamilyTree3DControls | null>;
 };
 
 type Vec3 = [number, number, number];
@@ -50,40 +56,77 @@ function cameraPositionFor(bounds: Layout3DResult["bounds"]): Vec3 {
 /** Frames the tree on mount and exposes a reset callback to the parent. */
 function CameraRig({
   bounds,
-  controlsRef,
-  resetViewRef,
+  orbitControlsRef,
+  viewControlsRef,
+  minDistance,
+  maxDistance,
   onReady,
 }: {
   bounds: Layout3DResult["bounds"];
-  controlsRef: React.MutableRefObject<OrbitControlsImpl | null>;
-  resetViewRef?: React.MutableRefObject<(() => void) | null>;
+  orbitControlsRef: React.MutableRefObject<OrbitControlsImpl | null>;
+  viewControlsRef?: React.MutableRefObject<FamilyTree3DControls | null>;
+  minDistance: number;
+  maxDistance: number;
   onReady: () => void;
 }) {
   const camera = useThree((state) => state.camera);
   const invalidate = useThree((state) => state.invalidate);
 
   useLayoutEffect(() => {
+    const target = new THREE.Vector3(0, 0, 0);
+
     const apply = () => {
       const [x, y, z] = cameraPositionFor(bounds);
       camera.position.set(x, y, z);
       camera.updateProjectionMatrix();
-      camera.lookAt(0, 0, 0);
-      const controls = controlsRef.current;
+      camera.lookAt(target);
+      const controls = orbitControlsRef.current;
       if (controls) {
-        controls.target.set(0, 0, 0);
+        controls.target.copy(target);
         controls.update();
       }
       invalidate();
     };
+
+    const zoomBy = (factor: number) => {
+      const controls = orbitControlsRef.current;
+      const currentTarget = controls?.target ?? target;
+      const offset = camera.position.clone().sub(currentTarget);
+      const nextDistance = THREE.MathUtils.clamp(
+        offset.length() * factor,
+        minDistance,
+        maxDistance,
+      );
+      offset.setLength(nextDistance);
+      camera.position.copy(currentTarget).add(offset);
+      camera.updateProjectionMatrix();
+      camera.lookAt(currentTarget);
+      controls?.update();
+      invalidate();
+    };
+
     apply();
     onReady();
-    if (resetViewRef) {
-      resetViewRef.current = apply;
+    if (viewControlsRef) {
+      viewControlsRef.current = {
+        resetView: apply,
+        zoomIn: () => zoomBy(0.72),
+        zoomOut: () => zoomBy(1 / 0.72),
+      };
       return () => {
-        resetViewRef.current = null;
+        viewControlsRef.current = null;
       };
     }
-  }, [bounds, camera, controlsRef, invalidate, onReady, resetViewRef]);
+  }, [
+    bounds,
+    camera,
+    invalidate,
+    maxDistance,
+    minDistance,
+    onReady,
+    orbitControlsRef,
+    viewControlsRef,
+  ]);
 
   return null;
 }
@@ -339,7 +382,7 @@ function SceneContent({
   colorByFamily,
   greyDeceased,
   showNamesOnly,
-  resetViewRef,
+  viewControlsRef,
 }: {
   layout: Layout3DResult;
   selectedId: string | null;
@@ -347,12 +390,14 @@ function SceneContent({
   colorByFamily: boolean;
   greyDeceased: boolean;
   showNamesOnly: boolean;
-  resetViewRef?: React.MutableRefObject<(() => void) | null>;
+  viewControlsRef?: React.MutableRefObject<FamilyTree3DControls | null>;
 }) {
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
   const markCameraReady = useCallback(() => setCameraReady(true), []);
+  const minDistance = 20;
+  const maxDistance = Math.max(layout.bounds.radius, 200) * 6;
 
   const positions = useMemo(() => {
     const map = new Map<string, Vec3>();
@@ -473,8 +518,10 @@ function SceneContent({
 
       <CameraRig
         bounds={layout.bounds}
-        controlsRef={controlsRef}
-        resetViewRef={resetViewRef}
+        orbitControlsRef={controlsRef}
+        viewControlsRef={viewControlsRef}
+        minDistance={minDistance}
+        maxDistance={maxDistance}
         onReady={markCameraReady}
       />
       <OrbitControls
@@ -485,8 +532,8 @@ function SceneContent({
         rotateSpeed={0.6}
         zoomSpeed={0.8}
         panSpeed={0.7}
-        maxDistance={Math.max(layout.bounds.radius, 200) * 6}
-        minDistance={20}
+        maxDistance={maxDistance}
+        minDistance={minDistance}
       />
     </>
   );
@@ -499,7 +546,7 @@ export function FamilyTree3D({
   colorByFamily,
   greyDeceased,
   showNamesOnly,
-  resetViewRef,
+  controlsRef,
 }: FamilyTree3DProps) {
   const layout = useMemo(() => computeLayout3D(), []);
   const initialCamera = useMemo(
@@ -523,7 +570,7 @@ export function FamilyTree3D({
           colorByFamily={colorByFamily}
           greyDeceased={greyDeceased}
           showNamesOnly={showNamesOnly}
-          resetViewRef={resetViewRef}
+          viewControlsRef={controlsRef}
         />
       </Canvas>
     </div>

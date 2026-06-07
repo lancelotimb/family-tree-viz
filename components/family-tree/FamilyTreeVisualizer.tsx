@@ -54,6 +54,7 @@ import {
 import { computeLayout, type LayoutPosition } from "./elkLayout";
 import { isDeceased, isDeceasedAsOfYear } from "./personUtils";
 import { getFamilyTimeRange, isBornByYear } from "./timeUtils";
+import type { FamilyTree3DControls } from "./FamilyTree3D";
 import type { FamilyNodeData } from "./types";
 
 const currentCalendarYear = new Date().getFullYear();
@@ -177,7 +178,7 @@ function FamilyTreeCanvas() {
   const [timeTravelOpen, setTimeTravelOpen] = useState(false);
   const [timeTravelYear, setTimeTravelYear] = useState(currentCalendarYear);
   const [viewMode, setViewMode] = useState<ViewMode>("2d");
-  const resetView3DRef = useRef<(() => void) | null>(null);
+  const controls3DRef = useRef<FamilyTree3DControls | null>(null);
   const suppressNextNodeClickRef = useRef(false);
   const instanceRef = useRef<ReactFlowInstance<Node<FamilyNodeData>, Edge> | null>(
     null,
@@ -819,7 +820,7 @@ function FamilyTreeCanvas() {
           colorByFamily={colorByFamily}
           greyDeceased={greyDeceased}
           showNamesOnly={activeShowNamesOnly}
-          resetViewRef={resetView3DRef}
+          controlsRef={controls3DRef}
         />
       ) : (
         <ReactFlow
@@ -900,7 +901,9 @@ function FamilyTreeCanvas() {
               onTimeTravelClose={handleTimeTravelClose}
               viewMode={viewMode}
               onViewModeChange={setViewMode}
-              onResetView={() => resetView3DRef.current?.()}
+              onZoomIn3D={() => controls3DRef.current?.zoomIn()}
+              onZoomOut3D={() => controls3DRef.current?.zoomOut()}
+              onResetView={() => controls3DRef.current?.resetView()}
             />
           </div>
         </div>
