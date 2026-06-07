@@ -2,7 +2,7 @@
 
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
-import { Html, Line, OrbitControls } from "@react-three/drei";
+import { Html, Line, OrbitControls, useCursor } from "@react-three/drei";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import {
@@ -19,6 +19,7 @@ import {
   unions,
 } from "./familyGraph";
 import type { NodeContextMenuTarget } from "./familyTreeActionsContext";
+import { familyHighlight as highlightColors } from "./familyHighlightColors";
 import { isDeceased } from "./personUtils";
 import { ProfileAvatar } from "./ProfileAvatar";
 
@@ -190,6 +191,7 @@ function PersonCard({
   emphasized,
   pathHighlighted,
   focusHighlighted,
+  hoverKind,
   showNamesOnly,
   onSelect,
   onHover,
@@ -204,6 +206,7 @@ function PersonCard({
   emphasized: boolean;
   pathHighlighted: boolean;
   focusHighlighted: boolean;
+  hoverKind: "primary" | "related" | null;
   showNamesOnly: boolean;
   onSelect: (id: string) => void;
   onHover: (id: string | null) => void;
@@ -213,13 +216,29 @@ function PersonCard({
   if (!person) return null;
 
   const branch = getFamilyColor(person.familyName);
+  const hoverHighlight =
+    hoverKind === "primary"
+      ? highlightColors.hover.primary
+      : hoverKind === "related"
+        ? highlightColors.hover.related
+        : null;
   const borderColor = selected
-    ? "#b8956a"
+    ? hoverHighlight?.border ?? "#b8956a"
+    : hoverHighlight
+      ? hoverHighlight.border
     : colorByFamily
       ? branch.border
       : NEUTRAL_BORDER;
-  const textColor = colorByFamily ? branch.text : "#3d3428";
-  const avatarColor = colorByFamily ? branch.stroke : "#a8957a";
+  const textColor = hoverHighlight
+    ? hoverHighlight.text
+    : colorByFamily
+      ? branch.text
+      : "#3d3428";
+  const avatarColor = hoverHighlight
+    ? hoverHighlight.stroke
+    : colorByFamily
+      ? branch.stroke
+      : "#a8957a";
   const lifespan = person.death?.year
     ? `${person.birth.year ?? "?"} – ${person.death.year}`
     : `${person.birth.year ?? "?"} –`;
@@ -269,7 +288,11 @@ function PersonCard({
 
   if (showNamesOnly) {
     const compactBg = colorByFamily
-      ? `color-mix(in srgb, ${branch.background} 45%, #fffef9)`
+      ? hoverHighlight
+        ? `color-mix(in srgb, ${branch.background} 32%, ${hoverHighlight.background})`
+        : `color-mix(in srgb, ${branch.background} 45%, #fffef9)`
+      : hoverHighlight
+        ? hoverHighlight.background
       : NEUTRAL_BG;
     return (
       <Html
@@ -317,7 +340,11 @@ function PersonCard({
   }
 
   const cardBg = colorByFamily
-    ? `color-mix(in srgb, ${branch.background} 45%, #fffef9)`
+    ? hoverHighlight
+      ? `color-mix(in srgb, ${branch.background} 32%, ${hoverHighlight.background})`
+      : `color-mix(in srgb, ${branch.background} 45%, #fffef9)`
+    : hoverHighlight
+      ? hoverHighlight.background
     : NEUTRAL_BG;
   const avatarBg = colorByFamily
     ? `linear-gradient(180deg, ${branch.background}, #f0e8da)`
@@ -441,8 +468,10 @@ function SceneContent({
 }) {
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [hoveredUnionId, setHoveredUnionId] = useState<string | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
   const markCameraReady = useCallback(() => setCameraReady(true), []);
+  useCursor(hoveredUnionId !== null, "pointer", "auto");
   const minDistance = 20;
   const maxDistance = Math.max(layout.bounds.radius, 200) * 6;
 
@@ -493,7 +522,7 @@ function SceneContent({
 
   // Highlight the family of whichever node is hovered, or the selected person
   // when nothing is hovered — same idea as the 2D hover behaviour.
-  const familyHighlight = useMemo(() => {
+  const familyNodeHighlight = useMemo(() => {
     const focusId = hoveredId ?? selectedId;
     if (!focusId || !individuals[focusId]) return null;
     return getFamilyHighlight(focusId);
@@ -533,13 +562,13 @@ function SceneContent({
         if (!from || !to) return null;
         const pathActive = linkIsPathHighlighted(link);
         const familyActive = Boolean(
-          familyHighlight?.nodeIds.has(link.sourceId) &&
-            familyHighlight?.nodeIds.has(link.targetId),
+          familyNodeHighlight?.nodeIds.has(link.sourceId) &&
+            familyNodeHighlight?.nodeIds.has(link.targetId),
         );
         const active = pathActive || familyActive;
         const dimmed =
           (pathEdgeIds !== null && !pathActive) ||
-          (familyHighlight !== null && !familyActive && !pathActive);
+          (familyNodeHighlight !== null && !familyActive && !pathActive);
         const greyed =
           greyDeceased &&
           !pathActive &&
@@ -577,16 +606,24 @@ function SceneContent({
           "UNKNOWN";
         const pathActive = pathNodeIds?.has(node.id) ?? false;
         const focusActive = focusHighlightNodeIds?.has(node.id) ?? false;
-        const familyActive = familyHighlight?.nodeIds.has(node.id) ?? false;
+        const familyActive = familyNodeHighlight?.nodeIds.has(node.id) ?? false;
         const active = pathActive || focusActive || familyActive;
         const dimmed =
           (pathNodeIds !== null && !pathActive) ||
-          (familyHighlight !== null && !familyActive && !pathActive && !focusActive);
+          (familyNodeHighlight !== null && !familyActive && !pathActive && !focusActive);
         const color = colorByFamily ? getFamilyColor(familyName).stroke : NEUTRAL_STROKE;
         return (
           <mesh
             key={node.id}
             position={[node.x, node.y, node.z]}
+            onPointerOver={(event) => {
+              event.stopPropagation();
+              setHoveredUnionId(node.id);
+            }}
+            onPointerOut={(event) => {
+              event.stopPropagation();
+              setHoveredUnionId((current) => (current === node.id ? null : current));
+            }}
             onContextMenu={(event) => openUnionContextMenu(node.id, event)}
           >
             <sphereGeometry args={[active ? 3 : 2.2, 16, 16]} />
@@ -615,11 +652,17 @@ function SceneContent({
             if (!visibleFamilyNames.has(person.familyName)) return null;
             const pathActive = pathNodeIds?.has(node.id) ?? false;
             const focusActive = focusHighlightNodeIds?.has(node.id) ?? false;
-            const familyActive = familyHighlight?.nodeIds.has(node.id) ?? false;
+            const familyActive = familyNodeHighlight?.nodeIds.has(node.id) ?? false;
+            const hoverKind =
+              hoveredId === node.id
+                ? "primary"
+                : familyNodeHighlight?.nodeIds.has(node.id)
+                  ? "related"
+                  : null;
             const active = pathActive || focusActive || familyActive;
             const dimmed =
               (pathNodeIds !== null && !pathActive) ||
-              (familyHighlight !== null && !familyActive && !pathActive && !focusActive);
+              (familyNodeHighlight !== null && !familyActive && !pathActive && !focusActive);
             return (
               <PersonCard
                 key={node.id}
@@ -634,6 +677,7 @@ function SceneContent({
                 emphasized={active && selectedId !== node.id}
                 pathHighlighted={pathActive}
                 focusHighlighted={focusActive}
+                hoverKind={hoverKind}
                 showNamesOnly={showNamesOnly}
                 onSelect={onSelectPerson}
                 onHover={setHoveredId}

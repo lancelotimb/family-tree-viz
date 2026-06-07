@@ -888,7 +888,11 @@ function FamilyTreeCanvas() {
             />
           </div>
         </header>
-        <div className="mt-auto flex items-end gap-3 pb-3 pl-3 pr-3 max-md:flex-col-reverse max-md:items-end max-md:gap-2">
+        <div
+          className={`mt-auto flex items-end gap-3 pb-3 pl-3 pr-3 max-md:flex-col-reverse max-md:items-end max-md:gap-2 ${
+            settingsOpen ? "max-md:hidden" : ""
+          }`}
+        >
           {timeTravelOpen && viewMode === "2d" ? (
             <TimePlayer
               minYear={timeRange.minYear}
