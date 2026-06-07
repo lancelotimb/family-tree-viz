@@ -158,7 +158,8 @@ function FamilyTreeCanvas() {
   const [greyDeceased, setGreyDeceased] = useState(false);
   const [colorByFamily, setColorByFamily] = useState(true);
   const [centerParents, setCenterParents] = useState(false);
-  const [showNamesOnly, setShowNamesOnly] = useState(false);
+  const [showNamesOnly2D, setShowNamesOnly2D] = useState(false);
+  const [showNamesOnly3D, setShowNamesOnly3D] = useState(true);
   const [visibleFamilyNames, setVisibleFamilyNames] = useState<Set<string>>(
     () => new Set(allFamilyNames),
   );
@@ -183,19 +184,21 @@ function FamilyTreeCanvas() {
   );
   const dismissSearchRef = useRef<(() => void) | null>(null);
   const { fitView, getNode, setCenter } = useReactFlow();
+  const activeShowNamesOnly = viewMode === "3d" ? showNamesOnly3D : showNamesOnly2D;
+  const setActiveShowNamesOnly = viewMode === "3d" ? setShowNamesOnly3D : setShowNamesOnly2D;
 
   const applyLayout = useCallback(
     (positions: Map<string, LayoutPosition>, personIds?: Set<string>) => {
       const layoutOptions = {
         ...(personIds ? { personIds } : {}),
-        showNamesOnly,
+        showNamesOnly: showNamesOnly2D,
       };
       setNodes(buildFlowNodes(positions));
       const built = buildFlowEdges(positions, layoutOptions);
       setBaseEdges(built);
       setEdges(built);
     },
-    [setNodes, setEdges, showNamesOnly],
+    [setNodes, setEdges, showNamesOnly2D],
   );
 
   const lineagePersonIds = useMemo(() => {
@@ -257,17 +260,17 @@ function FamilyTreeCanvas() {
         if (layoutPersonIds === null) {
           const cached =
             fullLayoutRef.current?.centerParents === centerParents &&
-            fullLayoutRef.current?.showNamesOnly === showNamesOnly
+            fullLayoutRef.current?.showNamesOnly === showNamesOnly2D
               ? fullLayoutRef.current.positions
               : null;
           const positions =
             cached ??
             (await computeLayout({
               centerParentsOverChildren: centerParents,
-              showNamesOnly,
+              showNamesOnly: showNamesOnly2D,
             }));
           if (cancelled) return;
-          fullLayoutRef.current = { centerParents, showNamesOnly, positions };
+          fullLayoutRef.current = { centerParents, showNamesOnly: showNamesOnly2D, positions };
           applyLayout(positions);
         } else if (layoutPersonIds.size === 0) {
           if (cancelled) return;
@@ -276,7 +279,7 @@ function FamilyTreeCanvas() {
           const positions = await computeLayout({
             personIds: layoutPersonIds,
             centerParentsOverChildren: centerParents,
-            showNamesOnly,
+            showNamesOnly: showNamesOnly2D,
           });
           if (cancelled) return;
           applyLayout(positions, layoutPersonIds);
@@ -291,7 +294,7 @@ function FamilyTreeCanvas() {
     return () => {
       cancelled = true;
     };
-  }, [layoutRequestKey, layoutPersonIds, applyLayout, centerParents, showNamesOnly]);
+  }, [layoutRequestKey, layoutPersonIds, applyLayout, centerParents, showNamesOnly2D]);
 
   useEffect(() => {
     if (!ready || layouting) return;
@@ -591,7 +594,7 @@ function FamilyTreeCanvas() {
               hovered: !hidden && isHovered,
               hoverRelated: !hidden && inHoverFamily && !isHovered,
               colorByFamily,
-              showNamesOnly,
+              showNamesOnly: showNamesOnly2D,
             },
           };
         }
@@ -663,7 +666,7 @@ function FamilyTreeCanvas() {
     selectedId,
     greyDeceased,
     colorByFamily,
-    showNamesOnly,
+    showNamesOnly2D,
     pathNodeIds,
     pathEdgeIdSet,
     familyHighlight,
@@ -785,8 +788,8 @@ function FamilyTreeCanvas() {
     centerParents,
     onCenterParentsChange: setCenterParents,
     centerParentsDisabled: viewMode === "3d",
-    showNamesOnly,
-    onShowNamesOnlyChange: setShowNamesOnly,
+    showNamesOnly: activeShowNamesOnly,
+    onShowNamesOnlyChange: setActiveShowNamesOnly,
     familyBranches,
     visibleFamilyNames,
     onFamilyVisibilityChange: handleFamilyVisibilityChange,
@@ -815,7 +818,7 @@ function FamilyTreeCanvas() {
           onClearSelection={closeProfilePanel}
           colorByFamily={colorByFamily}
           greyDeceased={greyDeceased}
-          showNamesOnly={showNamesOnly}
+          showNamesOnly={activeShowNamesOnly}
           resetViewRef={resetView3DRef}
         />
       ) : (

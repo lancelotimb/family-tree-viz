@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { Html, Line, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
@@ -52,32 +52,38 @@ function CameraRig({
   bounds,
   controlsRef,
   resetViewRef,
+  onReady,
 }: {
   bounds: Layout3DResult["bounds"];
   controlsRef: React.MutableRefObject<OrbitControlsImpl | null>;
   resetViewRef?: React.MutableRefObject<(() => void) | null>;
+  onReady: () => void;
 }) {
   const camera = useThree((state) => state.camera);
+  const invalidate = useThree((state) => state.invalidate);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const apply = () => {
       const [x, y, z] = cameraPositionFor(bounds);
       camera.position.set(x, y, z);
+      camera.updateProjectionMatrix();
       camera.lookAt(0, 0, 0);
       const controls = controlsRef.current;
       if (controls) {
         controls.target.set(0, 0, 0);
         controls.update();
       }
+      invalidate();
     };
     apply();
+    onReady();
     if (resetViewRef) {
       resetViewRef.current = apply;
       return () => {
         resetViewRef.current = null;
       };
     }
-  }, [bounds, camera, controlsRef, resetViewRef]);
+  }, [bounds, camera, controlsRef, invalidate, onReady, resetViewRef]);
 
   return null;
 }
@@ -189,7 +195,7 @@ function PersonCard({
       <Html
         position={position}
         center
-        distanceFactor={95}
+        distanceFactor={125}
         zIndexRange={CARD_Z_RANGE}
         style={{ pointerEvents: "none" }}
       >
@@ -197,8 +203,8 @@ function PersonCard({
           {...interactionProps}
           style={{
             ...sharedWrapperStyle,
-            width: 180,
-            height: 34,
+            width: 240,
+            height: 46,
             borderRadius: 8,
             border: `1.5px solid ${borderColor}`,
             background: compactBg,
@@ -212,7 +218,7 @@ function PersonCard({
           <span
             style={{
               fontFamily: "var(--font-playfair), Georgia, serif",
-              fontSize: 14,
+              fontSize: 17,
               fontWeight: 500,
               lineHeight: 1,
               color: textColor,
@@ -345,6 +351,8 @@ function SceneContent({
 }) {
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [cameraReady, setCameraReady] = useState(false);
+  const markCameraReady = useCallback(() => setCameraReady(true), []);
 
   const positions = useMemo(() => {
     const map = new Map<string, Vec3>();
@@ -436,33 +444,38 @@ function SceneContent({
         );
       })}
 
-      {layout.nodes.map((node) => {
-        if (node.kind !== "person") return null;
-        const person = individuals[node.id];
-        if (!person) return null;
-        const active = highlight?.nodeIds.has(node.id) ?? false;
-        const dimmed = highlight !== null && !active;
-        return (
-          <PersonCard
-            key={node.id}
-            id={node.id}
-            position={[node.x, node.y, node.z]}
-            colorByFamily={colorByFamily}
-            greyed={greyDeceased && isDeceased(person.birth.year, person.death?.year ?? null)}
-            selected={selectedId === node.id}
-            dimmed={dimmed}
-            emphasized={active && selectedId !== node.id}
-            showNamesOnly={showNamesOnly}
-            onSelect={onSelectPerson}
-            onHover={setHoveredId}
-          />
-        );
-      })}
+      {cameraReady
+        ? layout.nodes.map((node) => {
+            if (node.kind !== "person") return null;
+            const person = individuals[node.id];
+            if (!person) return null;
+            const active = highlight?.nodeIds.has(node.id) ?? false;
+            const dimmed = highlight !== null && !active;
+            return (
+              <PersonCard
+                key={node.id}
+                id={node.id}
+                position={[node.x, node.y, node.z]}
+                colorByFamily={colorByFamily}
+                greyed={
+                  greyDeceased && isDeceased(person.birth.year, person.death?.year ?? null)
+                }
+                selected={selectedId === node.id}
+                dimmed={dimmed}
+                emphasized={active && selectedId !== node.id}
+                showNamesOnly={showNamesOnly}
+                onSelect={onSelectPerson}
+                onHover={setHoveredId}
+              />
+            );
+          })
+        : null}
 
       <CameraRig
         bounds={layout.bounds}
         controlsRef={controlsRef}
         resetViewRef={resetViewRef}
+        onReady={markCameraReady}
       />
       <OrbitControls
         ref={controlsRef}
@@ -495,8 +508,9 @@ export function FamilyTree3D({
   );
 
   return (
-    <div className="h-full w-full">
+    <div className="h-full w-full cursor-grab active:cursor-grabbing">
       <Canvas
+        className="cursor-grab active:cursor-grabbing"
         dpr={[1, 2]}
         gl={{ antialias: true }}
         camera={initialCamera}
