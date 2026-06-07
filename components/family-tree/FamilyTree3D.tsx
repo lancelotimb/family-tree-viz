@@ -12,12 +12,17 @@ import {
 } from "./layout3d";
 import { getFamilyColor, getFamilyHighlight, individuals, unions } from "./familyGraph";
 import { isDeceased } from "./personUtils";
+import { ProfileAvatar } from "./ProfileAvatar";
 
 const NEUTRAL_STROKE = "#c4b49a";
 const NEUTRAL_BORDER = "#d8cab0";
 const NEUTRAL_BG = "#fffef9";
+const GREY_STROKE = "#b3a791";
 const CAMERA_FOV = 45;
 const SCENE_BG = "#f4efe5";
+// Keep the DOM person cards strictly below the overlay UI (parameters sidebar,
+// search, controls) which sits at Tailwind `z-10`, so they never paint over it.
+const CARD_Z_RANGE: [number, number] = [9, 0];
 
 type FamilyTree3DProps = {
   selectedId: string | null;
@@ -25,6 +30,7 @@ type FamilyTree3DProps = {
   onClearSelection: () => void;
   colorByFamily: boolean;
   greyDeceased: boolean;
+  showNamesOnly: boolean;
   /** Parent assigns a "reset camera to the default framing" callback here. */
   resetViewRef?: React.MutableRefObject<(() => void) | null>;
 };
@@ -104,6 +110,11 @@ function GenerationDisc({ plane }: { plane: GenerationPlane }) {
   );
 }
 
+/**
+ * A billboarded person card rendered as DOM via drei's `<Html>`. It mirrors the
+ * 2D `FamilyMemberNode`: a full card with avatar + name + lifespan, or — when
+ * "Show names only" is on — a compact single-line name card.
+ */
 function PersonCard({
   id,
   position,
@@ -112,6 +123,7 @@ function PersonCard({
   selected,
   dimmed,
   emphasized,
+  showNamesOnly,
   onSelect,
   onHover,
 }: {
@@ -122,6 +134,7 @@ function PersonCard({
   selected: boolean;
   dimmed: boolean;
   emphasized: boolean;
+  showNamesOnly: boolean;
   onSelect: (id: string) => void;
   onHover: (id: string | null) => void;
 }) {
@@ -134,81 +147,181 @@ function PersonCard({
     : colorByFamily
       ? branch.border
       : NEUTRAL_BORDER;
-  const background = colorByFamily
-    ? `color-mix(in srgb, ${branch.background} 55%, #fffef9)`
-    : NEUTRAL_BG;
   const textColor = colorByFamily ? branch.text : "#3d3428";
+  const avatarColor = colorByFamily ? branch.stroke : "#a8957a";
   const lifespan = person.death?.year
     ? `${person.birth.year ?? "?"} – ${person.death.year}`
     : `${person.birth.year ?? "?"} –`;
 
-  const opacity = dimmed ? 0.28 : greyed ? 0.55 : 1;
+  const shouldGrey = greyed && !selected && !emphasized;
+  const wrapperOpacity = dimmed ? 0.26 : shouldGrey ? 0.5 : 1;
+  const scale = selected ? 1.1 : emphasized ? 1.04 : 1;
+  const ring = selected
+    ? `0 0 0 2px ${branch.stroke}, 0 6px 18px rgba(120, 80, 40, 0.35)`
+    : emphasized
+      ? "0 0 0 2px rgba(90,148,208,0.55), 0 6px 16px rgba(45,95,160,0.25)"
+      : "0 3px 10px rgba(60, 52, 40, 0.18)";
+
+  const sharedWrapperStyle: React.CSSProperties = {
+    pointerEvents: "auto",
+    cursor: "pointer",
+    opacity: wrapperOpacity,
+    transform: `scale(${scale})`,
+    transition: "opacity 150ms ease, transform 150ms ease",
+    filter: shouldGrey ? "grayscale(0.85)" : "none",
+  };
+
+  const interactionProps = {
+    onClick: (event: React.MouseEvent) => {
+      event.stopPropagation();
+      onSelect(id);
+    },
+    onPointerEnter: () => onHover(id),
+    onPointerLeave: () => onHover(null),
+    title: `${person.name} (${person.familyName}) · ${lifespan}`,
+  };
+
+  if (showNamesOnly) {
+    const compactBg = colorByFamily
+      ? `color-mix(in srgb, ${branch.background} 45%, #fffef9)`
+      : NEUTRAL_BG;
+    return (
+      <Html
+        position={position}
+        center
+        distanceFactor={95}
+        zIndexRange={CARD_Z_RANGE}
+        style={{ pointerEvents: "none" }}
+      >
+        <div
+          {...interactionProps}
+          style={{
+            ...sharedWrapperStyle,
+            width: 180,
+            height: 34,
+            borderRadius: 8,
+            border: `1.5px solid ${borderColor}`,
+            background: compactBg,
+            boxShadow: ring,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "0 8px",
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "var(--font-playfair), Georgia, serif",
+              fontSize: 14,
+              fontWeight: 500,
+              lineHeight: 1,
+              color: textColor,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              width: "100%",
+              textAlign: "center",
+            }}
+          >
+            {person.name}
+          </span>
+        </div>
+      </Html>
+    );
+  }
+
+  const cardBg = colorByFamily
+    ? `color-mix(in srgb, ${branch.background} 45%, #fffef9)`
+    : NEUTRAL_BG;
+  const avatarBg = colorByFamily
+    ? `linear-gradient(180deg, ${branch.background}, #f0e8da)`
+    : "linear-gradient(180deg, #faf6ef, #f0e8da)";
 
   return (
     <Html
       position={position}
       center
       distanceFactor={120}
-      zIndexRange={[20, 0]}
+      zIndexRange={CARD_Z_RANGE}
       style={{ pointerEvents: "none" }}
     >
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          onSelect(id);
-        }}
-        onPointerEnter={() => onHover(id)}
-        onPointerLeave={() => onHover(null)}
-        title={`${person.name} (${person.familyName}) · ${lifespan}`}
+      <div
+        {...interactionProps}
         style={{
-          pointerEvents: "auto",
-          opacity,
-          width: 150,
-          transform: `scale(${selected ? 1.12 : emphasized ? 1.06 : 1})`,
-          transition: "opacity 150ms ease, transform 150ms ease",
-          borderRadius: 12,
+          ...sharedWrapperStyle,
+          width: 200,
+          borderRadius: 14,
           border: `2px solid ${borderColor}`,
-          background,
-          color: textColor,
-          padding: "8px 10px",
-          boxShadow: selected
-            ? "0 6px 18px rgba(120, 80, 40, 0.35)"
-            : "0 3px 10px rgba(60, 52, 40, 0.18)",
-          cursor: "pointer",
-          fontFamily: "var(--font-playfair), Georgia, serif",
-          textAlign: "center",
-          filter: greyed && !selected && !emphasized ? "grayscale(0.85)" : "none",
-          outline: selected ? `2px solid ${branch.stroke}` : "none",
-          outlineOffset: 2,
+          background: cardBg,
+          boxShadow: ring,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          padding: "12px 16px",
         }}
       >
-        <span
+        <div
           style={{
-            display: "block",
-            fontSize: 14,
-            fontWeight: 600,
-            lineHeight: 1.15,
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
+            display: "flex",
+            height: 56,
+            width: 56,
+            flexShrink: 0,
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: "9999px",
+            border: `1px solid ${borderColor}`,
+            background: avatarBg,
           }}
         >
-          {person.name}
-        </span>
-        <span
+          <ProfileAvatar
+            gender={person.gender}
+            style={{ height: 32, width: 32, color: avatarColor }}
+          />
+        </div>
+        <div
           style={{
-            display: "block",
-            marginTop: 2,
-            fontSize: 11,
-            letterSpacing: "0.02em",
+            marginTop: 8,
+            display: "flex",
+            height: 40,
+            width: "100%",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+              width: "100%",
+              textAlign: "center",
+              fontFamily: "var(--font-playfair), Georgia, serif",
+              fontSize: 16,
+              fontWeight: 500,
+              lineHeight: 1.15,
+              color: textColor,
+              wordBreak: "break-word",
+            }}
+          >
+            {person.name}
+          </p>
+        </div>
+        <p
+          style={{
+            margin: "4px 0 0",
+            flexShrink: 0,
+            textAlign: "center",
+            fontSize: 12,
+            letterSpacing: "0.03em",
             color: "#8b7d6b",
             fontFamily: "var(--font-inter), system-ui, sans-serif",
           }}
         >
           {lifespan}
-        </span>
-      </button>
+        </p>
+      </div>
     </Html>
   );
 }
@@ -219,6 +332,7 @@ function SceneContent({
   onSelectPerson,
   colorByFamily,
   greyDeceased,
+  showNamesOnly,
   resetViewRef,
 }: {
   layout: Layout3DResult;
@@ -226,6 +340,7 @@ function SceneContent({
   onSelectPerson: (id: string) => void;
   colorByFamily: boolean;
   greyDeceased: boolean;
+  showNamesOnly: boolean;
   resetViewRef?: React.MutableRefObject<(() => void) | null>;
 }) {
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
@@ -236,6 +351,17 @@ function SceneContent({
     for (const node of layout.nodes) map.set(node.id, [node.x, node.y, node.z]);
     return map;
   }, [layout]);
+
+  /** True when the link connects to a deceased person (for "Grey out deceased"). */
+  const linkTouchesDeceased = (sourceId: string, targetId: string) => {
+    for (const id of [sourceId, targetId]) {
+      const person = individuals[id];
+      if (person && isDeceased(person.birth.year, person.death?.year ?? null)) {
+        return true;
+      }
+    }
+    return false;
+  };
 
   // Highlight the family of whichever node is hovered, or the selected person
   // when nothing is hovered — same idea as the 2D hover behaviour.
@@ -259,15 +385,23 @@ function SceneContent({
         const from = positions.get(link.sourceId);
         const to = positions.get(link.targetId);
         if (!from || !to) return null;
-        const active =
+        const active = Boolean(
           highlight?.nodeIds.has(link.sourceId) &&
-          highlight?.nodeIds.has(link.targetId);
+            highlight?.nodeIds.has(link.targetId),
+        );
         const dimmed = highlight !== null && !active;
+        const greyed =
+          greyDeceased &&
+          !active &&
+          !dimmed &&
+          linkTouchesDeceased(link.sourceId, link.targetId);
         const color = active
           ? "#4a8ac8"
-          : colorByFamily
-            ? getFamilyColor(link.familyName).stroke
-            : NEUTRAL_STROKE;
+          : greyed
+            ? GREY_STROKE
+            : colorByFamily
+              ? getFamilyColor(link.familyName).stroke
+              : NEUTRAL_STROKE;
         return (
           <Line
             key={`${link.sourceId}-${link.targetId}-${link.kind}`}
@@ -275,7 +409,7 @@ function SceneContent({
             color={color}
             lineWidth={active ? 2.6 : 1.2}
             transparent
-            opacity={dimmed ? 0.12 : active ? 0.95 : 0.5}
+            opacity={dimmed ? 0.12 : active ? 0.95 : greyed ? 0.22 : 0.5}
             dashed={false}
           />
         );
@@ -318,6 +452,7 @@ function SceneContent({
             selected={selectedId === node.id}
             dimmed={dimmed}
             emphasized={active && selectedId !== node.id}
+            showNamesOnly={showNamesOnly}
             onSelect={onSelectPerson}
             onHover={setHoveredId}
           />
@@ -350,6 +485,7 @@ export function FamilyTree3D({
   onClearSelection,
   colorByFamily,
   greyDeceased,
+  showNamesOnly,
   resetViewRef,
 }: FamilyTree3DProps) {
   const layout = useMemo(() => computeLayout3D(), []);
@@ -372,6 +508,7 @@ export function FamilyTree3D({
           onSelectPerson={onSelectPerson}
           colorByFamily={colorByFamily}
           greyDeceased={greyDeceased}
+          showNamesOnly={showNamesOnly}
           resetViewRef={resetViewRef}
         />
       </Canvas>

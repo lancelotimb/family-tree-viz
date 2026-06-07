@@ -80,14 +80,14 @@ export type Layout3DOptions = {
 };
 
 /** Vertical distance between two adjacent generation planes (world units). */
-export const LAYER_HEIGHT = 78;
+export const LAYER_HEIGHT = 82;
 /** Collision radius for a person node (keeps cards from overlapping in-plane). */
-const PERSON_COLLIDE = 17;
-const UNION_COLLIDE = 7;
+const PERSON_COLLIDE = 22;
+const UNION_COLLIDE = 8;
 /** Rest length of the partner→marriage links (tight, so couples read as pairs). */
-const MARRIAGE_DISTANCE = 13;
+const MARRIAGE_DISTANCE = 15;
 /** Rest length of the marriage→child links (spans one inter-plane gap). */
-const CHILD_DISTANCE = 30;
+const CHILD_DISTANCE = 34;
 /** Repulsion between every pair of nodes; spreads each plane outward. */
 const CHARGE_STRENGTH = -140;
 /** Gentle pull toward the central axis, so the cloud stays compact. */
