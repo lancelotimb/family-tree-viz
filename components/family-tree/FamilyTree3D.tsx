@@ -551,20 +551,28 @@ function SceneContent({
     return ids;
   }, [visibleLinks]);
 
+  const isPersonDeceasedForView = (id: string) => {
+    const person = individuals[id];
+    if (!person) return false;
+    return aliveAtYear === null
+      ? isDeceased(person.birth.year, person.death?.year ?? null)
+      : isDeceasedAsOfYear(person.birth.year, person.death?.year ?? null, aliveAtYear);
+  };
+
   /** True when the link connects to a deceased person (for "Grey out deceased"). */
-  const linkTouchesDeceased = (sourceId: string, targetId: string) => {
-    for (const id of [sourceId, targetId]) {
-      const person = individuals[id];
-      if (
-        person &&
-        (aliveAtYear === null
-          ? isDeceased(person.birth.year, person.death?.year ?? null)
-          : isDeceasedAsOfYear(person.birth.year, person.death?.year ?? null, aliveAtYear))
-      ) {
-        return true;
-      }
-    }
-    return false;
+  const linkTouchesDeceased = (sourceId: string, targetId: string) =>
+    [sourceId, targetId].some(isPersonDeceasedForView);
+
+  /** True when a visible partner or child attached to the union is deceased. */
+  const unionTouchesDeceased = (unionId: string) => {
+    const union = unions[unionId];
+    if (!union) return false;
+    return [...union.partnerIds, ...union.childIds].some(
+      (id) =>
+        visibleFamilyNames.has(individuals[id]?.familyName ?? "") &&
+        isPersonVisibleByYear(id) &&
+        isPersonDeceasedForView(id),
+    );
   };
 
   // Highlight the family of whichever node is hovered, or the selected person
@@ -658,6 +666,13 @@ function SceneContent({
         const dimmed =
           (pathNodeIds !== null && !pathActive) ||
           (familyNodeHighlight !== null && !familyActive && !pathActive && !focusActive);
+        const greyed =
+          greyDeceased &&
+          !pathActive &&
+          !focusActive &&
+          !familyActive &&
+          !dimmed &&
+          unionTouchesDeceased(node.id);
         const color = colorByFamily ? getFamilyColor(familyName).stroke : NEUTRAL_STROKE;
         return (
           <mesh
@@ -682,10 +697,12 @@ function SceneContent({
                     ? FOCUS_STROKE
                     : familyActive
                       ? "#4a8ac8"
+                      : greyed
+                        ? GREY_STROKE
                       : color
               }
               transparent
-              opacity={dimmed ? 0.2 : 0.9}
+              opacity={dimmed ? 0.2 : greyed ? 0.35 : 0.9}
             />
           </mesh>
         );
@@ -717,16 +734,7 @@ function SceneContent({
                 id={node.id}
                 position={[node.x, node.y, node.z]}
                 colorByFamily={colorByFamily}
-                greyed={
-                  greyDeceased &&
-                  (aliveAtYear === null
-                    ? isDeceased(person.birth.year, person.death?.year ?? null)
-                    : isDeceasedAsOfYear(
-                        person.birth.year,
-                        person.death?.year ?? null,
-                        aliveAtYear,
-                      ))
-                }
+                greyed={greyDeceased && isPersonDeceasedForView(node.id)}
                 selected={selectedId === node.id}
                 dimmed={dimmed}
                 emphasized={active && selectedId !== node.id}
