@@ -16,7 +16,12 @@ export type LifeEvent = {
  */
 export type Individual = {
   id: string;
+  /** Full given name(s) as spoken, without the surname. */
   name: string;
+  /** First given name only (middle names excluded). */
+  firstName: string;
+  /** Remaining given names after {@link Individual.firstName}, space-joined. */
+  middleNames: string;
   familyName: string;
   gender: MemberGender;
   birth: LifeEvent;
@@ -55,7 +60,10 @@ export type FamilyGraph = {
 
 export type PersonNodeData = {
   kind: "person";
+  /** Full given name(s) for search, tooltips, and profile UI. */
   name: string;
+  /** Parsed first given name (used with {@link PersonNodeData.familyName} on tree cards). */
+  firstName: string;
   familyName: string;
   branchColor: BranchColor;
   birthYear: number | null;
@@ -84,6 +92,7 @@ export type UnionNodeData = {
   hovered?: boolean;
   hoverRelated?: boolean;
   colorByFamily?: boolean;
+  showNamesOnly?: boolean;
 };
 
 export type FamilyNodeData = PersonNodeData | UnionNodeData;

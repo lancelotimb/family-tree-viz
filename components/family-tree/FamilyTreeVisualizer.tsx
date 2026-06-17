@@ -28,6 +28,11 @@ import {
 import { ZoomControls, type ViewMode } from "./ZoomControls";
 import { TimePlayer } from "./TimePlayer";
 import { ProfilePanel } from "./ProfilePanel";
+import { AddPersonDialog } from "./AddPersonDialog";
+import { AddMarriageDialog } from "./AddMarriageDialog";
+import { UnionEditDialog } from "./UnionEditDialog";
+import { useFamilyGraphAdmin } from "./FamilyGraphContext";
+import { useGraphRevision } from "./useGraphRevision";
 import {
   FamilyTreeActionsContext,
   type NodeContextMenuTarget,
@@ -78,7 +83,6 @@ const FamilyTree3D = dynamic(
 );
 
 const nodeTypes = { familyMember: FamilyMemberNode, union: MarriageNode };
-const allFamilyNames = familyBranches.map((branch) => branch.familyName);
 
 const defaultEdgeStyle = { stroke: "#c4b49a", strokeWidth: 1.5 };
 
@@ -143,7 +147,16 @@ function layoutPersonIdsKey(personIds: Set<string> | null): string {
   return [...personIds].sort().join("\0");
 }
 
-function FamilyTreeCanvas() {
+function FamilyTreeCanvas({ onAdminLogout }: { onAdminLogout?: () => void }) {
+  const graphRevision = useGraphRevision();
+  const { adminMode, addPerson, addMarriage, updateUnion, removeUnion, saving } = useFamilyGraphAdmin();
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editUnionId, setEditUnionId] = useState<string | null>(null);
+  const [addMarriagePresetId, setAddMarriagePresetId] = useState<string | null>(null);
+  const allFamilyNames = useMemo(
+    () => familyBranches.map((branch) => branch.familyName),
+    [graphRevision],
+  );
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<FamilyNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [baseEdges, setBaseEdges] = useState<Edge[]>([]);
@@ -213,7 +226,7 @@ function FamilyTreeCanvas() {
     [visibleFamilyNames],
   );
 
-  const timeRange = useMemo(() => getFamilyTimeRange(individuals), []);
+  const timeRange = useMemo(() => getFamilyTimeRange(individuals), [graphRevision]);
 
   /** When set, ELK lays out only these people (branch and/or lineage filter). */
   const layoutPersonIds = useMemo(() => {
@@ -234,6 +247,7 @@ function FamilyTreeCanvas() {
     () =>
       [
         layoutRequestNonce,
+        graphRevision,
         focusPersonId,
         focusUnionId,
         visibleFamilyNamesKey(visibleFamilyNames),
@@ -241,6 +255,7 @@ function FamilyTreeCanvas() {
       ].join("|"),
     [
       layoutRequestNonce,
+      graphRevision,
       focusPersonId,
       focusUnionId,
       visibleFamilyNames,
@@ -614,6 +629,7 @@ function FamilyTreeCanvas() {
             focusHighlighted: !hidden && focusHighlighted,
             hoverRelated: !hidden && inHoverFamily,
             colorByFamily,
+            showNamesOnly: showNamesOnly2D,
           },
         };
       }),
@@ -925,6 +941,9 @@ function FamilyTreeCanvas() {
               onZoomIn3D={() => controls3DRef.current?.zoomIn()}
               onZoomOut3D={() => controls3DRef.current?.zoomOut()}
               onResetView={() => controls3DRef.current?.resetView()}
+              onAddPerson={adminMode ? () => setAddDialogOpen(true) : undefined}
+              addPersonDisabled={saving}
+              onAdminLogout={onAdminLogout}
             />
           </div>
         </div>
@@ -943,7 +962,54 @@ function FamilyTreeCanvas() {
         onSelectPerson={handleSelectPerson}
         focusPersonId={focusPersonId}
         onFocusLineage={handleFocusPersonChange}
+        onEditUnion={adminMode ? setEditUnionId : undefined}
+        onAddMarriage={adminMode ? setAddMarriagePresetId : undefined}
       />
+
+      {adminMode ? (
+        <AddPersonDialog
+          open={addDialogOpen}
+          onClose={() => setAddDialogOpen(false)}
+          onSubmit={async (data) => {
+            const personId = await addPerson(data);
+            if (personId) {
+              handleSelectPerson(personId);
+              bumpLayoutRequest();
+            }
+            return personId !== null;
+          }}
+        />
+      ) : null}
+
+      {adminMode ? (
+        <UnionEditDialog
+          unionId={editUnionId}
+          onClose={() => setEditUnionId(null)}
+          onSubmit={async (unionId, data) => {
+            const result = await updateUnion(unionId, data);
+            if (result.ok) bumpLayoutRequest();
+            return result;
+          }}
+          onRemove={async (unionId, data) => {
+            const result = await removeUnion(unionId, data);
+            if (result.ok) bumpLayoutRequest();
+            return result;
+          }}
+        />
+      ) : null}
+
+      {adminMode ? (
+        <AddMarriageDialog
+          open={addMarriagePresetId !== null}
+          presetPartnerId={addMarriagePresetId ?? ""}
+          onClose={() => setAddMarriagePresetId(null)}
+          onSubmit={async (data) => {
+            const result = await addMarriage(data);
+            if (result.ok) bumpLayoutRequest();
+            return result;
+          }}
+        />
+      ) : null}
 
       <NodeContextMenu
         target={contextMenuTarget}
@@ -952,16 +1018,22 @@ function FamilyTreeCanvas() {
         onUnfocusLineage={handleUnfocusLineage}
         focusPersonId={focusPersonId}
         focusUnionId={focusUnionId}
+        adminMode={adminMode}
+        onEditUnion={adminMode ? setEditUnionId : undefined}
       />
     </div>
     </FamilyTreeActionsContext.Provider>
   );
 }
 
-export function FamilyTreeVisualizer() {
+export function FamilyTreeVisualizer({
+  onAdminLogout,
+}: {
+  onAdminLogout?: () => void;
+} = {}) {
   return (
     <ReactFlowProvider>
-      <FamilyTreeCanvas />
+      <FamilyTreeCanvas onAdminLogout={onAdminLogout} />
     </ReactFlowProvider>
   );
 }

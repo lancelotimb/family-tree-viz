@@ -1,9 +1,19 @@
 "use client";
 
-import { Heart, MapPin, Users, X, type LucideIcon } from "lucide-react";
+import { useState } from "react";
+import { Heart, MapPin, Pencil, Plus, Users, X, type LucideIcon } from "lucide-react";
 import { ProfileAvatar } from "./ProfileAvatar";
 import type { MemberGender } from "./types";
-import { getChildren, getIndividual, getParents, getSpouses } from "./familyGraph";
+import {
+  getChildren,
+  getIndividual,
+  getParents,
+  getPersonUnions,
+  getUnionPartners,
+} from "./familyGraph";
+import { useFamilyGraphAdmin } from "./FamilyGraphContext";
+import { EditPersonForm } from "./PersonForm";
+import { useGraphRevision } from "./useGraphRevision";
 
 type ProfilePanelProps = {
   memberId: string | null;
@@ -12,6 +22,8 @@ type ProfilePanelProps = {
   onSelectPerson: (id: string) => void;
   focusPersonId: string;
   onFocusLineage: (id: string) => void;
+  onEditUnion?: (unionId: string) => void;
+  onAddMarriage?: (personId: string) => void;
 };
 
 function formatLifespan(birthYear: number | null, deathYear: number | null) {
@@ -26,11 +38,23 @@ export function ProfilePanel({
   onSelectPerson,
   focusPersonId,
   onFocusLineage,
+  onEditUnion,
+  onAddMarriage,
 }: ProfilePanelProps) {
+  const graphRevision = useGraphRevision();
+  const { adminMode, updatePerson, saving, saveError } = useFamilyGraphAdmin();
+  const [editing, setEditing] = useState(false);
   const profile = getIndividual(memberId);
   const parents = profile ? getParents(profile.id) : [];
-  const spouses = profile ? getSpouses(profile.id) : [];
+  const personUnions = profile ? getPersonUnions(profile.id) : [];
   const children = profile ? getChildren(profile.id) : [];
+
+  void graphRevision;
+
+  const handleClose = () => {
+    setEditing(false);
+    onClose();
+  };
 
   return (
     <>
@@ -38,7 +62,7 @@ export function ProfilePanel({
         className={`fixed inset-0 z-40 bg-[#3d3428]/20 transition-opacity duration-300 ${
           open ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
-        onClick={onClose}
+        onClick={handleClose}
         aria-hidden={!open}
       />
       <aside
@@ -52,145 +76,236 @@ export function ProfilePanel({
             <header className="relative shrink-0 border-b border-[#e8dfd0] px-6 pb-5 pt-6">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 className="absolute right-4 top-4 rounded-full p-2 text-[#8b7d6b] transition-colors hover:bg-[#f5efe4] hover:text-[#3d3428]"
                 aria-label="Close profile"
               >
                 <X className="h-5 w-5" />
               </button>
-              <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full border-2 border-[#e8dfd0] bg-gradient-to-b from-[#faf6ef] to-[#f0e8da]">
-                <ProfileAvatar
-                  gender={profile.gender}
-                  className="h-16 w-16 text-[#a8957a]"
-                  strokeWidth={1.25}
-                />
-              </div>
-              <h2 className="mt-4 text-center font-serif text-2xl font-medium text-[#3d3428]">
-                {profile.name}
-              </h2>
-              <p className="mt-1 text-center text-sm text-[#8b7d6b]">
-                {formatLifespan(profile.birth.year, profile.death?.year ?? null)}
-              </p>
-              {profile.birth.place && (
-                <p className="mt-2 flex items-center justify-center gap-1.5 text-sm text-[#6b5f4f]">
-                  <MapPin className="h-3.5 w-3.5 text-[#a8957a]" />
-                  {profile.birth.place}
-                </p>
+
+              {editing ? (
+                <div className="pt-2">
+                  <h2 className="mb-4 font-serif text-xl text-[#3d3428]">Edit person</h2>
+                  <EditPersonForm
+                    person={profile}
+                    onCancel={() => setEditing(false)}
+                    onSubmit={async (data) => {
+                      const ok = await updatePerson(profile.id, data);
+                      if (ok) setEditing(false);
+                      return ok;
+                    }}
+                  />
+                  {saveError ? (
+                    <p className="mt-3 text-sm text-red-700">{saveError}</p>
+                  ) : null}
+                </div>
+              ) : (
+                <>
+                  <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full border-2 border-[#e8dfd0] bg-gradient-to-b from-[#faf6ef] to-[#f0e8da]">
+                    <ProfileAvatar
+                      gender={profile.gender}
+                      className="h-16 w-16 text-[#a8957a]"
+                      strokeWidth={1.25}
+                    />
+                  </div>
+                  <h2 className="mt-4 text-center font-serif text-2xl font-medium text-[#3d3428]">
+                    {profile.name}
+                  </h2>
+                  <p className="mt-1 text-center text-sm text-[#8b7d6b]">
+                    {formatLifespan(profile.birth.year, profile.death?.year ?? null)}
+                  </p>
+                  {profile.birth.place && (
+                    <p className="mt-2 flex items-center justify-center gap-1.5 text-sm text-[#6b5f4f]">
+                      <MapPin className="h-3.5 w-3.5 text-[#a8957a]" />
+                      {profile.birth.place}
+                    </p>
+                  )}
+                  <div className="mt-4 flex justify-center gap-2">
+                    <ProfileActionButton
+                      icon={Users}
+                      label={
+                        focusPersonId === profile.id ? "Lineage focused" : "Focus lineage"
+                      }
+                      active={focusPersonId === profile.id}
+                      onClick={() => onFocusLineage(profile.id)}
+                    />
+                    {adminMode ? (
+                      <ProfileActionButton
+                        icon={Pencil}
+                        label={saving ? "Saving…" : "Edit"}
+                        active={false}
+                        onClick={() => setEditing(true)}
+                        disabled={saving}
+                      />
+                    ) : null}
+                  </div>
+                </>
               )}
-              <div className="mt-4 flex justify-center">
-                <ProfileActionButton
-                  icon={Users}
-                  label={
-                    focusPersonId === profile.id ? "Lineage focused" : "Focus lineage"
-                  }
-                  active={focusPersonId === profile.id}
-                  onClick={() => onFocusLineage(profile.id)}
-                />
-              </div>
             </header>
 
-            <div className="flex-1 overflow-y-auto px-6 py-5">
-              <section className="mb-8">
-                <h3 className="mb-3 font-serif text-lg text-[#3d3428]">Biography</h3>
-                <p className="text-sm leading-relaxed text-[#5c5244]">{profile.biography}</p>
-              </section>
+            {!editing ? (
+              <div className="flex-1 overflow-y-auto px-6 py-5">
+                <section className="mb-8">
+                  <h3 className="mb-3 font-serif text-lg text-[#3d3428]">Biography</h3>
+                  <p className="text-sm leading-relaxed text-[#5c5244]">{profile.biography}</p>
+                </section>
 
-              <section className="mb-8">
-                <h3 className="mb-3 font-serif text-lg text-[#3d3428]">Relationships</h3>
-                {parents.length > 0 && (
-                  <div className="mb-4">
-                    <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
-                      <Users className="h-3.5 w-3.5" />
-                      Parents
-                    </p>
-                    <div className="flex flex-col gap-2">
-                      {parents.map((parent) => (
-                        <RelationshipCard
-                          key={parent.id}
-                          id={parent.id}
-                          name={parent.name}
-                          gender={parent.gender}
-                          years={formatLifespan(
-                            parent.birth.year,
-                            parent.death?.year ?? null,
-                          )}
-                          onSelect={onSelectPerson}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {spouses.length > 0 && (
-                  <div className="mb-4">
-                    <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
-                      <Heart className="h-3.5 w-3.5" />
-                      {spouses.length > 1 ? "Partners" : "Married with"}
-                    </p>
-                    <div className="flex flex-col gap-2">
-                      {spouses.map((spouse) => (
-                        <RelationshipCard
-                          key={spouse.id}
-                          id={spouse.id}
-                          name={spouse.name}
-                          gender={spouse.gender}
-                          years={formatLifespan(
-                            spouse.birth.year,
-                            spouse.death?.year ?? null,
-                          )}
-                          onSelect={onSelectPerson}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {children.length > 0 && (
-                  <div>
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
-                      Children
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {children.map((child) => (
-                        <RelationshipCard
-                          key={child.id}
-                          id={child.id}
-                          name={child.name}
-                          gender={child.gender}
-                          years={formatLifespan(
-                            child.birth.year,
-                            child.death?.year ?? null,
-                          )}
-                          compact
-                          onSelect={onSelectPerson}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </section>
-
-              <section>
-                <h3 className="mb-3 font-serif text-lg text-[#3d3428]">Archival gallery</h3>
-                <div className="flex gap-3 overflow-x-auto pb-2">
-                  {profile.gallery.map((item) => (
-                    <figure
-                      key={item.id}
-                      className="w-36 shrink-0 overflow-hidden rounded-lg border border-[#e8dfd0] bg-[#faf6ef]"
-                    >
-                      <div className="flex h-28 items-center justify-center bg-gradient-to-br from-[#f0e8da] to-[#e8dfd0]">
-                        <ProfileAvatar
-                          gender={profile.gender}
-                          className="h-8 w-8 text-[#c4b49a]/60"
-                          strokeWidth={1}
-                        />
+                <section className="mb-8">
+                  <h3 className="mb-3 font-serif text-lg text-[#3d3428]">Relationships</h3>
+                  {parents.length > 0 && (
+                    <div className="mb-4">
+                      <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
+                        <Users className="h-3.5 w-3.5" />
+                        Parents
+                      </p>
+                      <div className="flex flex-col gap-2">
+                        {parents.map((parent) => (
+                          <RelationshipCard
+                            key={parent.id}
+                            id={parent.id}
+                            name={parent.name}
+                            gender={parent.gender}
+                            years={formatLifespan(
+                              parent.birth.year,
+                              parent.death?.year ?? null,
+                            )}
+                            onSelect={onSelectPerson}
+                          />
+                        ))}
                       </div>
-                      <figcaption className="px-2 py-2 text-[10px] leading-snug text-[#6b5f4f]">
-                        {item.caption}
-                      </figcaption>
-                    </figure>
-                  ))}
-                </div>
-              </section>
-            </div>
+                    </div>
+                  )}
+                  {personUnions.length > 0 && (
+                    <div className="mb-4">
+                      <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
+                        <Heart className="h-3.5 w-3.5" />
+                        {personUnions.length > 1 ? "Unions" : "Married with"}
+                      </p>
+                      <div className="flex flex-col gap-2">
+                        {personUnions.map((union) => {
+                          const partners = getUnionPartners(profile.id, union.id);
+                          const marriageYear = union.marriage?.year;
+                          const meta = [
+                            marriageYear ? `Married ${marriageYear}` : null,
+                            union.divorce ? "Divorced" : null,
+                            union.childIds.length === 1
+                              ? "1 child"
+                              : `${union.childIds.length} children`,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ");
+
+                          return (
+                            <div
+                              key={union.id}
+                              className="rounded-lg border border-[#e8dfd0] bg-white p-2"
+                            >
+                              {partners.length > 0 ? (
+                                <div className="flex flex-col gap-2">
+                                  {partners.map((partner) => (
+                                    <RelationshipCard
+                                      key={partner.id}
+                                      id={partner.id}
+                                      name={partner.name}
+                                      gender={partner.gender}
+                                      years={formatLifespan(
+                                        partner.birth.year,
+                                        partner.death?.year ?? null,
+                                      )}
+                                      onSelect={onSelectPerson}
+                                    />
+                                  ))}
+                                </div>
+                              ) : null}
+                              {meta || (adminMode && onEditUnion) ? (
+                                <div
+                                  className={`flex items-center justify-between gap-2 ${
+                                    partners.length > 0
+                                      ? "mt-2 border-t border-[#f0e8da] pt-2"
+                                      : "px-1 py-1"
+                                  }`}
+                                >
+                                  {meta ? (
+                                    <p className="text-[10px] text-[#8b7d6b]">{meta}</p>
+                                  ) : (
+                                    <span />
+                                  )}
+                                  {adminMode && onEditUnion ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => onEditUnion(union.id)}
+                                      className="shrink-0 rounded-lg border border-[#e8dfd0] px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-[#6b5f4f] transition-colors hover:bg-[#faf6ef]"
+                                    >
+                                      Edit
+                                    </button>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {adminMode && onAddMarriage ? (
+                    <button
+                      type="button"
+                      onClick={() => onAddMarriage(profile.id)}
+                      className="mb-4 inline-flex items-center gap-2 rounded-lg border border-dashed border-[#c9b896] px-3 py-2 text-sm font-medium text-[#6b5f4f] transition-colors hover:bg-[#faf6ef]"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add marriage
+                    </button>
+                  ) : null}
+                  {children.length > 0 && (
+                    <div>
+                      <p className="mb-2 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
+                        Children
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {children.map((child) => (
+                          <RelationshipCard
+                            key={child.id}
+                            id={child.id}
+                            name={child.name}
+                            gender={child.gender}
+                            years={formatLifespan(
+                              child.birth.year,
+                              child.death?.year ?? null,
+                            )}
+                            compact
+                            onSelect={onSelectPerson}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </section>
+
+                <section>
+                  <h3 className="mb-3 font-serif text-lg text-[#3d3428]">Archival gallery</h3>
+                  <div className="flex gap-3 overflow-x-auto pb-2">
+                    {profile.gallery.map((item) => (
+                      <figure
+                        key={item.id}
+                        className="w-36 shrink-0 overflow-hidden rounded-lg border border-[#e8dfd0] bg-[#faf6ef]"
+                      >
+                        <div className="flex h-28 items-center justify-center bg-gradient-to-br from-[#f0e8da] to-[#e8dfd0]">
+                          <ProfileAvatar
+                            gender={profile.gender}
+                            className="h-8 w-8 text-[#c4b49a]/60"
+                            strokeWidth={1}
+                          />
+                        </div>
+                        <figcaption className="px-2 py-2 text-[10px] leading-snug text-[#6b5f4f]">
+                          {item.caption}
+                        </figcaption>
+                      </figure>
+                    ))}
+                  </div>
+                </section>
+              </div>
+            ) : null}
           </>
         )}
       </aside>
@@ -203,17 +318,20 @@ function ProfileActionButton({
   label,
   active,
   onClick,
+  disabled = false,
 }: {
   icon: LucideIcon;
   label: string;
   active: boolean;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+      disabled={disabled}
+      className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
         active
           ? "border-[#6b7d5a] bg-[#eef4e8] text-[#4a5c3d]"
           : "border-[#e8dfd0] bg-white text-[#3d3428] hover:border-[#d4c4a8] hover:bg-[#faf6ef]"

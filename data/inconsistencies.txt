@@ -1,0 +1,85 @@
+Family tree data inconsistencies
+================================
+
+Compared:
+  - Canonical dataset: data/family-tree.ged
+  - Incoming merge:   ~/Downloads/Imberton_Darodes_Family_Tree.ged (merged 2026-06-16)
+
+Resolution policy (current):
+  - Keep values from data/family-tree.ged unless noted otherwise below.
+  - Spelling "Jeannine" is correct (not "Jeanine" from the incoming file).
+
+
+DATE CONFLICTS (original kept)
+----------------------------
+
+1. Paul Imberton + Esprite Ribet marriage (@F_Imb_1@ / incoming @F9@)
+   Original:  05/02/1782
+   Incoming:  7 APR 1808
+   Kept:      05/02/1782
+   Note:      Esprite died in 1800; a marriage in 1808 is not plausible.
+
+2. Aimé Million birth (@M_Aim@ / incoming @I13@)
+   Original:  1817
+   Incoming:  1818
+   Kept:      1817
+
+3. Joséphine Antoinette Varenne death (@I_JAVarenne@ / incoming @I34@)
+   Original:  12/1945
+   Incoming:  1951
+   Kept:      12/1945
+
+4. Hippolyte Louis Antoine Imberton birth (@I_Hippolyte@ / incoming @I29@)
+   Original:  09/01/1824
+   Incoming:  1 SEP 1824
+   Kept:      09/01/1824
+   Note:      Same year; day and month differ.
+
+5. François dit Jean Darodes death (@D_F2@ / incoming @I5@)
+   Original:  31/10/1765
+   Incoming:  3 OCT 1765
+   Kept:      31/10/1765
+   Note:      Likely the same date in different formats.
+
+
+NAME / SPELLING DIFFERENCES (original kept)
+-------------------------------------------
+
+6. Jeannine Poirieux (@P_Janine@ / incoming @I37@)
+   Original:  Jeannine
+   Incoming:  Jeanine
+   Kept:      Jeannine (confirmed correct spelling)
+
+7. Marie Madeleine Priaron (@I_MMPrioron@ / incoming @I31@)
+   Original:  PRIORON
+   Incoming:  Priaron
+   Kept:      PRIORON
+
+8. Marie-Anne Reine Massotte (@I_MAReine@ / incoming @I28@)
+   Original:  MASSOTTE
+   Incoming:  Massot
+   Kept:      MASSOTTE
+
+9. Marie Pierre Hippolyte Imberton (@I_MPierre@ / incoming @I32@)
+   Original:  Marie Pierre Hippolyte
+   Incoming:  Hippolyte
+   Kept:      full name in original
+
+10. Marie Noël Paul Imberton (@I_MNPaul@ / incoming @I35@)
+    Original:  Marie Noël Paul
+    Incoming:  Paul
+    Kept:      full name in original
+
+11. Jean Hippolyte Emmanuel Imberton (@I_Jean@ / incoming @I36@)
+    Original:  Jean Hippolyte Emmanuel
+    Incoming:  Jean
+    Kept:      full name in original
+
+
+SCOPE / COVERAGE (informational)
+--------------------------------
+
+12. The incoming file is a focused subset (~58 records) of the Imberton–Darodes–Million
+    trunk. It does not include Poirieux branches, Argout, Girard descendants, or most
+    modern Imberton lines present in family-tree.ged. No data was removed from the
+    canonical file for this reason.

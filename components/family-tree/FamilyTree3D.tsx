@@ -18,6 +18,7 @@ import {
   unionSearchIndex,
   unions,
 } from "./familyGraph";
+import { treeCardName } from "./gedcom";
 import type { NodeContextMenuTarget } from "./familyTreeActionsContext";
 import { familyHighlight as highlightColors } from "./familyHighlightColors";
 import { isDeceased, isDeceasedAsOfYear } from "./personUtils";
@@ -271,6 +272,7 @@ function PersonCard({
   const lifespan = person.death?.year
     ? `${person.birth.year ?? "?"} – ${person.death.year}`
     : `${person.birth.year ?? "?"} –`;
+  const cardLabel = treeCardName(person.firstName, person.familyName);
 
   const shouldGrey = greyed && !selected && !emphasized;
   const wrapperOpacity = dimmed ? 0.26 : shouldGrey ? 0.5 : 1;
@@ -361,7 +363,7 @@ function PersonCard({
               textAlign: "center",
             }}
           >
-            {person.name}
+            {cardLabel}
           </span>
         </div>
       </Html>
@@ -447,7 +449,7 @@ function PersonCard({
               wordBreak: "break-word",
             }}
           >
-            {person.name}
+            {cardLabel}
           </p>
         </div>
         <p
@@ -465,6 +467,114 @@ function PersonCard({
         </p>
       </div>
     </Html>
+  );
+}
+
+function unionMarriageTooltip(marriageYear: number | null, divorced: boolean): string | undefined {
+  if (!marriageYear) return undefined;
+  return `Married ${marriageYear}${divorced ? " (divorced)" : ""}`;
+}
+
+/** Marriage anchor in 3D — sphere with optional marriage year centered on it. */
+function UnionAnchor({
+  unionId,
+  position,
+  colorByFamily,
+  showNamesOnly,
+  active,
+  pathActive,
+  focusActive,
+  familyActive,
+  dimmed,
+  greyed,
+  onHover,
+  onHoverEnd,
+  onOpenContextMenu,
+}: {
+  unionId: string;
+  position: Vec3;
+  colorByFamily: boolean;
+  showNamesOnly: boolean;
+  active: boolean;
+  pathActive: boolean;
+  focusActive: boolean;
+  familyActive: boolean;
+  dimmed: boolean;
+  greyed: boolean;
+  onHover: (unionId: string) => void;
+  onHoverEnd: (unionId: string) => void;
+  onOpenContextMenu: (
+    unionId: string,
+    event: { stopPropagation: () => void; nativeEvent: MouseEvent },
+  ) => void;
+}) {
+  const union = unions[unionId];
+  const marriageYear = union?.marriage?.year ?? null;
+  const divorced = union?.divorce !== null;
+  const showYear = !showNamesOnly && marriageYear != null;
+  const familyName =
+    union?.childIds.map((id) => individuals[id]?.familyName).find(Boolean) ?? "UNKNOWN";
+  const color = colorByFamily ? getFamilyColor(familyName).stroke : NEUTRAL_STROKE;
+  const sphereColor = pathActive
+    ? PATH_STROKE
+    : focusActive
+      ? FOCUS_STROKE
+      : familyActive
+        ? "#4a8ac8"
+        : greyed
+          ? GREY_STROKE
+          : color;
+
+  return (
+    <group position={position}>
+      <mesh
+        onPointerOver={(event) => {
+          event.stopPropagation();
+          onHover(unionId);
+        }}
+        onPointerOut={(event) => {
+          event.stopPropagation();
+          onHoverEnd(unionId);
+        }}
+        onContextMenu={(event) => onOpenContextMenu(unionId, event)}
+      >
+        <sphereGeometry args={[active ? 3 : 2.2, 16, 16]} />
+        <meshStandardMaterial
+          color={sphereColor}
+          transparent
+          opacity={dimmed ? 0.2 : greyed ? 0.35 : 0.9}
+        />
+      </mesh>
+      {showYear ? (
+        <Html
+          position={[0, 0, 0.1]}
+          center
+          distanceFactor={active ? 42 : 48}
+          zIndexRange={CARD_Z_RANGE}
+          style={{ pointerEvents: "none" }}
+        >
+          <span
+            title={unionMarriageTooltip(marriageYear, divorced)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: "var(--font-inter), system-ui, sans-serif",
+              fontSize: 10,
+              fontWeight: 600,
+              fontVariantNumeric: "tabular-nums",
+              lineHeight: 1,
+              color: "#ffffff",
+              textShadow: "0 0 3px rgba(0,0,0,0.55), 0 1px 2px rgba(0,0,0,0.45)",
+              whiteSpace: "nowrap",
+              opacity: dimmed ? 0.35 : greyed ? 0.55 : 1,
+            }}
+          >
+            {marriageYear}
+          </span>
+        </Html>
+      ) : null}
+    </group>
   );
 }
 
@@ -655,10 +765,6 @@ function SceneContent({
       {layout.nodes.map((node) => {
         if (node.kind !== "union") return null;
         if (!visibleUnionIds.has(node.id)) return null;
-        const union = unions[node.id];
-        const familyName =
-          union?.childIds.map((id) => individuals[id]?.familyName).find(Boolean) ??
-          "UNKNOWN";
         const pathActive = pathNodeIds?.has(node.id) ?? false;
         const focusActive = focusHighlightNodeIds?.has(node.id) ?? false;
         const familyActive = familyNodeHighlight?.nodeIds.has(node.id) ?? false;
@@ -673,38 +779,25 @@ function SceneContent({
           !familyActive &&
           !dimmed &&
           unionTouchesDeceased(node.id);
-        const color = colorByFamily ? getFamilyColor(familyName).stroke : NEUTRAL_STROKE;
         return (
-          <mesh
+          <UnionAnchor
             key={node.id}
+            unionId={node.id}
             position={[node.x, node.y, node.z]}
-            onPointerOver={(event) => {
-              event.stopPropagation();
-              setHoveredUnionId(node.id);
-            }}
-            onPointerOut={(event) => {
-              event.stopPropagation();
-              setHoveredUnionId((current) => (current === node.id ? null : current));
-            }}
-            onContextMenu={(event) => openUnionContextMenu(node.id, event)}
-          >
-            <sphereGeometry args={[active ? 3 : 2.2, 16, 16]} />
-            <meshStandardMaterial
-              color={
-                pathActive
-                  ? PATH_STROKE
-                  : focusActive
-                    ? FOCUS_STROKE
-                    : familyActive
-                      ? "#4a8ac8"
-                      : greyed
-                        ? GREY_STROKE
-                      : color
-              }
-              transparent
-              opacity={dimmed ? 0.2 : greyed ? 0.35 : 0.9}
-            />
-          </mesh>
+            colorByFamily={colorByFamily}
+            showNamesOnly={showNamesOnly}
+            active={active}
+            pathActive={pathActive}
+            focusActive={focusActive}
+            familyActive={familyActive}
+            dimmed={dimmed}
+            greyed={greyed}
+            onHover={(unionId) => setHoveredUnionId(unionId)}
+            onHoverEnd={(unionId) =>
+              setHoveredUnionId((current) => (current === unionId ? null : current))
+            }
+            onOpenContextMenu={openUnionContextMenu}
+          />
         );
       })}
 

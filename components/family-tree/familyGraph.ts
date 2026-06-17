@@ -102,9 +102,75 @@ export const graph = buildGraph();
 export const individuals = graph.individuals;
 export const unions = graph.unions;
 
+type GraphListener = () => void;
+const graphListeners = new Set<GraphListener>();
+let graphRevision = 0;
+
+export function subscribeGraph(listener: GraphListener): () => void {
+  graphListeners.add(listener);
+  return () => graphListeners.delete(listener);
+}
+
+export function getGraphRevision(): number {
+  return graphRevision;
+}
+
+function notifyGraphChange(): void {
+  graphRevision++;
+  for (const listener of graphListeners) listener();
+}
+
+/** Replace the in-memory graph (keeps `individuals` / `unions` object references). */
+export function replaceGraph(newGraph: FamilyGraph): void {
+  deriveGenerations(newGraph);
+  sortChildren(newGraph);
+
+  for (const key of Object.keys(individuals)) {
+    delete individuals[key];
+  }
+  Object.assign(individuals, newGraph.individuals);
+
+  for (const key of Object.keys(unions)) {
+    delete unions[key];
+  }
+  Object.assign(unions, newGraph.unions);
+
+  refreshDerived();
+  notifyGraphChange();
+}
+
+/** Load graph state from a GEDCOM document string (runtime source of truth). */
+export function initializeGraphFromGedcom(gedcomText: string): void {
+  replaceGraph(parseGedcom(gedcomText));
+}
+
 export function getIndividual(id: string | null): Individual | null {
   if (!id) return null;
   return individuals[id] ?? null;
+}
+
+export function getUnion(id: string | null): Union | null {
+  if (!id) return null;
+  return unions[id] ?? null;
+}
+
+/** Unions where this person is a partner (GEDCOM FAMS), in file order. */
+export function getPersonUnions(id: string): Union[] {
+  const person = individuals[id];
+  if (!person) return [];
+  return person.fams
+    .map((unionId) => unions[unionId])
+    .filter((union): union is Union => union !== undefined);
+}
+
+/** The other partner(s) in a union for a given person. */
+export function getUnionPartners(personId: string, unionId: string): Individual[] {
+  const union = unions[unionId];
+  if (!union) return [];
+  return union.partnerIds
+    .filter((id) => id !== personId)
+    .map((id) => individuals[id])
+    .filter((individual): individual is Individual => individual !== undefined);
 }
 
 /** Parents of a person via their birth union (GEDCOM FAMC). */
@@ -152,42 +218,113 @@ export function getChildren(id: string): Individual[] {
   return result.sort((a, b) => (a.birth.year ?? 0) - (b.birth.year ?? 0));
 }
 
-export const searchIndex = Object.values(individuals)
-  .map((p) => ({
-    id: p.id,
-    name: p.name,
-    familyName: p.familyName,
-    birthYear: p.birth.year,
-    deathYear: p.death?.year ?? null,
-    gender: p.gender,
-    generation: p.generation,
-  }))
-  .sort((a, b) => a.name.localeCompare(b.name));
+export type UnionSearchEntry = {
+  id: string;
+  label: string;
+  partnerIds: string[];
+  marriageYear: number | null;
+  divorced: boolean;
+  childCount: number;
+};
 
-const familyCountEntries = Array.from(
-  Object.values(individuals).reduce((counts, individual) => {
-    counts.set(individual.familyName, (counts.get(individual.familyName) ?? 0) + 1);
-    return counts;
-  }, new Map<string, number>()),
-).map(([familyName, count]) => ({ familyName, count }));
-
-export const familyColorMap = assignDistinctFamilyColors(familyCountEntries);
-
-export function getFamilyColor(familyName: string) {
-  return familyColorMap.get(familyName) ?? colorForFamilyName(familyName);
+function formatUnionLabel(union: Union): string {
+  const names = union.partnerIds
+    .map((id) => individuals[id]?.name)
+    .filter(Boolean);
+  if (names.length === 0) return "Unknown union";
+  if (names.length === 1) return names[0]!;
+  return `${names[0]} & ${names[1]}`;
 }
 
-export const familyBranches: FamilyBranch[] = familyCountEntries
-  .map(({ familyName, count }) => ({
-    familyName,
-    count,
-    color: getFamilyColor(familyName),
-  }))
-  .sort((a, b) => b.count - a.count || a.familyName.localeCompare(b.familyName));
+export type SearchEntry = {
+  id: string;
+  name: string;
+  familyName: string;
+  birthYear: number | null;
+  deathYear: number | null;
+  gender: Individual["gender"];
+  generation: number;
+};
 
-export const maxGeneration = Math.max(
-  ...Object.values(individuals).map((p) => p.generation),
-);
+export const graphDerived = {
+  searchIndex: [] as SearchEntry[],
+  unionSearchIndex: [] as UnionSearchEntry[],
+  familyBranches: [] as FamilyBranch[],
+  familyColorMap: new Map<string, ReturnType<typeof colorForFamilyName>>(),
+};
+
+export const searchIndex = graphDerived.searchIndex;
+export const unionSearchIndex = graphDerived.unionSearchIndex;
+export const familyBranches = graphDerived.familyBranches;
+export const familyColorMap = graphDerived.familyColorMap;
+
+export let maxGeneration = 0;
+
+function refreshDerived(): void {
+  graphDerived.searchIndex.length = 0;
+  graphDerived.searchIndex.push(
+    ...Object.values(individuals)
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        familyName: p.familyName,
+        birthYear: p.birth.year,
+        deathYear: p.death?.year ?? null,
+        gender: p.gender,
+        generation: p.generation,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+  );
+
+  const familyCountEntries = Array.from(
+    Object.values(individuals).reduce((counts, individual) => {
+      counts.set(individual.familyName, (counts.get(individual.familyName) ?? 0) + 1);
+      return counts;
+    }, new Map<string, number>()),
+  ).map(([familyName, count]) => ({ familyName, count }));
+
+  graphDerived.familyColorMap.clear();
+  for (const [name, color] of assignDistinctFamilyColors(familyCountEntries)) {
+    graphDerived.familyColorMap.set(name, color);
+  }
+
+  graphDerived.familyBranches.length = 0;
+  graphDerived.familyBranches.push(
+    ...familyCountEntries
+      .map(({ familyName, count }) => ({
+        familyName,
+        count,
+        color:
+          graphDerived.familyColorMap.get(familyName) ?? colorForFamilyName(familyName),
+      }))
+      .sort((a, b) => b.count - a.count || a.familyName.localeCompare(b.familyName)),
+  );
+
+  maxGeneration = Math.max(
+    0,
+    ...Object.values(individuals).map((p) => p.generation),
+  );
+
+  graphDerived.unionSearchIndex.length = 0;
+  graphDerived.unionSearchIndex.push(
+    ...Object.values(unions)
+      .map((union) => ({
+        id: union.id,
+        label: formatUnionLabel(union),
+        partnerIds: union.partnerIds,
+        marriageYear: union.marriage?.year ?? null,
+        divorced: union.divorce !== null,
+        childCount: union.childIds.length,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label)),
+  );
+}
+
+refreshDerived();
+
+export function getFamilyColor(familyName: string) {
+  return graphDerived.familyColorMap.get(familyName) ?? colorForFamilyName(familyName);
+}
 
 export const personNodeId = (id: string) => id;
 export const unionNodeId = (id: string) => id;
@@ -474,6 +611,7 @@ function personData(individual: Individual): PersonNodeData {
   return {
     kind: "person",
     name: individual.name,
+    firstName: individual.firstName,
     familyName: individual.familyName,
     branchColor,
     birthYear: individual.birth.year,
@@ -686,35 +824,6 @@ export function getLineagePersonIds(personId: string): Set<string> {
 
   return result;
 }
-
-export type UnionSearchEntry = {
-  id: string;
-  label: string;
-  partnerIds: string[];
-  marriageYear: number | null;
-  divorced: boolean;
-  childCount: number;
-};
-
-function formatUnionLabel(union: Union): string {
-  const names = union.partnerIds
-    .map((id) => individuals[id]?.name)
-    .filter(Boolean);
-  if (names.length === 0) return "Unknown union";
-  if (names.length === 1) return names[0]!;
-  return `${names[0]} & ${names[1]}`;
-}
-
-export const unionSearchIndex: UnionSearchEntry[] = Object.values(unions)
-  .map((union) => ({
-    id: union.id,
-    label: formatUnionLabel(union),
-    partnerIds: union.partnerIds,
-    marriageYear: union.marriage?.year ?? null,
-    divorced: union.divorce !== null,
-    childCount: union.childIds.length,
-  }))
-  .sort((a, b) => a.label.localeCompare(b.label));
 
 /** Lineage of every partner in a union, merged together. */
 export function getLineagePersonIdsForUnion(unionId: string): Set<string> {

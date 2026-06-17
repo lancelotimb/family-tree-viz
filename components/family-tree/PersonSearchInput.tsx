@@ -5,12 +5,14 @@ import { Search, X } from "lucide-react";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { searchIndex } from "./familyGraph";
 import { isBornByYear } from "./timeUtils";
+import { useGraphRevision } from "./useGraphRevision";
 
 type PersonSearchInputProps = {
   label: string;
   value: string;
   onChange: (id: string) => void;
   excludeId?: string;
+  excludeIds?: Iterable<string>;
   visibleFamilyNames?: Set<string>;
   lineagePersonIds?: Set<string> | null;
   aliveAtYear?: number | null;
@@ -27,11 +29,13 @@ export function PersonSearchInput({
   value,
   onChange,
   excludeId,
+  excludeIds,
   visibleFamilyNames,
   lineagePersonIds,
   aliveAtYear = null,
   placeholder = "Search ancestors…",
 }: PersonSearchInputProps) {
+  const graphRevision = useGraphRevision();
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -39,16 +43,25 @@ export function PersonSearchInput({
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
 
+  const excluded = useMemo(() => {
+    const ids = new Set<string>();
+    if (excludeId) ids.add(excludeId);
+    if (excludeIds) {
+      for (const id of excludeIds) ids.add(id);
+    }
+    return ids;
+  }, [excludeId, excludeIds]);
+
   const selectedPerson = useMemo(
     () => searchIndex.find((person) => person.id === value),
-    [value],
+    [value, graphRevision],
   );
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     const visiblePeople = searchIndex.filter(
       (person) =>
-        person.id !== excludeId &&
+        !excluded.has(person.id) &&
         (!visibleFamilyNames || visibleFamilyNames.has(person.familyName)) &&
         (!lineagePersonIds || lineagePersonIds.has(person.id)) &&
         (aliveAtYear === null || isBornByYear(person.birthYear, aliveAtYear)),
@@ -57,7 +70,7 @@ export function PersonSearchInput({
     return visiblePeople
       .filter((person) => person.name.toLowerCase().includes(q))
       .slice(0, 8);
-  }, [query, excludeId, visibleFamilyNames, lineagePersonIds, aliveAtYear]);
+  }, [query, excluded, visibleFamilyNames, lineagePersonIds, aliveAtYear, graphRevision]);
 
   const selectPerson = useCallback(
     (id: string) => {
@@ -120,7 +133,7 @@ export function PersonSearchInput({
         <Search className="h-3.5 w-3.5 shrink-0 text-[#a8957a]" aria-hidden />
         <input
           ref={inputRef}
-          type="search"
+          type="text"
           value={inputValue}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -146,7 +159,7 @@ export function PersonSearchInput({
           <button
             type="button"
             onClick={clearSelection}
-            className="shrink-0 rounded-full p-0.5 text-[#a8957a] transition-colors hover:bg-[#f5efe4] hover:text-[#3d3428]"
+            className="shrink-0 cursor-pointer rounded-full p-0.5 text-[#a8957a] transition-colors hover:bg-[#f5efe4] hover:text-[#3d3428]"
             aria-label={`Clear ${label}`}
           >
             <X className="h-3.5 w-3.5" />
@@ -166,7 +179,7 @@ export function PersonSearchInput({
                 type="button"
                 onMouseEnter={() => setActiveIndex(index)}
                 onClick={() => selectPerson(person.id)}
-                className={`flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors ${
+                className={`flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left transition-colors ${
                   index === activeIndex ? "bg-[#f5efe4]" : "hover:bg-[#faf6ef]"
                 }`}
               >

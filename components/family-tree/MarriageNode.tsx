@@ -8,6 +8,11 @@ import { unionSearchIndex } from "./familyGraph";
 import type { UnionNodeData } from "./types";
 import { useLongPress } from "./useLongPress";
 
+function unionTooltip(union: UnionNodeData): string | undefined {
+  if (!union.marriageYear) return undefined;
+  return `Married ${union.marriageYear}${union.divorced ? " (divorced)" : ""}`;
+}
+
 /**
  * The "marriage node": partners connect to its top and children branch from its
  * bottom, giving every child a single shared anchor instead of a faked midpoint.
@@ -15,6 +20,8 @@ import { useLongPress } from "./useLongPress";
 export function MarriageNode({ id, data }: NodeProps) {
   const union = data as UnionNodeData;
   const { openNodeContextMenu, suppressNextNodeClick } = useFamilyTreeActions();
+  const showNamesOnly = union.showNamesOnly ?? false;
+  const showYear = !showNamesOnly && union.marriageYear != null;
 
   const unionLabel =
     unionSearchIndex.find((entry) => entry.id === id)?.label ?? "Union";
@@ -53,22 +60,21 @@ export function MarriageNode({ id, data }: NodeProps) {
         ? familyHighlight.focus.primary
         : null;
 
+  const dotSize = union.singleParent ? "h-2.5 w-2.5" : "h-3.5 w-3.5";
+
   return (
     <div
       {...longPressHandlers}
-      className="relative flex h-7 w-7 items-center justify-center"
+      className={`relative flex flex-col items-center justify-center ${
+        showYear ? "min-w-9 gap-0.5 pb-0.5" : "h-7 w-7"
+      }`}
       style={{ touchAction: "manipulation" }}
+      title={unionTooltip(union)}
     >
       <Handle
         id="union-top"
         type="target"
         position={Position.Top}
-        className="!h-2 !w-2 !border-0 !bg-transparent !opacity-0"
-      />
-      <Handle
-        id="union-bottom"
-        type="source"
-        position={Position.Bottom}
         className="!h-2 !w-2 !border-0 !bg-transparent !opacity-0"
       />
       <span
@@ -84,7 +90,7 @@ export function MarriageNode({ id, data }: NodeProps) {
               ? branchColor.background
               : "#efe6d4",
         }}
-        className={`block rounded-full border transition-all duration-200 ${
+        className={`block shrink-0 rounded-full border transition-all duration-200 ${
           hoverRelated
             ? "family-hover-union"
             : pathHighlighted
@@ -92,12 +98,18 @@ export function MarriageNode({ id, data }: NodeProps) {
               : focusHighlighted
                 ? "family-focus-union"
                 : ""
-        } ${union.singleParent ? "h-2.5 w-2.5" : "h-3.5 w-3.5"}`}
-        title={
-          union.marriageYear
-            ? `Married ${union.marriageYear}${union.divorced ? " (divorced)" : ""}`
-            : undefined
-        }
+        } ${dotSize}`}
+      />
+      {showYear ? (
+        <span className="shrink-0 text-[10px] font-medium tabular-nums leading-none text-[#8b7d6b]">
+          {union.marriageYear}
+        </span>
+      ) : null}
+      <Handle
+        id="union-bottom"
+        type="source"
+        position={Position.Bottom}
+        className="!h-2 !w-2 !border-0 !bg-transparent !opacity-0"
       />
     </div>
   );

@@ -121,7 +121,7 @@ export function UnionSearchInput({
         <Search className="h-3.5 w-3.5 shrink-0 text-[#a8957a]" aria-hidden />
         <input
           ref={inputRef}
-          type="search"
+          type="text"
           value={inputValue}
           onChange={(e) => {
             setQuery(e.target.value);
