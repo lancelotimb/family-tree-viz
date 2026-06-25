@@ -2,9 +2,11 @@ import type {
   FamilyGraph,
   Individual,
   LifeEvent,
+  MediaItem,
   MemberGender,
   Union,
 } from "./types";
+import { parseMultilineText } from "./gedcomText";
 
 type GedcomNode = {
   level: number;
@@ -160,14 +162,10 @@ function parseIndividual(node: GedcomNode): Individual {
     birth: parseEvent(birthNode) ?? { year: null },
     death: deathNode ? (parseEvent(deathNode) ?? { year: null }) : null,
     biography: childrenWith(node, "NOTE")
-      .map((n) => n.value ?? "")
+      .map((n) => parseMultilineText(n))
       .join(" ")
       .trim(),
     avatarUrl: child(node, "_AVATAR")?.value ?? "",
-    gallery: childrenWith(node, "_PHOTO").map((photo, index) => ({
-      id: `${node.xref}-photo-${index}`,
-      caption: photo.value ?? "",
-    })),
     fams: childrenWith(node, "FAMS").map((c) => stripPointer(c.value ?? "")),
     famc: child(node, "FAMC")?.value
       ? stripPointer(child(node, "FAMC")!.value!)
@@ -190,6 +188,55 @@ function parseUnion(node: GedcomNode): Union {
     divorce: parseEvent(child(node, "DIV")),
     generation: 0,
   };
+}
+
+function parseMedia(node: GedcomNode): MediaItem {
+  const fileNode = child(node, "FILE");
+  return {
+    id: node.xref!,
+    url: fileNode?.value?.trim() ?? "",
+    legend: parseMultilineText(child(node, "NOTE")),
+    taggedPersonIds: childrenWith(node, "_TAG").map((tag) =>
+      stripPointer(tag.value ?? ""),
+    ),
+  };
+}
+
+function migrateLegacyPhotos(
+  records: GedcomNode[],
+  media: Record<string, MediaItem>,
+): void {
+  for (const record of records) {
+    if (record.tag !== "INDI" || !record.xref) continue;
+    const personId = record.xref;
+    childrenWith(record, "_PHOTO").forEach((photo, index) => {
+      const id = `legacy-${personId}-photo-${index}`;
+      if (media[id]) return;
+      media[id] = {
+        id,
+        url: "",
+        legend: photo.value ?? "",
+        taggedPersonIds: [personId],
+      };
+    });
+  }
+}
+
+function syncMediaTagsFromIndividuals(
+  records: GedcomNode[],
+  media: Record<string, MediaItem>,
+): void {
+  for (const record of records) {
+    if (record.tag !== "INDI" || !record.xref) continue;
+    for (const obje of childrenWith(record, "OBJE")) {
+      const mediaId = stripPointer(obje.value ?? "");
+      const item = media[mediaId];
+      if (!item) continue;
+      if (!item.taggedPersonIds.includes(record.xref)) {
+        item.taggedPersonIds.push(record.xref);
+      }
+    }
+  }
 }
 
 function applyFamilyRoleGenders(
@@ -231,6 +278,7 @@ function linkChildrenToBirthFamilies(
 export function parseGedcom(text: string): FamilyGraph {
   const individuals: Record<string, Individual> = {};
   const unions: Record<string, Union> = {};
+  const media: Record<string, MediaItem> = {};
   const indiNodes: Record<string, GedcomNode> = {};
   const records = parseRecords(text);
 
@@ -241,8 +289,13 @@ export function parseGedcom(text: string): FamilyGraph {
       individuals[record.xref] = parseIndividual(record);
     } else if (record.tag === "FAM") {
       unions[record.xref] = parseUnion(record);
+    } else if (record.tag === "OBJE") {
+      media[record.xref] = parseMedia(record);
     }
   }
+
+  migrateLegacyPhotos(records, media);
+  syncMediaTagsFromIndividuals(records, media);
 
   for (const record of records) {
     if (record.tag === "FAM" && record.xref) {
@@ -252,5 +305,5 @@ export function parseGedcom(text: string): FamilyGraph {
 
   linkChildrenToBirthFamilies(unions, individuals);
 
-  return { individuals, unions };
+  return { individuals, unions, media };
 }

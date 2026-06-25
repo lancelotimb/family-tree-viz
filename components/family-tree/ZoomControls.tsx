@@ -3,6 +3,7 @@
 import { useReactFlow } from "@xyflow/react";
 import {
   Calendar,
+  Image,
   LogOut,
   Maximize2,
   Plus,
@@ -27,6 +28,7 @@ type ZoomControlsProps = {
   /** Reset the 3D camera to its default framing. */
   onResetView?: () => void;
   onAddPerson?: () => void;
+  onManageGallery?: () => void;
   addPersonDisabled?: boolean;
   onAdminLogout?: () => void;
 };
@@ -42,6 +44,7 @@ export function ZoomControls({
   onZoomOut3D,
   onResetView,
   onAddPerson,
+  onManageGallery,
   addPersonDisabled = false,
   onAdminLogout,
 }: ZoomControlsProps) {
@@ -66,6 +69,14 @@ export function ZoomControls({
           label="Add person"
           icon={<Plus className="h-4 w-4" />}
           onClick={onAddPerson}
+          disabled={addPersonDisabled}
+        />
+      ) : null}
+      {onManageGallery ? (
+        <AdminZoomButton
+          label="Manage gallery"
+          icon={<Image className="h-4 w-4" />}
+          onClick={onManageGallery}
           disabled={addPersonDisabled}
         />
       ) : null}

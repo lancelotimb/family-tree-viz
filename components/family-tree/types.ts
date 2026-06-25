@@ -28,7 +28,6 @@ export type Individual = {
   death: LifeEvent | null;
   biography: string;
   avatarUrl: string;
-  gallery: { id: string; caption: string }[];
   /** Unions where this person is a partner (GEDCOM `FAMS`). */
   fams: string[];
   /** Union this person was born into (GEDCOM `FAMC`). */
@@ -53,9 +52,18 @@ export type Union = {
   generation: number;
 };
 
+/** GEDCOM `OBJE` record — a tree-wide gallery image with legend and person tags. */
+export type MediaItem = {
+  id: string;
+  url: string;
+  legend: string;
+  taggedPersonIds: string[];
+};
+
 export type FamilyGraph = {
   individuals: Record<string, Individual>;
   unions: Record<string, Union>;
+  media: Record<string, MediaItem>;
 };
 
 export type PersonNodeData = {
@@ -70,6 +78,7 @@ export type PersonNodeData = {
   deathYear: number | null;
   gender: MemberGender;
   generation: number;
+  avatarUrl?: string;
   selected?: boolean;
   greyed?: boolean;
   pathHighlighted?: boolean;

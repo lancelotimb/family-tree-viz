@@ -10,6 +10,7 @@ import type {
   FamilyGraph,
   FamilyNodeData,
   Individual,
+  MediaItem,
   PersonNodeData,
   Union,
   UnionNodeData,
@@ -101,6 +102,7 @@ function buildGraph(): FamilyGraph {
 export const graph = buildGraph();
 export const individuals = graph.individuals;
 export const unions = graph.unions;
+export const media = graph.media;
 
 type GraphListener = () => void;
 const graphListeners = new Set<GraphListener>();
@@ -135,6 +137,11 @@ export function replaceGraph(newGraph: FamilyGraph): void {
   }
   Object.assign(unions, newGraph.unions);
 
+  for (const key of Object.keys(media)) {
+    delete media[key];
+  }
+  Object.assign(media, newGraph.media);
+
   refreshDerived();
   notifyGraphChange();
 }
@@ -152,6 +159,22 @@ export function getIndividual(id: string | null): Individual | null {
 export function getUnion(id: string | null): Union | null {
   if (!id) return null;
   return unions[id] ?? null;
+}
+
+/** Gallery images tagged on a person (derived from tree-wide media registry). */
+export function getPersonGallery(personId: string): MediaItem[] {
+  return Object.values(media)
+    .filter((item) => item.taggedPersonIds.includes(personId))
+    .sort((a, b) => a.id.localeCompare(b.id));
+}
+
+export function getMediaItem(id: string | null): MediaItem | null {
+  if (!id) return null;
+  return media[id] ?? null;
+}
+
+export function getFullGraph(): FamilyGraph {
+  return { individuals, unions, media };
 }
 
 /** Unions where this person is a partner (GEDCOM FAMS), in file order. */
@@ -618,6 +641,7 @@ function personData(individual: Individual): PersonNodeData {
     deathYear: individual.death?.year ?? null,
     gender: individual.gender,
     generation: individual.generation,
+    avatarUrl: individual.avatarUrl || undefined,
   };
 }
 

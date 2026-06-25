@@ -1,5 +1,5 @@
 import { splitGivenName } from "./gedcomParser";
-import type { FamilyGraph, Individual, LifeEvent, MemberGender, Union } from "./types";
+import type { FamilyGraph, Individual, LifeEvent, MediaItem, MemberGender, Union } from "./types";
 
 export type PersonFormData = {
   firstName: string;
@@ -66,7 +66,6 @@ export function formDataToIndividual(id: string, data: PersonFormData): Individu
     death,
     biography: data.biography.trim(),
     avatarUrl: "",
-    gallery: [],
     fams: [],
     famc: data.famc,
     generation: 0,
@@ -96,7 +95,10 @@ export function generatePersonId(
 export function cloneGraph(graph: FamilyGraph): FamilyGraph {
   return {
     individuals: Object.fromEntries(
-      Object.entries(graph.individuals).map(([id, person]) => [id, { ...person, fams: [...person.fams], gallery: [...person.gallery] }]),
+      Object.entries(graph.individuals).map(([id, person]) => [
+        id,
+        { ...person, fams: [...person.fams] },
+      ]),
     ),
     unions: Object.fromEntries(
       Object.entries(graph.unions).map(([id, union]) => [
@@ -106,6 +108,12 @@ export function cloneGraph(graph: FamilyGraph): FamilyGraph {
           partnerIds: [...union.partnerIds],
           childIds: [...union.childIds],
         },
+      ]),
+    ),
+    media: Object.fromEntries(
+      Object.entries(graph.media).map(([id, item]) => [
+        id,
+        { ...item, taggedPersonIds: [...item.taggedPersonIds] },
       ]),
     ),
   };
@@ -122,7 +130,6 @@ export function updatePersonInGraph(
 
   const updated = formDataToIndividual(personId, data);
   updated.fams = [...existing.fams];
-  updated.gallery = [...existing.gallery];
   updated.avatarUrl = existing.avatarUrl;
   updated.famc = data.famc;
 
@@ -544,4 +551,69 @@ export function normalizeNameFields(firstName: string, middleNames: string, fami
     middleNames: middleNames.trim() || parsedMiddle,
     familyName: familyName.trim().toUpperCase() || "UNKNOWN",
   };
+}
+
+export type MediaFormData = {
+  url: string;
+  legend: string;
+  taggedPersonIds: string[];
+};
+
+export function generateMediaId(graph: FamilyGraph): string {
+  let counter = 1;
+  let id = `M_photo_${counter}`;
+  while (graph.media[id]) {
+    counter++;
+    id = `M_photo_${counter}`;
+  }
+  return id;
+}
+
+export function updatePersonAvatarInGraph(
+  graph: FamilyGraph,
+  personId: string,
+  avatarUrl: string,
+): FamilyGraph {
+  const next = cloneGraph(graph);
+  const person = next.individuals[personId];
+  if (!person) return graph;
+  person.avatarUrl = avatarUrl;
+  return next;
+}
+
+export function addMediaToGraph(
+  graph: FamilyGraph,
+  mediaId: string,
+  data: MediaFormData,
+): FamilyGraph {
+  const next = cloneGraph(graph);
+  next.media[mediaId] = {
+    id: mediaId,
+    url: data.url.trim(),
+    legend: data.legend,
+    taggedPersonIds: [...new Set(data.taggedPersonIds)],
+  };
+  return next;
+}
+
+export function updateMediaInGraph(
+  graph: FamilyGraph,
+  mediaId: string,
+  data: Partial<MediaFormData>,
+): FamilyGraph {
+  const next = cloneGraph(graph);
+  const existing = next.media[mediaId];
+  if (!existing) return graph;
+  if (data.url !== undefined) existing.url = data.url.trim();
+  if (data.legend !== undefined) existing.legend = data.legend;
+  if (data.taggedPersonIds !== undefined) {
+    existing.taggedPersonIds = [...new Set(data.taggedPersonIds)];
+  }
+  return next;
+}
+
+export function removeMediaFromGraph(graph: FamilyGraph, mediaId: string): FamilyGraph {
+  const next = cloneGraph(graph);
+  delete next.media[mediaId];
+  return next;
 }

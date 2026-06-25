@@ -419,6 +419,8 @@ function PersonCard({
         >
           <ProfileAvatar
             gender={person.gender}
+            src={person.avatarUrl || undefined}
+            alt={person.name}
             style={{ height: 32, width: 32, color: avatarColor }}
           />
         </div>

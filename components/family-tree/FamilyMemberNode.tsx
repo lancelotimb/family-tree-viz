@@ -199,6 +199,8 @@ export function FamilyMemberNode({ id, data, selected }: NodeProps) {
       >
         <ProfileAvatar
           gender={member.gender}
+          src={member.avatarUrl}
+          alt={member.name}
           className="h-8 w-8"
           style={{ color: avatarColor }}
           strokeWidth={1.5}

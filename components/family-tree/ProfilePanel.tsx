@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { Heart, MapPin, Pencil, Plus, Users, X, type LucideIcon } from "lucide-react";
+import { AvatarCropDialog } from "./AvatarCropDialog";
 import { ProfileAvatar } from "./ProfileAvatar";
 import type { MemberGender } from "./types";
 import {
   getChildren,
   getIndividual,
   getParents,
+  getPersonGallery,
   getPersonUnions,
   getUnionPartners,
 } from "./familyGraph";
@@ -42,17 +44,20 @@ export function ProfilePanel({
   onAddMarriage,
 }: ProfilePanelProps) {
   const graphRevision = useGraphRevision();
-  const { adminMode, updatePerson, saving, saveError } = useFamilyGraphAdmin();
+  const { adminMode, updatePerson, updateAvatar, saving, saveError } = useFamilyGraphAdmin();
   const [editing, setEditing] = useState(false);
+  const [avatarCropOpen, setAvatarCropOpen] = useState(false);
   const profile = getIndividual(memberId);
   const parents = profile ? getParents(profile.id) : [];
   const personUnions = profile ? getPersonUnions(profile.id) : [];
   const children = profile ? getChildren(profile.id) : [];
+  const gallery = profile ? getPersonGallery(profile.id) : [];
 
   void graphRevision;
 
   const handleClose = () => {
     setEditing(false);
+    setAvatarCropOpen(false);
     onClose();
   };
 
@@ -101,13 +106,35 @@ export function ProfilePanel({
                 </div>
               ) : (
                 <>
-                  <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full border-2 border-[#e8dfd0] bg-gradient-to-b from-[#faf6ef] to-[#f0e8da]">
-                    <ProfileAvatar
-                      gender={profile.gender}
-                      className="h-16 w-16 text-[#a8957a]"
-                      strokeWidth={1.25}
-                    />
-                  </div>
+                  {adminMode ? (
+                    <button
+                      type="button"
+                      onClick={() => setAvatarCropOpen(true)}
+                      className="group relative mx-auto flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-2 border-[#e8dfd0] bg-gradient-to-b from-[#faf6ef] to-[#f0e8da]"
+                      aria-label="Change avatar"
+                    >
+                      <ProfileAvatar
+                        gender={profile.gender}
+                        src={profile.avatarUrl || undefined}
+                        alt={profile.name}
+                        className="h-full w-full text-[#a8957a]"
+                        strokeWidth={1.25}
+                      />
+                      <span className="absolute inset-0 flex items-center justify-center bg-[#3d3428]/0 text-xs font-medium text-white opacity-0 transition group-hover:bg-[#3d3428]/45 group-hover:opacity-100">
+                        Change
+                      </span>
+                    </button>
+                  ) : (
+                    <div className="mx-auto flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-2 border-[#e8dfd0] bg-gradient-to-b from-[#faf6ef] to-[#f0e8da]">
+                      <ProfileAvatar
+                        gender={profile.gender}
+                        src={profile.avatarUrl || undefined}
+                        alt={profile.name}
+                        className="h-full w-full text-[#a8957a]"
+                        strokeWidth={1.25}
+                      />
+                    </div>
+                  )}
                   <h2 className="mt-4 text-center font-serif text-2xl font-medium text-[#3d3428]">
                     {profile.name}
                   </h2>
@@ -283,32 +310,55 @@ export function ProfilePanel({
                 </section>
 
                 <section>
-                  <h3 className="mb-3 font-serif text-lg text-[#3d3428]">Archival gallery</h3>
-                  <div className="flex gap-3 overflow-x-auto pb-2">
-                    {profile.gallery.map((item) => (
-                      <figure
-                        key={item.id}
-                        className="w-36 shrink-0 overflow-hidden rounded-lg border border-[#e8dfd0] bg-[#faf6ef]"
-                      >
-                        <div className="flex h-28 items-center justify-center bg-gradient-to-br from-[#f0e8da] to-[#e8dfd0]">
-                          <ProfileAvatar
-                            gender={profile.gender}
-                            className="h-8 w-8 text-[#c4b49a]/60"
-                            strokeWidth={1}
-                          />
-                        </div>
-                        <figcaption className="px-2 py-2 text-[10px] leading-snug text-[#6b5f4f]">
-                          {item.caption}
-                        </figcaption>
-                      </figure>
-                    ))}
-                  </div>
+                  {gallery.length > 0 ? (
+                    <>
+                      <h3 className="mb-3 font-serif text-lg text-[#3d3428]">Archival gallery</h3>
+                      <div className="flex gap-3 overflow-x-auto pb-2">
+                        {gallery.map((item) => (
+                          <figure
+                            key={item.id}
+                            className="w-36 shrink-0 overflow-hidden rounded-lg border border-[#e8dfd0] bg-[#faf6ef]"
+                          >
+                            {item.url ? (
+                              <img
+                                src={item.url}
+                                alt=""
+                                className="h-28 w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-28 items-center justify-center bg-gradient-to-br from-[#f0e8da] to-[#e8dfd0]">
+                                <ProfileAvatar
+                                  gender={profile.gender}
+                                  className="h-8 w-8 text-[#c4b49a]/60"
+                                  strokeWidth={1}
+                                />
+                              </div>
+                            )}
+                            {item.legend.trim() ? (
+                              <figcaption className="whitespace-pre-line px-2 py-2 text-[10px] leading-snug text-[#6b5f4f]">
+                                {item.legend}
+                              </figcaption>
+                            ) : null}
+                          </figure>
+                        ))}
+                      </div>
+                    </>
+                  ) : null}
                 </section>
               </div>
             ) : null}
           </>
         )}
       </aside>
+
+      {profile && adminMode ? (
+        <AvatarCropDialog
+          open={avatarCropOpen}
+          personId={profile.id}
+          onClose={() => setAvatarCropOpen(false)}
+          onUploaded={(url) => updateAvatar(profile.id, url)}
+        />
+      ) : null}
     </>
   );
 }

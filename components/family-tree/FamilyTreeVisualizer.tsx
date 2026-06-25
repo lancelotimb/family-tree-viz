@@ -30,6 +30,7 @@ import { TimePlayer } from "./TimePlayer";
 import { ProfilePanel } from "./ProfilePanel";
 import { AddPersonDialog } from "./AddPersonDialog";
 import { AddMarriageDialog } from "./AddMarriageDialog";
+import { MediaManagerDialog } from "./MediaManagerDialog";
 import { UnionEditDialog } from "./UnionEditDialog";
 import { useFamilyGraphAdmin } from "./FamilyGraphContext";
 import { useGraphRevision } from "./useGraphRevision";
@@ -151,6 +152,7 @@ function FamilyTreeCanvas({ onAdminLogout }: { onAdminLogout?: () => void }) {
   const graphRevision = useGraphRevision();
   const { adminMode, addPerson, addMarriage, updateUnion, removeUnion, saving } = useFamilyGraphAdmin();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [mediaManagerOpen, setMediaManagerOpen] = useState(false);
   const [editUnionId, setEditUnionId] = useState<string | null>(null);
   const [addMarriagePresetId, setAddMarriagePresetId] = useState<string | null>(null);
   const allFamilyNames = useMemo(
@@ -223,7 +225,7 @@ function FamilyTreeCanvas({ onAdminLogout }: { onAdminLogout?: () => void }) {
 
   const allBranchesVisible = useMemo(
     () => allFamilyNames.every((name) => visibleFamilyNames.has(name)),
-    [visibleFamilyNames],
+    [allFamilyNames, visibleFamilyNames],
   );
 
   const timeRange = useMemo(() => getFamilyTimeRange(individuals), [graphRevision]);
@@ -942,6 +944,7 @@ function FamilyTreeCanvas({ onAdminLogout }: { onAdminLogout?: () => void }) {
               onZoomOut3D={() => controls3DRef.current?.zoomOut()}
               onResetView={() => controls3DRef.current?.resetView()}
               onAddPerson={adminMode ? () => setAddDialogOpen(true) : undefined}
+              onManageGallery={adminMode ? () => setMediaManagerOpen(true) : undefined}
               addPersonDisabled={saving}
               onAdminLogout={onAdminLogout}
             />
@@ -965,6 +968,13 @@ function FamilyTreeCanvas({ onAdminLogout }: { onAdminLogout?: () => void }) {
         onEditUnion={adminMode ? setEditUnionId : undefined}
         onAddMarriage={adminMode ? setAddMarriagePresetId : undefined}
       />
+
+      {adminMode ? (
+        <MediaManagerDialog
+          open={mediaManagerOpen}
+          onClose={() => setMediaManagerOpen(false)}
+        />
+      ) : null}
 
       {adminMode ? (
         <AddPersonDialog
