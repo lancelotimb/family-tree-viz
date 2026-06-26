@@ -36,6 +36,5 @@ yarn-error.log*
 # vercel
 .vercel
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# local dev media uploads (Blob fallback)
+/data/media/

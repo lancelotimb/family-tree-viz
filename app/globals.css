@@ -19,6 +19,20 @@ body {
   font-family: var(--font-inter), system-ui, sans-serif;
 }
 
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 .font-serif {
   font-family: var(--font-playfair), Georgia, serif;
 }

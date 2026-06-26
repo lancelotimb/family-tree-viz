@@ -6,6 +6,7 @@ import { Search } from "lucide-react";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { searchIndex } from "./familyGraph";
 import { isBornByYear } from "./timeUtils";
+import { useGraphRevision } from "./useGraphRevision";
 import {
   getLayoutMetrics,
   PERSON_FOCUS_DURATION_MS,
@@ -35,6 +36,7 @@ export function SearchBar({
   lineagePersonIds,
   aliveAtYear = null,
 }: SearchBarProps) {
+  const graphRevision = useGraphRevision();
   const { getNode, setCenter } = useReactFlow();
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -54,7 +56,7 @@ export function SearchBar({
     return visiblePeople
       .filter((item) => item.name.toLowerCase().includes(q))
       .slice(0, 8);
-  }, [query, visibleFamilyNames, lineagePersonIds, aliveAtYear]);
+  }, [query, visibleFamilyNames, lineagePersonIds, aliveAtYear, graphRevision]);
 
   const setDropdownOpen = useCallback(
     (next: boolean) => {

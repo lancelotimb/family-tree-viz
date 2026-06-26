@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Users, X } from "lucide-react";
+import { Pencil, Users, X } from "lucide-react";
 import type { NodeContextMenuTarget } from "./familyTreeActionsContext";
 
 type NodeContextMenuProps = {
@@ -11,6 +11,8 @@ type NodeContextMenuProps = {
   onUnfocusLineage: () => void;
   focusPersonId: string;
   focusUnionId: string;
+  adminMode?: boolean;
+  onEditUnion?: (unionId: string) => void;
 };
 
 export function NodeContextMenu({
@@ -20,6 +22,8 @@ export function NodeContextMenu({
   onUnfocusLineage,
   focusPersonId,
   focusUnionId,
+  adminMode = false,
+  onEditUnion,
 }: NodeContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ left: number; top: number } | null>(
@@ -118,6 +122,20 @@ export function NodeContextMenu({
           Focus lineage
         </button>
       )}
+      {adminMode && target.kind === "union" && onEditUnion ? (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            onEditUnion(target.nodeId);
+            onClose();
+          }}
+          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#3d3428] transition-colors hover:bg-[#faf6ef]"
+        >
+          <Pencil className="h-4 w-4 shrink-0 text-[#8b7d6b]" aria-hidden />
+          Edit union
+        </button>
+      ) : null}
     </div>
   );
 }

@@ -1,0 +1,26 @@
+GEDCOM merge report
+Incoming: /Users/lancelot.imberton/Downloads/Imberton_Darodes_Family_Tree.ged
+Output: /Users/lancelot.imberton/Dev/family-tree-viz/data/family-tree.ged
+
+Enrichments applied:
+  - Added individuals: @D_Doum@ (Doumengès Darolles), @D_MSeves@ (Marie Seves)
+  - Added individuals: @M_Vincent@, @M_Adeline@ (parents of Aimé Million)
+  - Added families: @F_Darodes_0@, @F_Million_Vincent@
+  - Linked @D_F1@ FAMC → @F_Darodes_0@
+  - Linked @M_Aim@ FAMC → @F_Million_Vincent@
+  - Added occupations (OCCU) on Darodes ancestors and Hippolyte priest ordination
+  - Added birth estimate for Paul Imberton (@I_Paul1@): ABT 1775
+
+Conflicts — existing data kept:
+  - @M_Aim@ BIRT: existing='1817' vs incoming='1818'
+  - @I_JAVarenne@ DEAT: existing='12/1945' vs incoming='1951'
+  - @F_Imb_1@ MARR: existing='05/02/1782' vs incoming='7 APR 1808'
+
+Additional inconsistencies to review (not auto-merged):
+  - @I_Hippolyte@ BIRT: existing 09/01/1824 vs incoming 1 SEP 1824 (same year, different day/month)
+  - @D_F2@ DEAT: existing 31/10/1765 vs incoming 3 OCT 1765 (likely same date)
+  - Spelling: Priaron (incoming) vs PRIORON (existing); Massot vs MASSOTTE; Jeanine vs Jeannine
+  - @I_MPierre@ is "Marie Pierre Hippolyte" in existing; incoming shortens to "Hippolyte"
+  - @I_MNPaul@ is "Marie Noël Paul" in existing; incoming uses "Paul" only
+  - @I_Jean@ is "Jean Hippolyte Emmanuel" in existing; incoming uses "Jean" only
+  - Incoming tree is a subset: no Poirieux branches, Argout, Girard descendants, or modern Imberton lines beyond Jacques/Monique/Jean

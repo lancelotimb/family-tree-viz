@@ -22,20 +22,62 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 ## Family data (GEDCOM)
 
-The tree is defined as a GEDCOM document in `data/family-tree.ged`. `INDI`
-records are people and `FAM` records are marriage/union nodes — `HUSB`/`WIFE` are
-the partners and `CHIL` the children. Modelling unions as records (rather than a
-single `spouseId`) is what lets the tree represent remarriages, divorces, and
-half-siblings.
+The live family tree is stored in **Vercel Blob** at `gedcom/family-tree.ged`.
+`data/family-tree.ged` in the repo is a **seed / backup** only — it bootstraps
+Blob on first read when the object does not exist yet.
 
-To edit the family, change `data/family-tree.ged`:
+`INDI` records are people and `FAM` records are marriage/union nodes —
+`HUSB`/`WIFE` are the partners and `CHIL` the children. Modelling unions as
+records (rather than a single `spouseId`) is what lets the tree represent
+remarriages, divorces, and half-siblings.
 
-- Add a person with an `INDI` record (`NAME`, `SEX`, `BIRT`/`DEAT`, `NOTE` for
-  the biography, `_PHOTO` for gallery captions).
-- Link relationships with a `FAM` record and the `FAMS` (spouse) / `FAMC`
-  (child) pointers on the individuals.
+### Editing in the browser (admin mode)
 
-`components/family-tree/gedcom.ts` parses the document into a graph; generations are derived
+1. Set `ADMIN_SECRET` in your environment (see `.env.example`).
+2. Open [`/admin`](http://localhost:3000/admin) and sign in with that password.
+3. Your browser remembers the password locally so you stay signed in on return visits.
+4. Use **Edit** in profile panels or **Add person** on the map — changes save to Blob immediately.
+
+### Environment variables
+
+| Variable | Purpose |
+|----------|---------|
+| `BLOB_READ_WRITE_TOKEN` | Required for **local** scripts and `next dev` when OIDC is enabled |
+| `BLOB_STORE_ID` | Set automatically when Blob is linked (used by OIDC on Vercel) |
+| `ADMIN_SECRET` | Admin sign-in password for `/admin` |
+
+Blob vars are scoped to **Preview** and **Production** by default. Pull preview vars for local use:
+
+```bash
+vercel env pull .env.local --environment=preview --yes
+```
+
+**OIDC note:** if your Blob store uses OIDC (the default for new stores), `vercel env pull` downloads an empty `BLOB_READ_WRITE_TOKEN=""`. Local tools cannot use OIDC unless the store is also linked to the **Development** environment. For local dev, either:
+
+1. **Enable Development** on the Blob store project link (Dashboard → Storage → Blob → Projects), then re-run `vercel env pull`, or
+2. **Copy `BLOB_READ_WRITE_TOKEN` manually** from the store settings into `.env.local`
+
+On Vercel deployments (Preview/Production), OIDC works automatically — no token needed.
+
+Without Blob credentials locally, the app falls back to reading/writing `data/family-tree.ged` on disk.
+
+### Manual Blob seed
+
+After Blob is configured, upload the repo seed file once:
+
+```bash
+npm run seed-gedcom-blob
+```
+
+If the seed script fails with an OIDC / Development error, use one of the fixes above, or deploy to Preview and let the app lazy-seed on first visit.
+
+### API
+
+- `GET /api/gedcom` — returns the canonical GEDCOM text
+- `PUT /api/gedcom` — replace the document (`Authorization: Bearer $ADMIN_SECRET`)
+- `POST /api/admin/session` — set an HttpOnly admin cookie (`{ "key": "..." }`)
+
+`components/family-tree/gedcom.ts` parses GEDCOM into a graph; generations are derived
 automatically and the layout is computed with
 [ELK](https://github.com/kieler/elkjs)'s layered algorithm
 (`components/family-tree/elkLayout.ts`).

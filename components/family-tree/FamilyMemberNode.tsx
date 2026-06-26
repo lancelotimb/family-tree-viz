@@ -6,6 +6,7 @@ import { useFamilyTreeActions } from "./familyTreeActionsContext";
 import { familyHighlight } from "./familyHighlightColors";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { getLayoutMetrics } from "./layoutConstants";
+import { treeCardName } from "./gedcom";
 import type { PersonNodeData } from "./types";
 import { useLongPress } from "./useLongPress";
 
@@ -108,6 +109,7 @@ export function FamilyMemberNode({ id, data, selected }: NodeProps) {
       : "#fffef9";
 
   const lifespan = formatLifespan(member.birthYear, member.deathYear);
+  const cardLabel = treeCardName(member.firstName, member.familyName);
   const tooltip = showNamesOnly
     ? `${member.name} (${member.familyName}) · ${lifespan}`
     : `${member.name} (${member.familyName})`;
@@ -149,7 +151,7 @@ export function FamilyMemberNode({ id, data, selected }: NodeProps) {
           className="w-full truncate text-center font-serif text-sm font-medium leading-none"
           style={{ color: highlight?.text ?? "#3d3428" }}
         >
-          {member.name}
+          {cardLabel}
         </p>
       </div>
     );
@@ -197,6 +199,8 @@ export function FamilyMemberNode({ id, data, selected }: NodeProps) {
       >
         <ProfileAvatar
           gender={member.gender}
+          src={member.avatarUrl}
+          alt={member.name}
           className="h-8 w-8"
           style={{ color: avatarColor }}
           strokeWidth={1.5}
@@ -208,7 +212,7 @@ export function FamilyMemberNode({ id, data, selected }: NodeProps) {
           className="line-clamp-2 w-full break-words text-center font-serif text-base font-medium leading-tight"
           style={{ color: highlight?.text ?? "#3d3428" }}
         >
-          {member.name}
+          {cardLabel}
         </p>
       </div>
       <p className="mt-1 shrink-0 text-center text-xs tracking-wide text-[#8b7d6b]">

@@ -3,7 +3,10 @@
 import { useReactFlow } from "@xyflow/react";
 import {
   Calendar,
+  Image,
+  LogOut,
   Maximize2,
+  Plus,
   Settings,
   X,
   ZoomIn,
@@ -24,6 +27,10 @@ type ZoomControlsProps = {
   onZoomOut3D?: () => void;
   /** Reset the 3D camera to its default framing. */
   onResetView?: () => void;
+  onAddPerson?: () => void;
+  onManageGallery?: () => void;
+  addPersonDisabled?: boolean;
+  onAdminLogout?: () => void;
 };
 
 export function ZoomControls({
@@ -36,6 +43,10 @@ export function ZoomControls({
   onZoomIn3D,
   onZoomOut3D,
   onResetView,
+  onAddPerson,
+  onManageGallery,
+  addPersonDisabled = false,
+  onAdminLogout,
 }: ZoomControlsProps) {
   const { getZoom, zoomTo, fitView } = useReactFlow();
 
@@ -53,6 +64,29 @@ export function ZoomControls({
 
   return (
     <div className="pointer-events-auto flex flex-col gap-2">
+      {onAddPerson ? (
+        <AdminZoomButton
+          label="Add person"
+          icon={<Plus className="h-4 w-4" />}
+          onClick={onAddPerson}
+          disabled={addPersonDisabled}
+        />
+      ) : null}
+      {onManageGallery ? (
+        <AdminZoomButton
+          label="Manage gallery"
+          icon={<Image className="h-4 w-4" />}
+          onClick={onManageGallery}
+          disabled={addPersonDisabled}
+        />
+      ) : null}
+      {onAdminLogout ? (
+        <AdminZoomButton
+          label="Sign out"
+          icon={<LogOut className="h-4 w-4" />}
+          onClick={onAdminLogout}
+        />
+      ) : null}
       {onSettingsClick && (
         <ZoomButton
           label="Settings"
@@ -185,6 +219,31 @@ function ZoomButton({
       aria-label={label}
       title={label}
       className={`h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-[#e8dfd0] bg-white/80 text-[#3d3428] shadow-lg backdrop-blur-md transition-colors hover:border-[#d4c4a8] hover:bg-[#faf6ef] ${className}`}
+    >
+      {icon}
+    </button>
+  );
+}
+
+function AdminZoomButton({
+  label,
+  icon,
+  onClick,
+  disabled = false,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-[#6b7d5a] bg-[#eef4e8]/95 text-[#4a5c3d] shadow-lg backdrop-blur-md transition-colors hover:border-[#5a6d4d] hover:bg-[#e4eddb] disabled:cursor-not-allowed disabled:opacity-60"
     >
       {icon}
     </button>

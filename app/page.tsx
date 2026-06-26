@@ -1,9 +1,9 @@
-import { FamilyTreeVisualizer } from "@/components/family-tree/FamilyTreeVisualizer";
+import { FamilyTreePage } from "@/components/family-tree/FamilyTreePage";
+import { readGedcom } from "@/lib/gedcomStore";
 
-export default function Home() {
-  return (
-    <main className="h-dvh w-full overflow-hidden">
-      <FamilyTreeVisualizer />
-    </main>
-  );
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const initialGedcom = await readGedcom();
+  return <FamilyTreePage initialGedcom={initialGedcom} />;
 }
