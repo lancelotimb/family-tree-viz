@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { put } from "@vercel/blob";
+import { BlobNotFoundError, get, put } from "@vercel/blob";
 import { isBlobOidcEnvironmentError, LOCAL_BLOB_SETUP_HELP } from "./blobLocalSetup";
 
 const LOCAL_MEDIA_ROOT = path.join(process.cwd(), "data", "media");
@@ -25,10 +25,10 @@ export function hasMediaBlobCredentials(): boolean {
   return Boolean(getBlobReadWriteToken()) || canUseBlobOidc();
 }
 
-function blobPublicOptions(): { access: "public"; token?: string } {
+function blobPrivateOptions(): { access: "private"; token?: string } {
   const token = getBlobReadWriteToken();
-  if (token) return { token, access: "public" };
-  return { access: "public" };
+  if (token) return { token, access: "private" };
+  return { access: "private" };
 }
 
 const ALLOWED_IMAGE_TYPES = new Set([
@@ -57,7 +57,11 @@ export function extensionForMime(contentType: string): string {
   }
 }
 
-/** Persist image bytes and return a public URL (Blob or local serve path). */
+function buildMediaServeUrl(blobPath: string): string {
+  return `/api/media/serve/${blobPath.split("/").map(encodeURIComponent).join("/")}`;
+}
+
+/** Persist image bytes and return an app-served URL. */
 export async function storeMediaFile(
   buffer: Buffer,
   blobPath: string,
@@ -65,13 +69,13 @@ export async function storeMediaFile(
 ): Promise<string> {
   if (hasMediaBlobCredentials()) {
     try {
-      const result = await put(blobPath, buffer, {
-        ...blobPublicOptions(),
+      await put(blobPath, buffer, {
+        ...blobPrivateOptions(),
         addRandomSuffix: false,
         allowOverwrite: true,
         contentType,
       });
-      return result.url;
+      return buildMediaServeUrl(blobPath);
     } catch (error) {
       if (!getBlobReadWriteToken() && isBlobOidcEnvironmentError(error)) {
         throw new Error(LOCAL_BLOB_SETUP_HELP);
@@ -83,7 +87,7 @@ export async function storeMediaFile(
   const localPath = path.join(LOCAL_MEDIA_ROOT, blobPath);
   await mkdir(path.dirname(localPath), { recursive: true });
   await writeFile(localPath, buffer);
-  return `/api/media/serve/${blobPath.split("/").map(encodeURIComponent).join("/")}`;
+  return buildMediaServeUrl(blobPath);
 }
 
 /** Read a locally stored media file (dev fallback when Blob is unavailable). */
@@ -96,6 +100,25 @@ export async function readLocalMediaFile(relativePath: string): Promise<Buffer |
   } catch {
     return null;
   }
+}
+
+/** Read a media file from Blob when configured, otherwise from the local dev fallback. */
+export async function readMediaFile(relativePath: string): Promise<Buffer | null> {
+  if (hasMediaBlobCredentials()) {
+    try {
+      const result = await get(relativePath, blobPrivateOptions());
+      if (!result || result.statusCode !== 200 || !result.stream) return null;
+      return Buffer.from(await new Response(result.stream).arrayBuffer());
+    } catch (error) {
+      if (error instanceof BlobNotFoundError) return null;
+      if (!getBlobReadWriteToken() && isBlobOidcEnvironmentError(error)) {
+        throw new Error(LOCAL_BLOB_SETUP_HELP);
+      }
+      throw error;
+    }
+  }
+
+  return readLocalMediaFile(relativePath);
 }
 
 export function buildMediaBlobPath(

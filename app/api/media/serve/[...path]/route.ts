@@ -1,5 +1,5 @@
 import path from "node:path";
-import { readLocalMediaFile } from "@/lib/mediaStore";
+import { readMediaFile } from "@/lib/mediaStore";
 
 const MIME_BY_EXT: Record<string, string> = {
   ".jpg": "image/jpeg",
@@ -15,7 +15,7 @@ export async function GET(
 ) {
   const { path: segments } = await context.params;
   const relativePath = segments.map(decodeURIComponent).join("/");
-  const buffer = await readLocalMediaFile(relativePath);
+  const buffer = await readMediaFile(relativePath);
   if (!buffer) {
     return new Response("Not found", { status: 404 });
   }

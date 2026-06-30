@@ -71,11 +71,56 @@ npm run seed-gedcom-blob
 
 If the seed script fails with an OIDC / Development error, use one of the fixes above, or deploy to Preview and let the app lazy-seed on first visit.
 
+### Importing photos from an ancestor PDF
+
+Large source PDFs should be processed locally, then only the reviewed image files
+should be uploaded to Blob. The import scripts use the existing GEDCOM media
+model (`OBJE` records tagged with `_TAG @personId@`) and the existing media Blob
+store.
+
+Install Poppler once so the scripts can inspect and extract embedded images:
+
+```bash
+brew install poppler
+```
+
+Extract the PDF into an ignored local workspace:
+
+```bash
+npm run pdf-media:extract -- --pdf "/path/to/ancestors.pdf" --out data/pdf-media-import
+```
+
+This writes extracted image files plus `data/pdf-media-import/manifest.json`.
+Review that manifest before applying it:
+
+- Set `accepted` to `true` for images you want to import.
+- Fill `taggedPersonIds` with existing GEDCOM person IDs.
+- Edit `legend` if the extracted page text is too noisy.
+- If the script reports page-sized images, the PDF is probably flattened scans
+  and the images should be cropped manually before applying.
+
+Preview the import without writing anything:
+
+```bash
+npm run pdf-media:apply -- --manifest data/pdf-media-import/manifest.json --dry-run
+```
+
+Apply the reviewed manifest:
+
+```bash
+npm run pdf-media:apply -- --manifest data/pdf-media-import/manifest.json
+```
+
+Accepted images are uploaded through the same Vercel Blob helper used by the
+admin gallery. The GEDCOM file is then re-serialized with new `OBJE` records so
+the images appear in the existing media manager and person galleries.
+
 ### API
 
 - `GET /api/gedcom` — returns the canonical GEDCOM text
 - `PUT /api/gedcom` — replace the document (`Authorization: Bearer $ADMIN_SECRET`)
 - `POST /api/admin/session` — set an HttpOnly admin cookie (`{ "key": "..." }`)
+- `POST /api/media` — upload an admin gallery/avatar image to Blob or local fallback
 
 `components/family-tree/gedcom.ts` parses GEDCOM into a graph; generations are derived
 automatically and the layout is computed with

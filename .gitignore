@@ -38,3 +38,6 @@ yarn-error.log*
 
 # local dev media uploads (Blob fallback)
 /data/media/
+
+# local PDF photo import workspace
+/data/pdf-media-import/
