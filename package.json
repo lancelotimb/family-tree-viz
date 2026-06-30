@@ -9,6 +9,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "pdf-media:extract": "npx tsx scripts/extract-pdf-media.ts",
+    "pdf-media:apply": "npx tsx scripts/apply-pdf-media-import.ts",
     "seed-gedcom-blob": "npx tsx scripts/seed-gedcom-blob.ts"
   },
   "dependencies": {
