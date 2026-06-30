@@ -22,10 +22,15 @@ function parseYearInput(value: string): number | null {
 }
 
 function buildLifeEvent(yearStr: string, placeStr: string): LifeEvent | null {
-  const year = parseYearInput(yearStr);
+  const dateInput = yearStr.trim();
+  const year = parseYearInput(dateInput);
   const place = placeStr.trim() || undefined;
-  if (year === null && !place) return null;
-  return { year, place };
+  if (year === null && !dateInput && !place) return null;
+  return {
+    year,
+    place,
+    date: dateInput || undefined,
+  };
 }
 
 function buildName(firstName: string, middleNames: string, familyName: string): string {
@@ -34,15 +39,17 @@ function buildName(firstName: string, middleNames: string, familyName: string): 
 }
 
 export function individualToFormData(individual: Individual): PersonFormData {
+  const birth = lifeEventToForm(individual.birth);
+  const death = lifeEventToForm(individual.death);
   return {
     firstName: individual.firstName,
     middleNames: individual.middleNames,
     familyName: individual.familyName,
     gender: individual.gender,
-    birthYear: individual.birth.year?.toString() ?? "",
-    birthPlace: individual.birth.place ?? "",
-    deathYear: individual.death?.year?.toString() ?? "",
-    deathPlace: individual.death?.place ?? "",
+    birthYear: birth.year,
+    birthPlace: birth.place,
+    deathYear: death.year,
+    deathPlace: death.place,
     biography: individual.biography,
     famc: individual.famc,
   };
@@ -195,7 +202,7 @@ export type AddMarriageFormData = {
 
 export function lifeEventToForm(event: LifeEvent | null): { year: string; place: string } {
   return {
-    year: event?.year?.toString() ?? "",
+    year: event?.date ?? event?.year?.toString() ?? "",
     place: event?.place ?? "",
   };
 }

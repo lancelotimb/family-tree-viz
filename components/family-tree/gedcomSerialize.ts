@@ -29,12 +29,13 @@ function formatGedcomName(individual: Individual): string {
 
 function writeLifeEvent(lines: string[], level: number, tag: string, event: LifeEvent | null) {
   if (!event) return;
-  const hasDate = event.year !== null;
+  const dateValue =
+    event.date?.trim() || (event.year !== null ? String(event.year) : "");
   const hasPlace = Boolean(event.place?.trim());
-  if (!hasDate && !hasPlace) return;
+  if (!dateValue && !hasPlace) return;
 
   lines.push(`${level} ${tag}`);
-  if (hasDate) lines.push(`${level + 1} DATE ${event.year}`);
+  if (dateValue) lines.push(`${level + 1} DATE ${dateValue}`);
   if (hasPlace) lines.push(`${level + 1} PLAC ${event.place!.trim()}`);
 }
 
