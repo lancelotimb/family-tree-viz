@@ -4,6 +4,8 @@ export type MemberGender = "male" | "female";
 
 /** A dated, optionally-placed life event (GEDCOM BIRT / DEAT / MARR …). */
 export type LifeEvent = {
+  /** Raw GEDCOM DATE value when present (e.g. `05/08/1743`). */
+  date?: string;
   /** Parsed four-digit year, or null when the GEDCOM date is absent/unparseable. */
   year: number | null;
   place?: string;

@@ -83,7 +83,12 @@ function parseYear(node: GedcomNode | undefined): number | null {
 
 function parseEvent(node: GedcomNode | undefined): LifeEvent | null {
   if (!node) return null;
-  return { year: parseYear(node), place: child(node, "PLAC")?.value };
+  const date = child(node, "DATE")?.value?.trim();
+  return {
+    date: date || undefined,
+    year: parseYear(node),
+    place: child(node, "PLAC")?.value,
+  };
 }
 
 function fallbackFamilyName(name: string): string {

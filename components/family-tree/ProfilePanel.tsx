@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Heart, MapPin, Pencil, Plus, Users, X, type LucideIcon } from "lucide-react";
 import { AvatarCropDialog } from "./AvatarCropDialog";
 import { ProfileAvatar } from "./ProfileAvatar";
-import type { MemberGender } from "./types";
+import type { LifeEvent, MemberGender } from "./types";
 import {
   getChildren,
   getIndividual,
@@ -16,6 +16,11 @@ import {
 import { useFamilyGraphAdmin } from "./FamilyGraphContext";
 import { EditPersonForm } from "./PersonForm";
 import { useGraphRevision } from "./useGraphRevision";
+import {
+  formatLifeSpanYears,
+  formatLifeEventDate,
+  formatMarriageLabel,
+} from "./lifeEventDisplay";
 
 type ProfilePanelProps = {
   memberId: string | null;
@@ -28,7 +33,7 @@ type ProfilePanelProps = {
   onAddMarriage?: (personId: string) => void;
 };
 
-function formatLifespan(birthYear: number | null, deathYear: number | null) {
+function formatRelationYears(birthYear: number | null, deathYear: number | null) {
   const birth = birthYear ?? "?";
   return deathYear ? `${birth} – ${deathYear}` : `n. ${birth}`;
 }
@@ -153,17 +158,20 @@ export function ProfilePanel({
                     </div>
                   )}
                   <h2 className="mt-4 text-center font-serif text-2xl font-medium text-[#3d3428]">
-                    {profile.name}
+                    <span>
+                      {profile.middleNames.trim()
+                        ? `${profile.firstName} ${profile.middleNames}`
+                        : profile.firstName}
+                    </span>{" "}
+                    <span className="uppercase tracking-wide">{profile.familyName}</span>
                   </h2>
                   <p className="mt-1 text-center text-sm text-[#8b7d6b]">
-                    {formatLifespan(profile.birth.year, profile.death?.year ?? null)}
+                    {formatLifeSpanYears(profile.birth, profile.death)}
                   </p>
-                  {profile.birth.place && (
-                    <p className="mt-2 flex items-center justify-center gap-1.5 text-sm text-[#6b5f4f]">
-                      <MapPin className="h-3.5 w-3.5 text-[#a8957a]" />
-                      {profile.birth.place}
-                    </p>
-                  )}
+                  <div className="mt-3 grid grid-cols-2 items-stretch gap-2">
+                    <LifeEventBox label="Naissance" event={profile.birth} />
+                    <LifeEventBox label="Décès" event={profile.death} />
+                  </div>
                   <div className="mt-4 flex justify-center gap-2">
                     <ProfileActionButton
                       icon={Users}
@@ -209,7 +217,7 @@ export function ProfilePanel({
                             id={parent.id}
                             name={parent.name}
                             gender={parent.gender}
-                            years={formatLifespan(
+                            years={formatRelationYears(
                               parent.birth.year,
                               parent.death?.year ?? null,
                             )}
@@ -228,9 +236,11 @@ export function ProfilePanel({
                       <div className="flex flex-col gap-2">
                         {personUnions.map((union) => {
                           const partners = getUnionPartners(profile.id, union.id);
-                          const marriageYear = union.marriage?.year;
+                          const marriageLabel = formatMarriageLabel(union.marriage);
+                          const marriagePlace = union.marriage?.place?.trim();
                           const meta = [
-                            marriageYear ? `Marié(e) en ${marriageYear}` : null,
+                            marriageLabel,
+                            marriagePlace ?? null,
                             union.divorce ? "Divorcé(e)" : null,
                             union.childIds.length === 1
                               ? "1 enfant"
@@ -252,7 +262,7 @@ export function ProfilePanel({
                                       id={partner.id}
                                       name={partner.name}
                                       gender={partner.gender}
-                                      years={formatLifespan(
+                                      years={formatRelationYears(
                                         partner.birth.year,
                                         partner.death?.year ?? null,
                                       )}
@@ -313,7 +323,7 @@ export function ProfilePanel({
                             id={child.id}
                             name={child.name}
                             gender={child.gender}
-                            years={formatLifespan(
+                            years={formatRelationYears(
                               child.birth.year,
                               child.death?.year ?? null,
                             )}
@@ -422,6 +432,35 @@ export function ProfilePanel({
         </div>
       ) : null}
     </>
+  );
+}
+
+function LifeEventBox({ label, event }: { label: string; event: LifeEvent | null }) {
+  const date = event ? formatLifeEventDate(event) : null;
+  const place = event?.place?.trim() || null;
+  const hasContent = Boolean(date || place);
+
+  return (
+    <div className="flex h-full min-h-[4.5rem] flex-col rounded-lg border border-[#e8dfd0] bg-white px-2.5 py-2">
+      <p className="text-[10px] font-medium uppercase tracking-wider text-[#a8957a]">
+        {label}
+      </p>
+      {hasContent ? (
+        <>
+          {date ? (
+            <p className="mt-1 text-sm leading-snug text-[#3d3428]">{date}</p>
+          ) : null}
+          {place ? (
+            <p className="mt-1 flex items-start gap-1 text-xs leading-snug text-[#6b5f4f]">
+              <MapPin className="mt-0.5 h-3 w-3 shrink-0 text-[#a8957a]" aria-hidden />
+              <span>{place}</span>
+            </p>
+          ) : null}
+        </>
+      ) : (
+        <p className="mt-1 text-sm text-[#c4b49a]">—</p>
+      )}
+    </div>
   );
 }
 

@@ -173,7 +173,11 @@
 0 @I_Paul1@ INDI
 1 NAME Paul /IMBERTON/
 1 BIRT
-2 DATE ABT 1775
+2 DATE 05/08/1743
+2 PLAC Pont St Esprit
+1 DEAT
+2 DATE 17/09/1822
+2 PLAC Pont St Esprit
 1 FAMS @F_Imb_1@
 
 0 @I_Esprite@ INDI
@@ -307,8 +311,10 @@
 1 NAME Marie Pierre Hippolyte /IMBERTON/
 1 BIRT
 2 DATE 20/02/1865
+2 PLAC St Marcel d'Ardèche
 1 DEAT
 2 DATE 12/03/1945
+2 PLAC Salon de Provence
 1 FAMS @F_Imb_4@
 1 FAMS @F_Imb_5@
 
@@ -317,7 +323,7 @@
 1 BIRT
 2 DATE 14/04/1865
 1 DEAT
-2 DATE 12/1945
+2 DATE 07/12/1945
 1 FAMS @F_Imb_4@
 
 0 @I_G2@ INDI

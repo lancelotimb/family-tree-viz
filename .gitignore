@@ -41,3 +41,5 @@ yarn-error.log*
 
 # local PDF photo import workspace
 /data/pdf-media-import/
+
+tsconfig.tsbuildinfo
