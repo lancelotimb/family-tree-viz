@@ -19,11 +19,11 @@ function formatUnionMeta(
 ) {
   const parts: string[] = [];
   if (marriageYear) {
-    parts.push(divorced ? `Married ${marriageYear}, divorced` : `Married ${marriageYear}`);
+    parts.push(divorced ? `Marié(e) en ${marriageYear}, divorcé(e)` : `Marié(e) en ${marriageYear}`);
   } else if (divorced) {
-    parts.push("Divorced");
+    parts.push("Divorcé(e)");
   }
-  parts.push(childCount === 1 ? "1 child" : `${childCount} children`);
+  parts.push(childCount === 1 ? "1 enfant" : `${childCount} enfants`);
   return parts.join(" · ");
 }
 
@@ -32,7 +32,7 @@ export function UnionSearchInput({
   value,
   onChange,
   visibleFamilyNames,
-  placeholder = "Search a union…",
+  placeholder = "Rechercher une union...",
 }: UnionSearchInputProps) {
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -148,7 +148,7 @@ export function UnionSearchInput({
             type="button"
             onClick={clearSelection}
             className="shrink-0 rounded-full p-0.5 text-[#a8957a] transition-colors hover:bg-[#f5efe4] hover:text-[#3d3428]"
-            aria-label={`Clear ${label}`}
+            aria-label={`Effacer ${label}`}
           >
             <X className="h-3.5 w-3.5" />
           </button>

@@ -47,7 +47,7 @@ export function UnionEditDialog({ unionId, onClose, onSubmit, onRemove }: UnionE
         <div className="mb-5 flex items-start justify-between gap-3">
           <div>
             <h2 id="edit-union-title" className="font-serif text-xl text-[#3d3428]">
-              Edit union
+              Modifier l&apos;union
             </h2>
             <p className="mt-1 text-sm text-[#8b7d6b]">{label}</p>
           </div>
@@ -55,7 +55,7 @@ export function UnionEditDialog({ unionId, onClose, onSubmit, onRemove }: UnionE
             type="button"
             onClick={onClose}
             className="rounded-full p-2 text-[#8b7d6b] transition-colors hover:bg-[#f5efe4] hover:text-[#3d3428]"
-            aria-label="Close"
+            aria-label="Fermer"
           >
             <X className="h-5 w-5" />
           </button>
@@ -66,7 +66,7 @@ export function UnionEditDialog({ unionId, onClose, onSubmit, onRemove }: UnionE
           onSubmit={handleSubmit}
           onRemove={handleRemove}
           onCancel={onClose}
-          submitLabel="Save union"
+          submitLabel="Enregistrer l'union"
         />
       </div>
     </>

@@ -17,7 +17,7 @@ export async function GET(
   const relativePath = segments.map(decodeURIComponent).join("/");
   const buffer = await readMediaFile(relativePath);
   if (!buffer) {
-    return new Response("Not found", { status: 404 });
+    return new Response("Introuvable", { status: 404 });
   }
 
   const ext = path.extname(relativePath).toLowerCase();

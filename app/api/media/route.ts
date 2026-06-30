@@ -10,7 +10,7 @@ import {
 
 export async function POST(request: Request) {
   if (!(await hasAdminSession())) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+    return Response.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   const form = await request.formData();
@@ -20,21 +20,21 @@ export async function POST(request: Request) {
   const mediaId = String(form.get("mediaId") ?? "").trim();
 
   if (!(file instanceof File)) {
-    return Response.json({ error: "Missing file" }, { status: 400 });
+    return Response.json({ error: "Fichier manquant" }, { status: 400 });
   }
   if (kind !== "avatar" && kind !== "gallery") {
-    return Response.json({ error: "Invalid kind" }, { status: 400 });
+    return Response.json({ error: "Type invalide" }, { status: 400 });
   }
   if (kind === "avatar" && !personId) {
-    return Response.json({ error: "personId is required for avatars" }, { status: 400 });
+    return Response.json({ error: "personId est obligatoire pour les avatars" }, { status: 400 });
   }
   if (file.size > MAX_MEDIA_BYTES) {
-    return Response.json({ error: "File exceeds 5 MB limit" }, { status: 400 });
+    return Response.json({ error: "Le fichier dépasse la limite de 5 Mo" }, { status: 400 });
   }
 
   const contentType = file.type || "application/octet-stream";
   if (!validateImageMimeType(contentType)) {
-    return Response.json({ error: "Unsupported image type" }, { status: 400 });
+    return Response.json({ error: "Type d'image non pris en charge" }, { status: 400 });
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());

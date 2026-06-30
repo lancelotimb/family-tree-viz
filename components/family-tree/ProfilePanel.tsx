@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Heart, MapPin, Pencil, Plus, Users, X, type LucideIcon } from "lucide-react";
 import { AvatarCropDialog } from "./AvatarCropDialog";
 import { ProfileAvatar } from "./ProfileAvatar";
@@ -30,7 +30,7 @@ type ProfilePanelProps = {
 
 function formatLifespan(birthYear: number | null, deathYear: number | null) {
   const birth = birthYear ?? "?";
-  return deathYear ? `${birth} – ${deathYear}` : `b. ${birth}`;
+  return deathYear ? `${birth} – ${deathYear}` : `n. ${birth}`;
 }
 
 export function ProfilePanel({
@@ -47,6 +47,9 @@ export function ProfilePanel({
   const { adminMode, updatePerson, updateAvatar, saving, saveError } = useFamilyGraphAdmin();
   const [editing, setEditing] = useState(false);
   const [avatarCropOpen, setAvatarCropOpen] = useState(false);
+  const [fullscreenImage, setFullscreenImage] = useState<{ url: string; legend: string } | null>(
+    null,
+  );
   const profile = getIndividual(memberId);
   const parents = profile ? getParents(profile.id) : [];
   const personUnions = profile ? getPersonUnions(profile.id) : [];
@@ -58,8 +61,20 @@ export function ProfilePanel({
   const handleClose = () => {
     setEditing(false);
     setAvatarCropOpen(false);
+    setFullscreenImage(null);
     onClose();
   };
+
+  useEffect(() => {
+    if (!fullscreenImage) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setFullscreenImage(null);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [fullscreenImage]);
 
   return (
     <>
@@ -83,14 +98,16 @@ export function ProfilePanel({
                 type="button"
                 onClick={handleClose}
                 className="absolute right-4 top-4 rounded-full p-2 text-[#8b7d6b] transition-colors hover:bg-[#f5efe4] hover:text-[#3d3428]"
-                aria-label="Close profile"
+                aria-label="Fermer le profil"
               >
                 <X className="h-5 w-5" />
               </button>
 
               {editing ? (
                 <div className="pt-2">
-                  <h2 className="mb-4 font-serif text-xl text-[#3d3428]">Edit person</h2>
+                  <h2 className="mb-4 font-serif text-xl text-[#3d3428]">
+                    Modifier la personne
+                  </h2>
                   <EditPersonForm
                     person={profile}
                     onCancel={() => setEditing(false)}
@@ -111,7 +128,7 @@ export function ProfilePanel({
                       type="button"
                       onClick={() => setAvatarCropOpen(true)}
                       className="group relative mx-auto flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-2 border-[#e8dfd0] bg-gradient-to-b from-[#faf6ef] to-[#f0e8da]"
-                      aria-label="Change avatar"
+                      aria-label="Changer l'avatar"
                     >
                       <ProfileAvatar
                         gender={profile.gender}
@@ -121,7 +138,7 @@ export function ProfilePanel({
                         strokeWidth={1.25}
                       />
                       <span className="absolute inset-0 flex items-center justify-center bg-[#3d3428]/0 text-xs font-medium text-white opacity-0 transition group-hover:bg-[#3d3428]/45 group-hover:opacity-100">
-                        Change
+                        Changer
                       </span>
                     </button>
                   ) : (
@@ -151,7 +168,7 @@ export function ProfilePanel({
                     <ProfileActionButton
                       icon={Users}
                       label={
-                        focusPersonId === profile.id ? "Lineage focused" : "Focus lineage"
+                        focusPersonId === profile.id ? "Lignée ciblée" : "Cibler la lignée"
                       }
                       active={focusPersonId === profile.id}
                       onClick={() => onFocusLineage(profile.id)}
@@ -159,7 +176,7 @@ export function ProfilePanel({
                     {adminMode ? (
                       <ProfileActionButton
                         icon={Pencil}
-                        label={saving ? "Saving…" : "Edit"}
+                        label={saving ? "Enregistrement..." : "Modifier"}
                         active={false}
                         onClick={() => setEditing(true)}
                         disabled={saving}
@@ -173,12 +190,12 @@ export function ProfilePanel({
             {!editing ? (
               <div className="flex-1 overflow-y-auto px-6 py-5">
                 <section className="mb-8">
-                  <h3 className="mb-3 font-serif text-lg text-[#3d3428]">Biography</h3>
+                  <h3 className="mb-3 font-serif text-lg text-[#3d3428]">Biographie</h3>
                   <p className="text-sm leading-relaxed text-[#5c5244]">{profile.biography}</p>
                 </section>
 
                 <section className="mb-8">
-                  <h3 className="mb-3 font-serif text-lg text-[#3d3428]">Relationships</h3>
+                  <h3 className="mb-3 font-serif text-lg text-[#3d3428]">Relations</h3>
                   {parents.length > 0 && (
                     <div className="mb-4">
                       <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
@@ -206,18 +223,18 @@ export function ProfilePanel({
                     <div className="mb-4">
                       <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
                         <Heart className="h-3.5 w-3.5" />
-                        {personUnions.length > 1 ? "Unions" : "Married with"}
+                        {personUnions.length > 1 ? "Unions" : "Marié(e) avec"}
                       </p>
                       <div className="flex flex-col gap-2">
                         {personUnions.map((union) => {
                           const partners = getUnionPartners(profile.id, union.id);
                           const marriageYear = union.marriage?.year;
                           const meta = [
-                            marriageYear ? `Married ${marriageYear}` : null,
-                            union.divorce ? "Divorced" : null,
+                            marriageYear ? `Marié(e) en ${marriageYear}` : null,
+                            union.divorce ? "Divorcé(e)" : null,
                             union.childIds.length === 1
-                              ? "1 child"
-                              : `${union.childIds.length} children`,
+                              ? "1 enfant"
+                              : `${union.childIds.length} enfants`,
                           ]
                             .filter(Boolean)
                             .join(" · ");
@@ -263,7 +280,7 @@ export function ProfilePanel({
                                       onClick={() => onEditUnion(union.id)}
                                       className="shrink-0 rounded-lg border border-[#e8dfd0] px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-[#6b5f4f] transition-colors hover:bg-[#faf6ef]"
                                     >
-                                      Edit
+                                      Modifier
                                     </button>
                                   ) : null}
                                 </div>
@@ -281,13 +298,13 @@ export function ProfilePanel({
                       className="mb-4 inline-flex items-center gap-2 rounded-lg border border-dashed border-[#c9b896] px-3 py-2 text-sm font-medium text-[#6b5f4f] transition-colors hover:bg-[#faf6ef]"
                     >
                       <Plus className="h-4 w-4" />
-                      Add marriage
+                      Ajouter un mariage
                     </button>
                   ) : null}
                   {children.length > 0 && (
                     <div>
                       <p className="mb-2 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
-                        Children
+                        Enfants
                       </p>
                       <div className="flex flex-wrap gap-2">
                         {children.map((child) => (
@@ -312,21 +329,32 @@ export function ProfilePanel({
                 <section>
                   {gallery.length > 0 ? (
                     <>
-                      <h3 className="mb-3 font-serif text-lg text-[#3d3428]">Archival gallery</h3>
-                      <div className="flex gap-3 overflow-x-auto pb-2">
+                      <h3 className="mb-3 font-serif text-lg text-[#3d3428]">
+                        Galerie d&apos;archives
+                      </h3>
+                      <div className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto pr-1">
                         {gallery.map((item) => (
                           <figure
                             key={item.id}
-                            className="w-36 shrink-0 overflow-hidden rounded-lg border border-[#e8dfd0] bg-[#faf6ef]"
+                            className="w-full shrink-0 overflow-hidden rounded-lg border border-[#e8dfd0] bg-[#faf6ef]"
                           >
                             {item.url ? (
-                              <img
-                                src={item.url}
-                                alt=""
-                                className="h-28 w-full object-cover"
-                              />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setFullscreenImage({ url: item.url, legend: item.legend })
+                                }
+                                className="block w-full cursor-zoom-in text-left"
+                                aria-label={`Ouvrir l'image d'archive de ${profile.name} en plein écran`}
+                              >
+                                <img
+                                  src={item.url}
+                                  alt=""
+                                  className="block h-auto w-full"
+                                />
+                              </button>
                             ) : (
-                              <div className="flex h-28 items-center justify-center bg-gradient-to-br from-[#f0e8da] to-[#e8dfd0]">
+                              <div className="flex aspect-[4/3] w-full items-center justify-center bg-gradient-to-br from-[#f0e8da] to-[#e8dfd0]">
                                 <ProfileAvatar
                                   gender={profile.gender}
                                   className="h-8 w-8 text-[#c4b49a]/60"
@@ -358,6 +386,40 @@ export function ProfilePanel({
           onClose={() => setAvatarCropOpen(false)}
           onUploaded={(url) => updateAvatar(profile.id, url)}
         />
+      ) : null}
+
+      {fullscreenImage ? (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-[#1f1a14]/90 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Image d'archive en plein écran"
+          onClick={() => setFullscreenImage(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setFullscreenImage(null)}
+            className="absolute right-4 top-4 rounded-full bg-white/90 p-2 text-[#3d3428] shadow-lg transition-colors hover:bg-white"
+            aria-label="Fermer l'image en plein écran"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <figure
+            className="flex max-h-full max-w-6xl flex-col items-center gap-3"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <img
+              src={fullscreenImage.url}
+              alt=""
+              className="max-h-[85vh] max-w-full rounded-lg object-contain shadow-2xl"
+            />
+            {fullscreenImage.legend.trim() ? (
+              <figcaption className="max-w-3xl whitespace-pre-line rounded-lg bg-[#fffef9]/95 px-4 py-3 text-sm leading-relaxed text-[#3d3428] shadow-lg">
+                {fullscreenImage.legend}
+              </figcaption>
+            ) : null}
+          </figure>
+        </div>
       ) : null}
     </>
   );

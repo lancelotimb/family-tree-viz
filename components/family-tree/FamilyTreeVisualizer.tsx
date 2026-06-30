@@ -76,7 +76,7 @@ const FamilyTree3D = dynamic(
     loading: () => (
       <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
         <p className="rounded-full bg-white/80 px-4 py-2 text-sm text-[#8b7d6b] shadow backdrop-blur-md">
-          Loading 3D view…
+          Chargement de la vue 3D...
         </p>
       </div>
     ),
@@ -892,7 +892,7 @@ function FamilyTreeCanvas({ onAdminLogout }: { onAdminLogout?: () => void }) {
       {viewMode === "2d" && (!ready || layouting) ? (
         <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
           <p className="rounded-full bg-white/80 px-4 py-2 text-sm text-[#8b7d6b] shadow backdrop-blur-md">
-            Arranging the family tree…
+            Organisation de l&apos;arbre généalogique...
           </p>
         </div>
       ) : null}

@@ -474,7 +474,7 @@ function PersonCard({
 
 function unionMarriageTooltip(marriageYear: number | null, divorced: boolean): string | undefined {
   if (!marriageYear) return undefined;
-  return `Married ${marriageYear}${divorced ? " (divorced)" : ""}`;
+  return `Marié(e) en ${marriageYear}${divorced ? " (divorcé(e))" : ""}`;
 }
 
 /** Marriage anchor in 3D — sphere with optional marriage year centered on it. */

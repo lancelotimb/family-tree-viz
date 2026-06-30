@@ -66,7 +66,7 @@ export function ZoomControls({
     <div className="pointer-events-auto flex flex-col gap-2">
       {onAddPerson ? (
         <AdminZoomButton
-          label="Add person"
+          label="Ajouter une personne"
           icon={<Plus className="h-4 w-4" />}
           onClick={onAddPerson}
           disabled={addPersonDisabled}
@@ -74,7 +74,7 @@ export function ZoomControls({
       ) : null}
       {onManageGallery ? (
         <AdminZoomButton
-          label="Manage gallery"
+          label="Gérer la galerie"
           icon={<Image className="h-4 w-4" />}
           onClick={onManageGallery}
           disabled={addPersonDisabled}
@@ -82,14 +82,14 @@ export function ZoomControls({
       ) : null}
       {onAdminLogout ? (
         <AdminZoomButton
-          label="Sign out"
+          label="Se déconnecter"
           icon={<LogOut className="h-4 w-4" />}
           onClick={onAdminLogout}
         />
       ) : null}
       {onSettingsClick && (
         <ZoomButton
-          label="Settings"
+          label="Paramètres"
           icon={<Settings className="h-4 w-4" />}
           onClick={onSettingsClick}
           className="hidden max-md:flex"
@@ -106,30 +106,30 @@ export function ZoomControls({
       {is3D ? (
         <>
           <ZoomButton
-            label="Zoom in"
+            label="Zoomer"
             icon={<ZoomIn className="h-4 w-4" />}
             onClick={() => onZoomIn3D?.()}
           />
           <ZoomButton
-            label="Zoom out"
+            label="Dézoomer"
             icon={<ZoomOut className="h-4 w-4" />}
             onClick={() => onZoomOut3D?.()}
           />
           <ZoomButton
-            label="Reset view"
+            label="Réinitialiser la vue"
             icon={<Maximize2 className="h-4 w-4" />}
             onClick={() => onResetView?.()}
           />
           {timeTravelOpen ? (
             <ZoomButton
-              label="Close time travel"
+              label="Fermer le voyage temporel"
               icon={<X className="h-4 w-4" />}
               onClick={onTimeTravelClose ?? (() => {})}
               className="hidden md:flex"
             />
           ) : onTimeTravelOpen ? (
             <ZoomButton
-              label="Time travel"
+              label="Voyage temporel"
               icon={<Calendar className="h-4 w-4" />}
               onClick={onTimeTravelOpen}
             />
@@ -138,17 +138,17 @@ export function ZoomControls({
       ) : (
         <>
           <ZoomButton
-            label="Zoom in"
+            label="Zoomer"
             icon={<ZoomIn className="h-4 w-4" />}
             onClick={zoomIn}
           />
           <ZoomButton
-            label="Zoom out"
+            label="Dézoomer"
             icon={<ZoomOut className="h-4 w-4" />}
             onClick={zoomOut}
           />
           <ZoomButton
-            label="Fit view"
+            label="Ajuster la vue"
             icon={<Maximize2 className="h-4 w-4" />}
             onClick={() =>
               fitView({ duration: 500, padding: 0.15, minZoom: MIN_ZOOM })
@@ -156,14 +156,14 @@ export function ZoomControls({
           />
           {timeTravelOpen ? (
             <ZoomButton
-              label="Close time travel"
+              label="Fermer le voyage temporel"
               icon={<X className="h-4 w-4" />}
               onClick={onTimeTravelClose ?? (() => {})}
               className="hidden md:flex"
             />
           ) : onTimeTravelOpen ? (
             <ZoomButton
-              label="Time travel"
+              label="Voyage temporel"
               icon={<Calendar className="h-4 w-4" />}
               onClick={onTimeTravelOpen}
             />
@@ -190,8 +190,8 @@ function ModeToggle({
     <button
       type="button"
       onClick={onClick}
-      aria-label={`Switch to ${target} view`}
-      title={`Switch to ${target} view`}
+      aria-label={`Passer à la vue ${target}`}
+      title={`Passer à la vue ${target}`}
       className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-[#e8dfd0] bg-white/80 text-[#3d3428] shadow-lg backdrop-blur-md transition-colors hover:border-[#d4c4a8] hover:bg-[#faf6ef]"
     >
       <span className="text-sm font-bold leading-none tracking-wide">

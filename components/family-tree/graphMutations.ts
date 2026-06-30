@@ -348,7 +348,7 @@ function reassignChildToParent(
 }
 
 function childName(graph: FamilyGraph, childId: string): string {
-  return graph.individuals[childId]?.name ?? "this child";
+  return graph.individuals[childId]?.name ?? "cet enfant";
 }
 
 function validateChildCustody(
@@ -360,7 +360,7 @@ function validateChildCustody(
   for (const childId of childIds) {
     const follow = childFollowParent[childId];
     if (!follow || !validParents.includes(follow)) {
-      return `Choose which parent ${childName(graph, childId)} follows.`;
+      return `Choisissez le parent dont ${childName(graph, childId)} suit la ligne.`;
     }
   }
   return null;
@@ -400,22 +400,22 @@ export function updateUnionInGraph(
   const newPartners = [data.partner1Id.trim(), data.partner2Id.trim()].filter(Boolean);
 
   if (newPartners.length === 0) {
-    return { error: "A union needs at least one partner." };
+    return { error: "Une union doit avoir au moins un partenaire." };
   }
   if (data.partner1Id.trim() && data.partner2Id.trim() && data.partner1Id === data.partner2Id) {
-    return { error: "Partners must be different people." };
+    return { error: "Les partenaires doivent être deux personnes différentes." };
   }
 
   for (const partnerId of newPartners) {
     if (!next.individuals[partnerId]) {
-      return { error: "One or both partners could not be found." };
+      return { error: "Un des partenaires, ou les deux, est introuvable." };
     }
   }
 
   if (newPartners.length === 2) {
     const existing = findUnionBetween(next, newPartners[0], newPartners[1]);
     if (existing && existing !== unionId) {
-      return { error: "These partners are already linked in another union." };
+      return { error: "Ces partenaires sont déjà liés dans une autre union." };
     }
   }
 
@@ -509,22 +509,22 @@ export function addMarriageToGraph(
   const partner1Id = data.partner1Id.trim();
   const partner2Id = data.partner2Id.trim();
   if (!partner1Id || !partner2Id) {
-    return { error: "Both partners are required." };
+    return { error: "Les deux partenaires sont obligatoires." };
   }
   if (partner1Id === partner2Id) {
-    return { error: "Choose two different people." };
+    return { error: "Choisissez deux personnes différentes." };
   }
 
   const next = cloneGraph(graph);
   const partner1 = next.individuals[partner1Id];
   const partner2 = next.individuals[partner2Id];
   if (!partner1 || !partner2) {
-    return { error: "One or both partners could not be found." };
+    return { error: "Un des partenaires, ou les deux, est introuvable." };
   }
 
   const existingUnionId = findUnionBetween(next, partner1Id, partner2Id);
   if (existingUnionId) {
-    return { error: "These partners are already linked in a union." };
+    return { error: "Ces partenaires sont déjà liés dans une union." };
   }
 
   const unionId = generateUnionId(next, partner1, partner2);

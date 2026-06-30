@@ -9,7 +9,7 @@ export async function getCroppedImageBlob(
   canvas.width = outputSize;
   canvas.height = outputSize;
   const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas is not supported");
+  if (!ctx) throw new Error("Canvas n'est pas pris en charge");
 
   ctx.drawImage(
     image,
@@ -27,7 +27,7 @@ export async function getCroppedImageBlob(
     canvas.toBlob(
       (blob) => {
         if (blob) resolve(blob);
-        else reject(new Error("Failed to export image"));
+        else reject(new Error("Impossible d'exporter l'image"));
       },
       "image/webp",
       0.9,
@@ -39,7 +39,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image();
     image.addEventListener("load", () => resolve(image));
-    image.addEventListener("error", () => reject(new Error("Failed to load image")));
+    image.addEventListener("error", () => reject(new Error("Impossible de charger l'image")));
     image.crossOrigin = "anonymous";
     image.src = src;
   });

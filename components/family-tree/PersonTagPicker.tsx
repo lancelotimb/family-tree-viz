@@ -55,7 +55,7 @@ export function PersonTagPicker({ taggedPersonIds, onChange }: PersonTagPickerPr
                 type="button"
                 onClick={() => removePerson(person.id)}
                 className="rounded-full p-0.5 text-[#8b7d6b] hover:bg-[#f0e8da] hover:text-[#3d3428]"
-                aria-label={`Remove ${person.name}`}
+                aria-label={`Retirer ${person.name}`}
               >
                 <X className="h-3 w-3" />
               </button>
@@ -63,14 +63,14 @@ export function PersonTagPicker({ taggedPersonIds, onChange }: PersonTagPickerPr
           ))}
         </ul>
       ) : (
-        <p className="text-xs text-[#8b7d6b]">No people tagged yet.</p>
+        <p className="text-xs text-[#8b7d6b]">Aucune personne identifiée pour le moment.</p>
       )}
       <PersonSearchInput
-        label="Tag a person"
+        label="Identifier une personne"
         value={pickerValue}
         onChange={addPerson}
         excludeIds={taggedPersonIds}
-        placeholder="Search to tag someone…"
+        placeholder="Rechercher une personne à identifier..."
       />
     </div>
   );

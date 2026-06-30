@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as { key?: string } | null;
   const key = body?.key?.trim();
   if (!key || !verifyAdminKey(key)) {
-    return Response.json({ error: "Invalid admin key" }, { status: 401 });
+    return Response.json({ error: "Clé admin invalide" }, { status: 401 });
   }
 
   const response = Response.json({ ok: true });

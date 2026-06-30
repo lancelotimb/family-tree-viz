@@ -84,7 +84,7 @@ export function NodeContextMenu({
     <div
       ref={menuRef}
       role="menu"
-      aria-label="Node actions"
+      aria-label="Actions du noeud"
       className="fixed z-[60] min-w-[11rem] overflow-hidden rounded-xl border border-[#e8dfd0] bg-white/95 py-1 shadow-xl backdrop-blur-md"
       style={{
         left: position?.left ?? target.x,
@@ -106,7 +106,7 @@ export function NodeContextMenu({
           className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#3d3428] transition-colors hover:bg-[#faf6ef]"
         >
           <X className="h-4 w-4 shrink-0 text-[#8b7d6b]" aria-hidden />
-          Unfocus lineage
+          Retirer le ciblage de la lignée
         </button>
       ) : (
         <button
@@ -119,7 +119,7 @@ export function NodeContextMenu({
           className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#3d3428] transition-colors hover:bg-[#faf6ef]"
         >
           <Users className="h-4 w-4 shrink-0 text-[#8b7d6b]" aria-hidden />
-          Focus lineage
+          Cibler la lignée
         </button>
       )}
       {adminMode && target.kind === "union" && onEditUnion ? (
@@ -133,7 +133,7 @@ export function NodeContextMenu({
           className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#3d3428] transition-colors hover:bg-[#faf6ef]"
         >
           <Pencil className="h-4 w-4 shrink-0 text-[#8b7d6b]" aria-hidden />
-          Edit union
+          Modifier l&apos;union
         </button>
       ) : null}
     </div>

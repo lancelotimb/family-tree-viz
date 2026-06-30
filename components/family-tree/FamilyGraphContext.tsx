@@ -89,7 +89,7 @@ export function FamilyGraphProvider({
       }
       return true;
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to save GEDCOM file";
+      const message = error instanceof Error ? error.message : "Échec de l'enregistrement du fichier GEDCOM";
       setSaveError(message);
       return false;
     } finally {
@@ -160,7 +160,7 @@ export function FamilyGraphProvider({
       }
       replaceGraph(result);
       const ok = await persistGraph();
-      return ok ? { ok: true } : { ok: false, error: "Failed to save GEDCOM file." };
+      return ok ? { ok: true } : { ok: false, error: "Échec de l'enregistrement du fichier GEDCOM." };
     },
     [persistGraph],
   );
@@ -173,7 +173,7 @@ export function FamilyGraphProvider({
       }
       replaceGraph(result);
       const ok = await persistGraph();
-      return ok ? { ok: true } : { ok: false, error: "Failed to save GEDCOM file." };
+      return ok ? { ok: true } : { ok: false, error: "Échec de l'enregistrement du fichier GEDCOM." };
     },
     [persistGraph],
   );
@@ -186,7 +186,9 @@ export function FamilyGraphProvider({
       }
       replaceGraph(result.graph);
       const ok = await persistGraph();
-      return ok ? { ok: true, unionId: result.unionId } : { ok: false, error: "Failed to save GEDCOM file." };
+      return ok
+        ? { ok: true, unionId: result.unionId }
+        : { ok: false, error: "Échec de l'enregistrement du fichier GEDCOM." };
     },
     [persistGraph],
   );

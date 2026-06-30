@@ -15,10 +15,10 @@ export async function uploadMediaFile(
     | null;
 
   if (!response.ok) {
-    throw new Error(payload?.error ?? "Upload failed");
+    throw new Error(payload?.error ?? "Échec de l'envoi");
   }
   if (!payload?.url) {
-    throw new Error("Upload did not return a URL");
+    throw new Error("L'envoi n'a pas retourné d'URL");
   }
   return payload.url;
 }

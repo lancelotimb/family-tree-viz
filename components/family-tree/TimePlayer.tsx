@@ -191,7 +191,7 @@ export function TimePlayer({
       className={`pointer-events-auto flex h-10 min-w-0 items-center gap-2 overflow-visible rounded-xl border border-[#e8dfd0] bg-white/80 px-2 shadow-lg backdrop-blur-md ${className}`}
     >
       <label className="flex h-full shrink-0 items-center">
-        <span className="sr-only">Year</span>
+        <span className="sr-only">Année</span>
         <select
           value={year}
           onChange={(event) => {
@@ -199,7 +199,7 @@ export function TimePlayer({
             onYearChange(Number(event.target.value));
           }}
           className="h-7 cursor-pointer rounded-lg border border-[#e8dfd0] bg-[#faf6ef] px-2 text-sm font-medium text-[#3d3428] tabular-nums outline-none focus:border-[#d4c4a8]"
-          aria-label="Selected year"
+          aria-label="Année sélectionnée"
         >
           {yearOptions.map((optionYear) => (
             <option key={optionYear} value={optionYear}>
@@ -225,7 +225,7 @@ export function TimePlayer({
             className="absolute top-1/2 h-1 -translate-y-1/2 cursor-pointer rounded-full bg-[#e8dfd0]"
             style={{ left: THUMB_HALF_PX, right: THUMB_HALF_PX }}
             role="slider"
-            aria-label="Timeline"
+            aria-label="Chronologie"
             aria-valuemin={minYear}
             aria-valuemax={maxYear}
             aria-valuenow={year}
@@ -254,8 +254,8 @@ export function TimePlayer({
       <button
         type="button"
         onClick={handlePlayPause}
-        aria-label={playing ? "Pause playback" : "Play through years"}
-        title={playing ? "Pause" : "Play"}
+        aria-label={playing ? "Mettre la lecture en pause" : "Lire les années"}
+        title={playing ? "Pause" : "Lecture"}
         className={iconButtonClassName}
       >
         {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
@@ -265,8 +265,8 @@ export function TimePlayer({
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close time travel"
-          title="Close"
+          aria-label="Fermer le voyage temporel"
+          title="Fermer"
           className={`${iconButtonClassName} md:hidden`}
         >
           <X className="h-4 w-4" />

@@ -77,17 +77,17 @@ export function ControlSidebarContent({
       <div>
         <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
           <Eye className="h-3.5 w-3.5" />
-          Display
+          Affichage
         </p>
         <ToggleRow
-          label="Grey out deceased"
+          label="Griser les personnes décédées"
           icon={<UserX className="h-4 w-4" />}
           checked={greyDeceased}
           onChange={onGreyDeceasedChange}
         />
         <div className="mt-2">
           <ToggleRow
-            label="Color by family name"
+            label="Colorer par nom de famille"
             icon={<Palette className="h-4 w-4" />}
             checked={colorByFamily}
             onChange={onColorByFamilyChange}
@@ -95,17 +95,17 @@ export function ControlSidebarContent({
         </div>
         <div className="mt-2">
           <ToggleRow
-            label="Center parents over children"
+            label="Centrer les parents au-dessus des enfants"
             icon={<AlignCenterHorizontal className="h-4 w-4" />}
             checked={centerParents && !centerParentsDisabled}
             onChange={onCenterParentsChange}
             disabled={centerParentsDisabled}
-            hint={centerParentsDisabled ? "Not used in the 3D view" : undefined}
+            hint={centerParentsDisabled ? "Non utilisé dans la vue 3D" : undefined}
           />
         </div>
         <div className="mt-2">
           <ToggleRow
-            label="Show names only"
+            label="Afficher seulement les noms"
             icon={<Type className="h-4 w-4" />}
             checked={showNamesOnly}
             onChange={onShowNamesOnlyChange}
@@ -117,7 +117,7 @@ export function ControlSidebarContent({
         <div className="mb-2 flex items-center justify-between gap-2">
           <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
             <Users className="h-3.5 w-3.5" />
-            Focus lineage
+            Cibler une lignée
           </p>
           {focusPersonId || focusUnionId ? (
             <button
@@ -128,39 +128,39 @@ export function ControlSidebarContent({
               }}
               className="shrink-0 rounded-md px-2 py-1 text-[10px] font-medium text-[#8b7d6b] transition-colors hover:bg-[#f5efe4] hover:text-[#3d3428]"
             >
-              Reset
+              Réinitialiser
             </button>
           ) : null}
         </div>
         <div className="flex flex-col gap-2">
           <PersonSearchInput
-            label="Person"
+            label="Personne"
             value={focusPersonId}
             onChange={onFocusPersonChange}
             aliveAtYear={aliveAtYear}
-            placeholder="Search a person…"
+            placeholder="Rechercher une personne..."
           />
           <UnionSearchInput
             label="Union"
             value={focusUnionId}
             onChange={onFocusUnionChange}
             visibleFamilyNames={visibleFamilyNames}
-            placeholder="Search a union…"
+            placeholder="Rechercher une union..."
           />
         </div>
         {focusPersonId ? (
           <p className="mt-2 text-xs text-[#6b7d5a]">
-            Showing this person, their ascendants, descendants, and each
-            descendant&apos;s spouse when they have children together.
+            Affichage de cette personne, de ses ascendants, de ses descendants et
+            du conjoint de chaque descendant lorsqu&apos;ils ont des enfants ensemble.
           </p>
         ) : focusUnionId ? (
           <p className="mt-2 text-xs text-[#6b7d5a]">
-            Showing both partners, their ascendants, descendants, and each
-            descendant&apos;s spouse when they have children together.
+            Affichage des deux partenaires, de leurs ascendants, de leurs descendants
+            et du conjoint de chaque descendant lorsqu&apos;ils ont des enfants ensemble.
           </p>
         ) : (
           <p className="mt-2 text-xs text-[#8b7d6b]">
-            Leave empty to show the full tree.
+            Laissez vide pour afficher l&apos;arbre complet.
           </p>
         )}
       </div>
@@ -169,7 +169,7 @@ export function ControlSidebarContent({
         <div className="mb-2 flex items-center justify-between gap-2">
           <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#8b7d6b]">
             <GitBranch className="h-3.5 w-3.5" />
-            Highlight link
+            Surligner un lien
           </p>
           {pathFromId || pathToId ? (
             <button
@@ -180,13 +180,13 @@ export function ControlSidebarContent({
               }}
               className="shrink-0 rounded-md px-2 py-1 text-[10px] font-medium text-[#8b7d6b] transition-colors hover:bg-[#f5efe4] hover:text-[#3d3428]"
             >
-              Reset
+              Réinitialiser
             </button>
           ) : null}
         </div>
         <div className="flex flex-col gap-2">
           <PersonSearchInput
-            label="From"
+            label="De"
             value={pathFromId}
             onChange={onPathFromChange}
             excludeId={pathToId}
@@ -195,7 +195,7 @@ export function ControlSidebarContent({
             aliveAtYear={aliveAtYear}
           />
           <PersonSearchInput
-            label="To"
+            label="À"
             value={pathToId}
             onChange={onPathToChange}
             excludeId={pathFromId}
@@ -206,11 +206,11 @@ export function ControlSidebarContent({
         </div>
         {pathStatus === "no-path" && (
           <p className="mt-2 text-xs text-[#a85c4a]">
-            No connection found between these people.
+            Aucun lien trouvé entre ces personnes.
           </p>
         )}
         {pathStatus === "ready" && (
-          <p className="mt-2 text-xs text-[#6b7d5a]">Path highlighted on the tree.</p>
+          <p className="mt-2 text-xs text-[#6b7d5a]">Chemin surligné dans l&apos;arbre.</p>
         )}
       </div>
 
@@ -240,7 +240,7 @@ export function ControlSidebar({ expanded, onExpandedChange, ...props }: Control
   if (!expanded) {
     return (
       <SettingsButton
-        label="Parameters"
+        label="Paramètres"
         iconPosition="right"
         variant="panel-header"
         onClick={() => onExpandedChange(true)}
@@ -251,13 +251,13 @@ export function ControlSidebar({ expanded, onExpandedChange, ...props }: Control
   return (
     <aside className="pointer-events-auto flex max-h-[calc(100dvh-5.5rem)] w-[300px] shrink-0 flex-col gap-3 overflow-y-auto rounded-2xl border border-[#e8dfd0] bg-white/75 px-4 pb-4 pt-2 shadow-lg backdrop-blur-md">
       <div className="flex shrink-0 items-center justify-between gap-2">
-        <h2 className="font-serif text-base font-medium text-[#3d3428]">Parameters</h2>
+        <h2 className="font-serif text-base font-medium text-[#3d3428]">Paramètres</h2>
         <button
           type="button"
           onClick={() => onExpandedChange(false)}
           className="shrink-0 cursor-pointer rounded-full p-1.5 text-[#8b7d6b] transition-colors hover:bg-[#f5efe4] hover:text-[#3d3428]"
-          aria-label="Collapse settings"
-          title="Collapse settings"
+          aria-label="Réduire les paramètres"
+          title="Réduire les paramètres"
         >
           <X className="h-4 w-4" />
         </button>
@@ -284,7 +284,7 @@ function BranchSelector({
     <div className="rounded-lg border border-[#e8dfd0] bg-[#fffef9]">
       <div className="flex items-center justify-between gap-2 border-b border-[#e8dfd0] px-3 py-2">
         <p className="text-xs text-[#8b7d6b]">
-          {visibleFamilyNames.size} of {branches.length} visible
+          {visibleFamilyNames.size} sur {branches.length} visibles
         </p>
         <div className="flex gap-1.5">
           <button
@@ -292,14 +292,14 @@ function BranchSelector({
             onClick={onShowAllBranches}
             className="rounded-md px-2 py-1 text-[10px] font-medium text-[#8b7d6b] transition-colors hover:bg-[#f5efe4] hover:text-[#3d3428]"
           >
-            All
+            Tout
           </button>
           <button
             type="button"
             onClick={onHideAllBranches}
             className="rounded-md px-2 py-1 text-[10px] font-medium text-[#8b7d6b] transition-colors hover:bg-[#f5efe4] hover:text-[#3d3428]"
           >
-            None
+            Aucun
           </button>
         </div>
       </div>
@@ -330,7 +330,7 @@ function BranchSelector({
                 onFamilyVisibilityChange(branch.familyName, e.target.checked)
               }
               className="h-4 w-4 shrink-0 cursor-pointer rounded border-[#d4c4a8] accent-[#b8956a]"
-              aria-label={`Show ${branch.familyName} branch`}
+              aria-label={`Afficher la branche ${branch.familyName}`}
             />
           </label>
         ))}

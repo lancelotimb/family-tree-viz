@@ -179,9 +179,9 @@ export function SearchBar({
           }}
           onFocus={() => setDropdownOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder="Search ancestors…"
+          placeholder="Rechercher des ancêtres..."
           className="min-w-0 flex-1 bg-transparent text-sm text-[#3d3428] outline-none placeholder:text-[#a8957a]/70"
-          aria-label="Search ancestors"
+          aria-label="Rechercher des ancêtres"
           aria-expanded={open}
           aria-controls="search-results"
           role="combobox"

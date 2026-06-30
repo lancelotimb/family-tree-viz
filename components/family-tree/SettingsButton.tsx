@@ -17,7 +17,7 @@ export function SettingsButton({
   iconPosition = "left",
   variant = "icon",
 }: SettingsButtonProps) {
-  const ariaLabel = label ?? "Settings";
+  const ariaLabel = label ?? "Paramètres";
   const isPanelHeader = variant === "panel-header" && label;
 
   return (

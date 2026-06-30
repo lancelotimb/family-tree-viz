@@ -60,7 +60,7 @@ function PersonForm({
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!form.firstName.trim() || !form.familyName.trim()) {
-      setError("First name and family name are required.");
+      setError("Le prénom et le nom de famille sont obligatoires.");
       return;
     }
     setSaving(true);
@@ -68,14 +68,14 @@ function PersonForm({
     const ok = await onSubmit(form);
     setSaving(false);
     if (!ok) {
-      setError("Could not save changes to the GEDCOM file.");
+      setError("Impossible d'enregistrer les changements dans le fichier GEDCOM.");
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
-        <Field label="First name">
+        <Field label="Prénom">
           <input
             value={form.firstName}
             onChange={(e) => updateField("firstName", e.target.value)}
@@ -83,7 +83,7 @@ function PersonForm({
             required
           />
         </Field>
-        <Field label="Family name">
+        <Field label="Nom de famille">
           <input
             value={form.familyName}
             onChange={(e) => updateField("familyName", e.target.value)}
@@ -93,7 +93,7 @@ function PersonForm({
         </Field>
       </div>
 
-      <Field label="Middle names">
+      <Field label="Autres prénoms">
         <input
           value={form.middleNames}
           onChange={(e) => updateField("middleNames", e.target.value)}
@@ -101,45 +101,45 @@ function PersonForm({
         />
       </Field>
 
-      <Field label="Gender">
+      <Field label="Genre">
         <select
           value={form.gender}
           onChange={(e) => updateField("gender", e.target.value as PersonFormData["gender"])}
           className={inputClass}
         >
-          <option value="male">Male</option>
-          <option value="female">Female</option>
+          <option value="male">Homme</option>
+          <option value="female">Femme</option>
         </select>
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Birth year">
+        <Field label="Année de naissance">
           <input
             value={form.birthYear}
             onChange={(e) => updateField("birthYear", e.target.value)}
             className={inputClass}
-            placeholder="e.g. 1924"
+            placeholder="ex. 1924"
           />
         </Field>
-        <Field label="Death year">
+        <Field label="Année de décès">
           <input
             value={form.deathYear}
             onChange={(e) => updateField("deathYear", e.target.value)}
             className={inputClass}
-            placeholder="Leave empty if living"
+            placeholder="Laisser vide si la personne est vivante"
           />
         </Field>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Birth place">
+        <Field label="Lieu de naissance">
           <input
             value={form.birthPlace}
             onChange={(e) => updateField("birthPlace", e.target.value)}
             className={inputClass}
           />
         </Field>
-        <Field label="Death place">
+        <Field label="Lieu de décès">
           <input
             value={form.deathPlace}
             onChange={(e) => updateField("deathPlace", e.target.value)}
@@ -149,13 +149,13 @@ function PersonForm({
       </div>
 
       {showBirthFamily ? (
-        <Field label="Birth family (optional)">
+        <Field label="Famille de naissance (facultatif)">
           <select
             value={form.famc ?? ""}
             onChange={(e) => updateField("famc", e.target.value || null)}
             className={inputClass}
           >
-            <option value="">None</option>
+            <option value="">Aucune</option>
             {unionOptions.map((union) => (
               <option key={union.id} value={union.id}>
                 {union.label}
@@ -165,7 +165,7 @@ function PersonForm({
         </Field>
       ) : null}
 
-      <Field label="Biography">
+      <Field label="Biographie">
         <textarea
           value={form.biography}
           onChange={(e) => updateField("biography", e.target.value)}
@@ -190,7 +190,7 @@ function PersonForm({
           disabled={saving}
           className="rounded-lg border border-[#e8dfd0] bg-white px-4 py-2 text-sm font-medium text-[#3d3428] transition-colors hover:bg-[#faf6ef] disabled:opacity-60"
         >
-          Cancel
+          Annuler
         </button>
       </div>
     </form>
@@ -223,7 +223,7 @@ export function EditPersonForm({ person, onSubmit, onCancel }: EditPersonFormPro
       initial={personToForm(person)}
       onSubmit={onSubmit}
       onCancel={onCancel}
-      submitLabel="Save changes"
+      submitLabel="Enregistrer les changements"
       showBirthFamily
     />
   );
@@ -240,7 +240,7 @@ export function AddPersonForm({ onSubmit, onCancel }: AddPersonFormProps) {
       initial={createEmptyPersonForm()}
       onSubmit={onSubmit}
       onCancel={onCancel}
-      submitLabel="Add person"
+      submitLabel="Ajouter la personne"
       showBirthFamily
     />
   );

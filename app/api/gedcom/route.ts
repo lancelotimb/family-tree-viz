@@ -13,7 +13,7 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   if (!verifyAuthorizationHeader(request.headers.get("authorization"))) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+    return Response.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   const body = await request.text();
@@ -21,7 +21,7 @@ export async function PUT(request: Request) {
     await writeGedcom(body);
     return Response.json({ ok: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Invalid GEDCOM";
+    const message = error instanceof Error ? error.message : "GEDCOM invalide";
     return Response.json({ error: message }, { status: 400 });
   }
 }

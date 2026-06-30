@@ -17,7 +17,7 @@ function FamilyTreePageContent() {
   if (!graphReady) {
     return (
       <main className="flex h-dvh w-full items-center justify-center bg-[#faf6ef]">
-        <p className="text-sm text-[#8b7d6b]">Loading family tree…</p>
+        <p className="text-sm text-[#8b7d6b]">Chargement de l&apos;arbre généalogique...</p>
       </main>
     );
   }
@@ -42,7 +42,7 @@ export function FamilyTreePage({ initialGedcom }: FamilyTreePageProps) {
     <Suspense
       fallback={
         <main className="flex h-dvh w-full items-center justify-center bg-[#faf6ef]">
-          <p className="text-sm text-[#8b7d6b]">Loading family tree…</p>
+          <p className="text-sm text-[#8b7d6b]">Chargement de l&apos;arbre généalogique...</p>
         </main>
       }
     >

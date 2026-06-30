@@ -33,7 +33,7 @@ export function PersonSearchInput({
   visibleFamilyNames,
   lineagePersonIds,
   aliveAtYear = null,
-  placeholder = "Search ancestors…",
+  placeholder = "Rechercher des ancêtres...",
 }: PersonSearchInputProps) {
   const graphRevision = useGraphRevision();
   const listId = useId();
@@ -160,7 +160,7 @@ export function PersonSearchInput({
             type="button"
             onClick={clearSelection}
             className="shrink-0 cursor-pointer rounded-full p-0.5 text-[#a8957a] transition-colors hover:bg-[#f5efe4] hover:text-[#3d3428]"
-            aria-label={`Clear ${label}`}
+            aria-label={`Effacer ${label}`}
           >
             <X className="h-3.5 w-3.5" />
           </button>

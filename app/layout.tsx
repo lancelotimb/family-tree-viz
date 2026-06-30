@@ -13,8 +13,8 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Family Tree Visualizer",
-  description: "Explore your family lineage across generations",
+  title: "Visualiseur d'arbre généalogique",
+  description: "Explorez votre lignée familiale à travers les générations",
 };
 
 export const viewport = {
@@ -28,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${playfair.variable} h-full`}>
+    <html lang="fr" className={`${inter.variable} ${playfair.variable} h-full`}>
       <body className="h-full overflow-hidden font-sans antialiased">{children}</body>
     </html>
   );

@@ -10,7 +10,7 @@ import { useLongPress } from "./useLongPress";
 
 function unionTooltip(union: UnionNodeData): string | undefined {
   if (!union.marriageYear) return undefined;
-  return `Married ${union.marriageYear}${union.divorced ? " (divorced)" : ""}`;
+  return `Marié(e) en ${union.marriageYear}${union.divorced ? " (divorcé(e))" : ""}`;
 }
 
 /**

@@ -48,7 +48,7 @@ export function AvatarCropDialog({
     const file = event.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      setError("Please choose an image file.");
+      setError("Veuillez choisir un fichier image.");
       return;
     }
     setError(null);
@@ -73,7 +73,7 @@ export function AvatarCropDialog({
       const ok = await onUploaded(url);
       if (ok) handleClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      setError(err instanceof Error ? err.message : "Échec de l'envoi");
     } finally {
       setUploading(false);
     }
@@ -93,15 +93,17 @@ export function AvatarCropDialog({
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <h2 id="avatar-crop-title" className="font-serif text-xl text-[#3d3428]">
-              Upload avatar
+              Envoyer un avatar
             </h2>
-            <p className="mt-1 text-sm text-[#8b7d6b]">Crop to a square before saving.</p>
+            <p className="mt-1 text-sm text-[#8b7d6b]">
+              Recadrez l&apos;image en carré avant l&apos;enregistrement.
+            </p>
           </div>
           <button
             type="button"
             onClick={handleClose}
             className="rounded-full p-2 text-[#8b7d6b] transition-colors hover:bg-[#f5efe4] hover:text-[#3d3428]"
-            aria-label="Close"
+            aria-label="Fermer"
           >
             <X className="h-5 w-5" />
           </button>
@@ -110,8 +112,8 @@ export function AvatarCropDialog({
         {!imageSrc ? (
           <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#e8dfd0] bg-[#faf6ef] px-6 py-12 text-center transition-colors hover:border-[#c4b49a]">
             <Upload className="h-8 w-8 text-[#a8957a]" />
-            <span className="text-sm font-medium text-[#3d3428]">Choose a photo</span>
-            <span className="text-xs text-[#8b7d6b]">JPEG, PNG, or WebP up to 5 MB</span>
+            <span className="text-sm font-medium text-[#3d3428]">Choisir une photo</span>
+            <span className="text-xs text-[#8b7d6b]">JPEG, PNG ou WebP jusqu&apos;à 5 Mo</span>
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp,image/gif"
@@ -155,7 +157,7 @@ export function AvatarCropDialog({
             onClick={handleClose}
             className="rounded-full border border-[#e8dfd0] bg-white px-4 py-2 text-sm text-[#6b5f4f] transition-colors hover:bg-[#faf6ef]"
           >
-            Cancel
+            Annuler
           </button>
           {imageSrc ? (
             <button
@@ -165,7 +167,7 @@ export function AvatarCropDialog({
               className="inline-flex items-center gap-2 rounded-full bg-[#5a7a5a] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#4a6a4a] disabled:opacity-50"
             >
               {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Save avatar
+              Enregistrer l&apos;avatar
             </button>
           ) : null}
         </div>

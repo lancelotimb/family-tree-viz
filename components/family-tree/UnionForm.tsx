@@ -19,7 +19,7 @@ type UnionFormProps = {
 
 function formatLifespan(birthYear: number | null, deathYear: number | null) {
   const birth = birthYear ?? "?";
-  return deathYear ? `${birth} – ${deathYear}` : `b. ${birth}`;
+  return deathYear ? `${birth} – ${deathYear}` : `n. ${birth}`;
 }
 
 export function UnionForm({ union, onSubmit, onRemove, onCancel, submitLabel }: UnionFormProps) {
@@ -120,7 +120,7 @@ export function UnionForm({ union, onSubmit, onRemove, onCancel, submitLabel }: 
     const result = await onSubmit(form);
     setSaving(false);
     if (!result.ok) {
-      setError(result.error ?? "Could not save changes to the GEDCOM file.");
+      setError(result.error ?? "Impossible d'enregistrer les changements dans le fichier GEDCOM.");
     }
   };
 
@@ -131,62 +131,62 @@ export function UnionForm({ union, onSubmit, onRemove, onCancel, submitLabel }: 
     const result = await onRemove({ childFollowParent: form.childFollowParent });
     setRemoving(false);
     if (!result.ok) {
-      setError(result.error ?? "Could not remove this union.");
+      setError(result.error ?? "Impossible de supprimer cette union.");
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <PersonSearchInput
-        label="Partner 1"
+        label="Partenaire 1"
         value={form.partner1Id}
         onChange={(id) => updateField("partner1Id", id)}
         excludeId={form.partner2Id}
-        placeholder="Search a person…"
+        placeholder="Rechercher une personne..."
       />
       <PersonSearchInput
-        label="Partner 2 (optional)"
+        label="Partenaire 2 (facultatif)"
         value={form.partner2Id}
         onChange={(id) => updateField("partner2Id", id)}
         excludeId={form.partner1Id}
-        placeholder="Leave empty for single-parent union"
+        placeholder="Laisser vide pour une union monoparentale"
       />
 
       {removedPartners.length > 0 ? (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-          A partner was removed. Choose which parent each child&apos;s birth line should follow
-          below before saving.
+          Un partenaire a été retiré. Choisissez ci-dessous la ligne de naissance parentale
+          que chaque enfant doit suivre avant d&apos;enregistrer.
         </p>
       ) : null}
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Marriage year">
+        <Field label="Année du mariage">
           <input
             value={form.marriageYear}
             onChange={(e) => updateField("marriageYear", e.target.value)}
             className={inputClass}
-            placeholder="e.g. 1952"
+            placeholder="ex. 1952"
           />
         </Field>
-        <Field label="Divorce year">
+        <Field label="Année du divorce">
           <input
             value={form.divorceYear}
             onChange={(e) => updateField("divorceYear", e.target.value)}
             className={inputClass}
-            placeholder="Leave empty if not divorced"
+            placeholder="Laisser vide si non divorcé(e)"
           />
         </Field>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Marriage place">
+        <Field label="Lieu du mariage">
           <input
             value={form.marriagePlace}
             onChange={(e) => updateField("marriagePlace", e.target.value)}
             className={inputClass}
           />
         </Field>
-        <Field label="Divorce place">
+        <Field label="Lieu du divorce">
           <input
             value={form.divorcePlace}
             onChange={(e) => updateField("divorcePlace", e.target.value)}
@@ -196,7 +196,7 @@ export function UnionForm({ union, onSubmit, onRemove, onCancel, submitLabel }: 
       </div>
 
       <div>
-        <Field label="Children">
+        <Field label="Enfants">
           {children.length > 0 ? (
             <ul className="mb-3 space-y-2">
               {children.map((child) => (
@@ -215,7 +215,7 @@ export function UnionForm({ union, onSubmit, onRemove, onCancel, submitLabel }: 
                       type="button"
                       onClick={() => removeChild(child.id)}
                       className="shrink-0 rounded-full p-1 text-[#8b7d6b] transition-colors hover:bg-[#f5efe4] hover:text-[#3d3428]"
-                      aria-label={`Remove ${child.name} from union`}
+                      aria-label={`Retirer ${child.name} de l'union`}
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -223,7 +223,7 @@ export function UnionForm({ union, onSubmit, onRemove, onCancel, submitLabel }: 
                   {showCustodyPickers ? (
                     <fieldset className="mt-2 border-t border-[#f0e8da] pt-2">
                       <legend className="text-[10px] font-medium uppercase tracking-wider text-[#a8957a]">
-                        Birth line follows
+                        Ligne de naissance suivie
                       </legend>
                       <div className="mt-1 flex flex-col gap-1">
                         {custodyParents.map((parentId) => {
@@ -255,17 +255,19 @@ export function UnionForm({ union, onSubmit, onRemove, onCancel, submitLabel }: 
               ))}
             </ul>
           ) : (
-            <p className="mb-3 text-sm text-[#8b7d6b]">No children linked to this union yet.</p>
+            <p className="mb-3 text-sm text-[#8b7d6b]">
+              Aucun enfant lié à cette union pour le moment.
+            </p>
           )}
         </Field>
         <div className="flex items-end gap-2">
           <div className="min-w-0 flex-1">
             <PersonSearchInput
-              label="Add child"
+              label="Ajouter un enfant"
               value={childToAdd}
               onChange={setChildToAdd}
               excludeIds={excludeFromChildSearch}
-              placeholder="Search a person…"
+              placeholder="Rechercher une personne..."
             />
           </div>
           <button
@@ -274,7 +276,7 @@ export function UnionForm({ union, onSubmit, onRemove, onCancel, submitLabel }: 
             disabled={!childToAdd || form.childIds.includes(childToAdd)}
             className="mb-0.5 shrink-0 rounded-lg border border-[#e8dfd0] bg-white px-3 py-2 text-sm font-medium text-[#3d3428] transition-colors hover:bg-[#faf6ef] disabled:opacity-50"
           >
-            Add
+            Ajouter
           </button>
         </div>
       </div>
@@ -288,19 +290,19 @@ export function UnionForm({ union, onSubmit, onRemove, onCancel, submitLabel }: 
               className="inline-flex items-center gap-2 text-sm font-medium text-red-800 transition-colors hover:text-red-900"
             >
               <Trash2 className="h-4 w-4" />
-              Remove this union
+              Supprimer cette union
             </button>
           ) : (
             <div className="space-y-3">
               <p className="text-sm text-red-900">
-                This will unlink the partners and dissolve the marriage node.
+                Cela déliera les partenaires et supprimera le noeud de mariage.
                 {form.childIds.length > 0
-                  ? " Each child will be placed on the birth line of the parent you choose."
+                  ? " Chaque enfant sera placé sur la ligne de naissance du parent choisi."
                   : ""}
               </p>
               {showRemoveConfirm && form.childIds.length > 0 && custodyParents.length >= 2 ? (
                 <p className="text-xs text-red-800">
-                  Set &ldquo;Birth line follows&rdquo; for each child above, then confirm removal.
+                  Définissez &ldquo;Ligne de naissance suivie&rdquo; pour chaque enfant ci-dessus, puis confirmez la suppression.
                 </p>
               ) : null}
               <div className="flex gap-2">
@@ -311,7 +313,7 @@ export function UnionForm({ union, onSubmit, onRemove, onCancel, submitLabel }: 
                   className="inline-flex items-center gap-2 rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-800 transition-colors hover:bg-red-100 disabled:opacity-60"
                 >
                   {removing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  Confirm removal
+                  Confirmer la suppression
                 </button>
                 <button
                   type="button"
@@ -319,7 +321,7 @@ export function UnionForm({ union, onSubmit, onRemove, onCancel, submitLabel }: 
                   disabled={removing}
                   className="rounded-lg border border-[#e8dfd0] bg-white px-3 py-2 text-sm text-[#3d3428] hover:bg-[#faf6ef]"
                 >
-                  Cancel
+                  Annuler
                 </button>
               </div>
             </div>
@@ -344,7 +346,7 @@ export function UnionForm({ union, onSubmit, onRemove, onCancel, submitLabel }: 
           disabled={saving || removing}
           className="rounded-lg border border-[#e8dfd0] bg-white px-4 py-2 text-sm font-medium text-[#3d3428] transition-colors hover:bg-[#faf6ef] disabled:opacity-60"
         >
-          Cancel
+          Annuler
         </button>
       </div>
     </form>

@@ -35,17 +35,17 @@ export function AddPersonDialog({ open, onClose, onSubmit }: AddPersonDialogProp
         <div className="mb-5 flex items-start justify-between gap-3">
           <div>
             <h2 id="add-person-title" className="font-serif text-xl text-[#3d3428]">
-              Add person
+              Ajouter une personne
             </h2>
             <p className="mt-1 text-sm text-[#8b7d6b]">
-              Creates a new entry in the family tree and saves it to the GEDCOM file.
+              Crée une nouvelle entrée dans l&apos;arbre généalogique et l&apos;enregistre dans le fichier GEDCOM.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="rounded-full p-2 text-[#8b7d6b] transition-colors hover:bg-[#f5efe4] hover:text-[#3d3428]"
-            aria-label="Close"
+            aria-label="Fermer"
           >
             <X className="h-5 w-5" />
           </button>

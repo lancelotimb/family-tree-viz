@@ -51,11 +51,11 @@ export function AddMarriageDialog({
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!form.partner1Id || !form.partner2Id) {
-      setError("Both partners are required.");
+      setError("Les deux partenaires sont obligatoires.");
       return;
     }
     if (form.partner1Id === form.partner2Id) {
-      setError("Choose two different people.");
+      setError("Choisissez deux personnes différentes.");
       return;
     }
 
@@ -66,7 +66,7 @@ export function AddMarriageDialog({
     if (result.ok) {
       onClose();
     } else {
-      setError(result.error ?? "Could not save marriage to the GEDCOM file.");
+      setError(result.error ?? "Impossible d'enregistrer le mariage dans le fichier GEDCOM.");
     }
   };
 
@@ -84,17 +84,17 @@ export function AddMarriageDialog({
         <div className="mb-5 flex items-start justify-between gap-3">
           <div>
             <h2 id="add-marriage-title" className="font-serif text-xl text-[#3d3428]">
-              Add marriage
+              Ajouter un mariage
             </h2>
             <p className="mt-1 text-sm text-[#8b7d6b]">
-              Links two people in a new union and saves to the GEDCOM file.
+              Relie deux personnes dans une nouvelle union et enregistre dans le fichier GEDCOM.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="rounded-full p-2 text-[#8b7d6b] transition-colors hover:bg-[#f5efe4] hover:text-[#3d3428]"
-            aria-label="Close"
+            aria-label="Fermer"
           >
             <X className="h-5 w-5" />
           </button>
@@ -102,45 +102,45 @@ export function AddMarriageDialog({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <PersonSearchInput
-            label="Partner 1"
+            label="Partenaire 1"
             value={form.partner1Id}
             onChange={(id) => updateField("partner1Id", id)}
             excludeId={form.partner2Id}
-            placeholder="Search a person…"
+            placeholder="Rechercher une personne..."
           />
           <PersonSearchInput
-            label="Partner 2"
+            label="Partenaire 2"
             value={form.partner2Id}
             onChange={(id) => updateField("partner2Id", id)}
             excludeId={form.partner1Id}
-            placeholder="Search a person…"
+            placeholder="Rechercher une personne..."
           />
 
           {partner1 ? (
             <p className="text-xs text-[#8b7d6b]">
-              Creating a union for {partner1.name}
+              Création d&apos;une union pour {partner1.name}
               {form.partner2Id && getIndividual(form.partner2Id)
-                ? ` and ${getIndividual(form.partner2Id)!.name}`
+                ? ` et ${getIndividual(form.partner2Id)!.name}`
                 : ""}
               .
             </p>
           ) : null}
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Marriage year">
+            <Field label="Année du mariage">
               <input
                 value={form.marriageYear}
                 onChange={(e) => updateField("marriageYear", e.target.value)}
                 className={inputClass}
-                placeholder="Optional"
+                placeholder="Facultatif"
               />
             </Field>
-            <Field label="Marriage place">
+            <Field label="Lieu du mariage">
               <input
                 value={form.marriagePlace}
                 onChange={(e) => updateField("marriagePlace", e.target.value)}
                 className={inputClass}
-                placeholder="Optional"
+                placeholder="Facultatif"
               />
             </Field>
           </div>
@@ -154,7 +154,7 @@ export function AddMarriageDialog({
               className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-[#6b7d5a] bg-[#eef4e8] px-4 py-2 text-sm font-medium text-[#4a5c3d] transition-colors hover:bg-[#e4eddb] disabled:opacity-60"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Add marriage
+              Ajouter le mariage
             </button>
             <button
               type="button"
@@ -162,7 +162,7 @@ export function AddMarriageDialog({
               disabled={saving}
               className="rounded-lg border border-[#e8dfd0] bg-white px-4 py-2 text-sm font-medium text-[#3d3428] transition-colors hover:bg-[#faf6ef] disabled:opacity-60"
             >
-              Cancel
+              Annuler
             </button>
           </div>
         </form>

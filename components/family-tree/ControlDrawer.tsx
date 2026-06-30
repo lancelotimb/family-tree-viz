@@ -25,18 +25,18 @@ export function ControlDrawer({ open, onClose, ...controlProps }: ControlDrawerP
         aria-hidden={!open}
         role="dialog"
         aria-modal={open}
-        aria-label="Tree settings"
+        aria-label="Paramètres de l'arbre"
       >
         <div className="flex shrink-0 items-center justify-between border-b border-[#e8dfd0] px-5 py-4">
           <div className="flex items-center gap-2">
             <Settings className="h-4 w-4 text-[#8b7d6b]" aria-hidden />
-            <h2 className="font-serif text-lg font-medium text-[#3d3428]">Settings</h2>
+            <h2 className="font-serif text-lg font-medium text-[#3d3428]">Paramètres</h2>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="rounded-full p-2 text-[#8b7d6b] transition-colors hover:bg-[#f5efe4] hover:text-[#3d3428]"
-            aria-label="Close settings"
+            aria-label="Fermer les paramètres"
           >
             <X className="h-5 w-5" />
           </button>
