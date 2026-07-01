@@ -113,7 +113,7 @@ function PersonForm({
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Année de naissance">
+        <Field label="Date de naissance">
           <input
             value={form.birthYear}
             onChange={(e) => updateField("birthYear", e.target.value)}
@@ -121,7 +121,7 @@ function PersonForm({
             placeholder="ex. 1924"
           />
         </Field>
-        <Field label="Année de décès">
+        <Field label="Date de décès">
           <input
             value={form.deathYear}
             onChange={(e) => updateField("deathYear", e.target.value)}

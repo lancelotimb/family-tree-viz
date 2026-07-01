@@ -414,14 +414,19 @@ function PersonCard({
             justifyContent: "center",
             borderRadius: "9999px",
             border: `1px solid ${borderColor}`,
-            background: avatarBg,
+            background: person.avatarUrl ? undefined : avatarBg,
+            overflow: "hidden",
           }}
         >
           <ProfileAvatar
             gender={person.gender}
             src={person.avatarUrl || undefined}
             alt={person.name}
-            style={{ height: 32, width: 32, color: avatarColor }}
+            style={
+              person.avatarUrl
+                ? { height: "100%", width: "100%" }
+                : { height: 32, width: 32, color: avatarColor }
+            }
           />
         </div>
         <div

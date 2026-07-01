@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import { ProfileAvatar } from "./ProfileAvatar";
-import { searchIndex } from "./familyGraph";
+import { searchIndex, type SearchEntry } from "./familyGraph";
 import { isBornByYear } from "./timeUtils";
 import { useGraphRevision } from "./useGraphRevision";
 
@@ -22,6 +22,33 @@ type PersonSearchInputProps = {
 function formatLifespan(birthYear: number | null, deathYear: number | null) {
   const birth = birthYear ?? "?";
   return deathYear ? `${birth} – ${deathYear}` : `${birth} –`;
+}
+
+function SearchResultAvatar({
+  gender,
+  name,
+  avatarUrl,
+}: {
+  gender: SearchEntry["gender"];
+  name: string;
+  avatarUrl: string;
+}) {
+  const hasAvatar = Boolean(avatarUrl.trim());
+
+  return (
+    <div
+      className={`flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#e8dfd0] ${
+        hasAvatar ? "bg-white" : "bg-[#faf6ef]"
+      }`}
+    >
+      <ProfileAvatar
+        gender={gender}
+        src={hasAvatar ? avatarUrl : undefined}
+        alt={name}
+        className={hasAvatar ? "h-full w-full" : "h-4 w-4 text-[#a8957a]"}
+      />
+    </div>
+  );
 }
 
 export function PersonSearchInput({
@@ -183,9 +210,11 @@ export function PersonSearchInput({
                   index === activeIndex ? "bg-[#f5efe4]" : "hover:bg-[#faf6ef]"
                 }`}
               >
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#e8dfd0] bg-[#faf6ef]">
-                  <ProfileAvatar gender={person.gender} className="h-4 w-4 text-[#a8957a]" />
-                </div>
+                <SearchResultAvatar
+                  gender={person.gender}
+                  name={person.name}
+                  avatarUrl={person.avatarUrl}
+                />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-[#3d3428]">{person.name}</p>
                   <p className="text-xs text-[#8b7d6b]">

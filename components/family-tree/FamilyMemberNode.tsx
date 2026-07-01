@@ -191,17 +191,19 @@ export function FamilyMemberNode({ id, data, selected }: NodeProps) {
       <div
         style={{
           borderColor: avatarBorderColor,
-          background: colorByFamily
-            ? `linear-gradient(180deg, ${branchColor.background}, #f0e8da)`
-            : "linear-gradient(180deg, #faf6ef, #f0e8da)",
+          background: member.avatarUrl
+            ? undefined
+            : colorByFamily
+              ? `linear-gradient(180deg, ${branchColor.background}, #f0e8da)`
+              : "linear-gradient(180deg, #faf6ef, #f0e8da)",
         }}
-        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border"
+        className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border"
       >
         <ProfileAvatar
           gender={member.gender}
           src={member.avatarUrl}
           alt={member.name}
-          className="h-8 w-8"
+          className={member.avatarUrl ? "h-full w-full" : "h-8 w-8"}
           style={{ color: avatarColor }}
           strokeWidth={1.5}
         />

@@ -17,7 +17,7 @@ import { useFamilyGraphAdmin } from "./FamilyGraphContext";
 import { EditPersonForm } from "./PersonForm";
 import { useGraphRevision } from "./useGraphRevision";
 import {
-  formatLifeSpanYears,
+  formatLifeSpanYearsWithAge,
   formatLifeEventDate,
   formatMarriageLabel,
 } from "./lifeEventDisplay";
@@ -91,7 +91,7 @@ export function ProfilePanel({
         aria-hidden={!open}
       />
       <aside
-        className={`fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col border-l border-[#e8dfd0] bg-[#fffef9] shadow-2xl transition-transform duration-300 ease-out ${
+        className={`fixed right-0 top-0 z-50 flex h-full w-full max-w-lg flex-col border-l border-[#e8dfd0] bg-[#fffef9] shadow-2xl transition-transform duration-300 ease-out ${
           open && profile ? "translate-x-0" : "translate-x-full"
         }`}
         aria-hidden={!open || !profile}
@@ -166,7 +166,7 @@ export function ProfilePanel({
                     <span className="uppercase tracking-wide">{profile.familyName}</span>
                   </h2>
                   <p className="mt-1 text-center text-sm text-[#8b7d6b]">
-                    {formatLifeSpanYears(profile.birth, profile.death)}
+                    {formatLifeSpanYearsWithAge(profile.birth, profile.death)}
                   </p>
                   <div className="mt-3 grid grid-cols-2 items-stretch gap-2">
                     <LifeEventBox label="Naissance" event={profile.birth} />
@@ -217,6 +217,7 @@ export function ProfilePanel({
                             id={parent.id}
                             name={parent.name}
                             gender={parent.gender}
+                            avatarUrl={parent.avatarUrl}
                             years={formatRelationYears(
                               parent.birth.year,
                               parent.death?.year ?? null,
@@ -262,6 +263,7 @@ export function ProfilePanel({
                                       id={partner.id}
                                       name={partner.name}
                                       gender={partner.gender}
+                                      avatarUrl={partner.avatarUrl}
                                       years={formatRelationYears(
                                         partner.birth.year,
                                         partner.death?.year ?? null,
@@ -323,6 +325,7 @@ export function ProfilePanel({
                             id={child.id}
                             name={child.name}
                             gender={child.gender}
+                            avatarUrl={child.avatarUrl}
                             years={formatRelationYears(
                               child.birth.year,
                               child.death?.year ?? null,
@@ -342,7 +345,7 @@ export function ProfilePanel({
                       <h3 className="mb-3 font-serif text-lg text-[#3d3428]">
                         Galerie d&apos;archives
                       </h3>
-                      <div className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto pr-1">
+                      <div className="flex flex-col gap-3">
                         {gallery.map((item) => (
                           <figure
                             key={item.id}
@@ -499,6 +502,7 @@ function RelationshipCard({
   id,
   name,
   gender,
+  avatarUrl,
   years,
   compact = false,
   onSelect,
@@ -506,10 +510,13 @@ function RelationshipCard({
   id: string;
   name: string;
   gender: MemberGender;
+  avatarUrl?: string;
   years: string;
   compact?: boolean;
   onSelect: (id: string) => void;
 }) {
+  const hasAvatar = Boolean(avatarUrl?.trim());
+
   return (
     <button
       type="button"
@@ -519,13 +526,19 @@ function RelationshipCard({
       }`}
     >
       <div
-        className={`flex shrink-0 items-center justify-center rounded-full border border-[#e8dfd0] bg-[#faf6ef] ${
-          compact ? "h-8 w-8" : "h-10 w-10"
-        }`}
+        className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#e8dfd0] ${
+          hasAvatar ? "bg-white" : "bg-[#faf6ef]"
+        } ${compact ? "h-8 w-8" : "h-10 w-10"}`}
       >
         <ProfileAvatar
           gender={gender}
-          className={`${compact ? "h-4.5 w-4.5" : "h-5 w-5"} text-[#a8957a]`}
+          src={hasAvatar ? avatarUrl : undefined}
+          alt={name}
+          className={
+            hasAvatar
+              ? "h-full w-full"
+              : `${compact ? "h-4.5 w-4.5" : "h-5 w-5"} text-[#a8957a]`
+          }
           strokeWidth={1.25}
         />
       </div>
