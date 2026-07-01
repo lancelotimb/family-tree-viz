@@ -267,6 +267,7 @@ export type SearchEntry = {
   deathYear: number | null;
   gender: Individual["gender"];
   generation: number;
+  avatarUrl: string;
 };
 
 export const graphDerived = {
@@ -295,6 +296,7 @@ function refreshDerived(): void {
         deathYear: p.death?.year ?? null,
         gender: p.gender,
         generation: p.generation,
+        avatarUrl: p.avatarUrl,
       }))
       .sort((a, b) => a.name.localeCompare(b.name)),
   );

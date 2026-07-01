@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { Search } from "lucide-react";
 import { ProfileAvatar } from "./ProfileAvatar";
-import { searchIndex } from "./familyGraph";
+import { searchIndex, type SearchEntry } from "./familyGraph";
 import { isBornByYear } from "./timeUtils";
 import { useGraphRevision } from "./useGraphRevision";
 import {
@@ -26,6 +26,33 @@ type SearchBarProps = {
 function formatLifespan(birthYear: number | null, deathYear: number | null) {
   const birth = birthYear ?? "?";
   return deathYear ? `${birth} – ${deathYear}` : `${birth} –`;
+}
+
+function SearchResultAvatar({
+  gender,
+  name,
+  avatarUrl,
+}: {
+  gender: SearchEntry["gender"];
+  name: string;
+  avatarUrl: string;
+}) {
+  const hasAvatar = Boolean(avatarUrl.trim());
+
+  return (
+    <div
+      className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#e8dfd0] ${
+        hasAvatar ? "bg-white" : "bg-[#faf6ef]"
+      }`}
+    >
+      <ProfileAvatar
+        gender={gender}
+        src={hasAvatar ? avatarUrl : undefined}
+        alt={name}
+        className={hasAvatar ? "h-full w-full" : "h-5 w-5 text-[#a8957a]"}
+      />
+    </div>
+  );
 }
 
 export function SearchBar({
@@ -204,9 +231,11 @@ export function SearchBar({
                   index === activeIndex ? "bg-[#f5efe4]" : "hover:bg-[#faf6ef]"
                 }`}
               >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#e8dfd0] bg-[#faf6ef]">
-                  <ProfileAvatar gender={item.gender} className="h-5 w-5 text-[#a8957a]" />
-                </div>
+                <SearchResultAvatar
+                  gender={item.gender}
+                  name={item.name}
+                  avatarUrl={item.avatarUrl}
+                />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-[#3d3428]">{item.name}</p>
                   <p className="text-xs text-[#8b7d6b]">
